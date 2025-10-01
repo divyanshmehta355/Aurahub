@@ -11,6 +11,7 @@ import { FcLike } from "react-icons/fc";
 import SuggestedVideoCard from "@/components/SuggestedVideoCard";
 import EditVideoModal from "@/components/EditVideoModal";
 import VideoPlayerSkeleton from "@/components/VideoPlayerSkeleton";
+import Comment from "@/components/Comment";
 import SaveToPlaylistModal from "@/components/SaveToPlaylistModal";
 import { useInView } from "react-intersection-observer";
 
@@ -30,17 +31,16 @@ const VideoPlayerPage = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
 
-  const [suggestedVideos, setSuggestedVideos] = useState([]);
-  const [suggestionPage, setSuggestionPage] = useState(1);
-  const [hasMoreSuggestions, setHasMoreSuggestions] = useState(false);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-  const [loadingRecommendations, setLoadingRecommendations] = useState(true);
+  const [sidebarVideos, setSidebarVideos] = useState([]);
+  const [sidebarPage, setSidebarPage] = useState(1);
+  const [hasMoreSidebarVideos, setHasMoreSidebarVideos] = useState(false);
+  const [loadingSidebar, setLoadingSidebar] = useState(true);
 
   const { ref, inView } = useInView({ threshold: 0.5 });
 
-  const fetchSuggestions = useCallback(
+  const fetchSidebarVideos = useCallback(
     async (currentPage) => {
-      setLoadingSuggestions(true);
+      setLoadingSidebar(true);
       try {
         const endpoint = isAuthenticated
           ? "/videos/recommendations"
@@ -49,17 +49,18 @@ const VideoPlayerPage = () => {
           params: { page: currentPage, limit: 10, exclude: id },
         });
         const videoData = response.data.videos || response.data;
-        setSuggestedVideos((prev) =>
+        setSidebarVideos((prev) =>
           currentPage === 1 ? videoData : [...prev, ...videoData]
         );
-        setHasMoreSuggestions(
-          response.data.currentPage < response.data.totalPages
-        );
+        if (response.data.currentPage) {
+          setHasMoreSidebarVideos(
+            response.data.currentPage < response.data.totalPages
+          );
+        }
       } catch (err) {
-        console.error("Failed to fetch suggestions", err);
+        console.error("Failed to fetch sidebar videos", err);
       } finally {
-        setLoadingSuggestions(false);
-        setLoadingRecommendations(false);
+        setLoadingSidebar(false);
       }
     },
     [id, isAuthenticated]
@@ -71,8 +72,8 @@ const VideoPlayerPage = () => {
       try {
         setLoading(true);
         setError("");
-        setSuggestionPage(1);
-        setSuggestedVideos([]);
+        setSidebarPage(1);
+        setSidebarVideos([]);
 
         const videoRes = await API.get(`/videos/${id}`);
         setVideo(videoRes.data);
@@ -81,7 +82,7 @@ const VideoPlayerPage = () => {
           .then((res) => setComments(res.data))
           .catch((err) => console.error("Failed to fetch comments:", err));
 
-        fetchSuggestions(1);
+        fetchSidebarVideos(1);
 
         API.post(`/videos/${id}/view`).catch((err) =>
           console.error("Failed to count view:", err)
@@ -98,20 +99,20 @@ const VideoPlayerPage = () => {
 
     fetchInitialData();
     window.scrollTo(0, 0);
-  }, [id, fetchSuggestions]);
+  }, [id, fetchSidebarVideos]);
 
   useEffect(() => {
-    if (inView && hasMoreSuggestions && !loadingSuggestions) {
-      const nextPage = suggestionPage + 1;
-      setSuggestionPage(nextPage);
-      fetchSuggestions(nextPage);
+    if (inView && hasMoreSidebarVideos && !loadingSidebar) {
+      const nextPage = sidebarPage + 1;
+      setSidebarPage(nextPage);
+      fetchSidebarVideos(nextPage);
     }
   }, [
     inView,
-    hasMoreSuggestions,
-    loadingSuggestions,
-    suggestionPage,
-    fetchSuggestions,
+    hasMoreSidebarVideos,
+    loadingSidebar,
+    sidebarPage,
+    fetchSidebarVideos,
   ]);
 
   const handleLike = async () => {
@@ -390,9 +391,11 @@ const VideoPlayerPage = () => {
 
         <div className="lg:col-span-1">
           <div className="sticky top-24">
-            <h3 className="font-bold text-lg mb-4">Up Next</h3>
+            <h3 className="font-bold text-lg mb-4">
+              {isAuthenticated ? "Recommended For You" : "Up Next"}
+            </h3>
             <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-2">
-              {loadingRecommendations
+              {loadingSidebar && sidebarVideos.length === 0
                 ? Array.from({ length: 5 }).map((_, index) => (
                     <div key={index} className="flex space-x-3 animate-pulse">
                       <div className="flex-shrink-0 w-40 h-24 bg-gray-300 rounded-lg"></div>
@@ -402,14 +405,14 @@ const VideoPlayerPage = () => {
                       </div>
                     </div>
                   ))
-                : suggestedVideos.map((recommendedVideo) => (
+                : sidebarVideos.map((sidebarVideo) => (
                     <SuggestedVideoCard
-                      key={recommendedVideo._id}
-                      video={recommendedVideo}
+                      key={sidebarVideo._id}
+                      video={sidebarVideo}
                     />
                   ))}
               <div ref={ref} className="h-10">
-                {loadingSuggestions && (
+                {loadingSidebar && sidebarVideos.length > 0 && (
                   <p className="text-center text-sm text-gray-500">
                     Loading...
                   </p>
