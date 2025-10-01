@@ -1,0 +1,32 @@
+const CATEGORIES = [
+  "Music",
+  "Gaming",
+  "Vlogs",
+  "Product Reviews",
+  "How-To & Tutorials",
+  "Entertainment",
+  "Sports",
+  "News & Politics",
+  "Education",
+  "Comedy",
+  "Travel",
+  "Food & Cooking",
+  "Technology",
+  "Unboxing",
+  "Beauty & Fashion",
+  "DIY & Crafts",
+  "Animation",
+  "Short Films",
+  "Documentaries",
+  "Podcasts",
+  "ASMR",
+  "Reaction Videos",
+  "Daily Lifestyle",
+  "Finance & Investment",
+  "Health & Fitness",
+  "Pets & Animals",
+  "Automobiles",
+  "Other"
+];
+
+export default CATEGORIES;
