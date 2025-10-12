@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import Image from 'next/image';
 import NotificationsPanel from "./NotificationsPanel";
-import { FaUserCircle, FaUserEdit } from "react-icons/fa";
+import { FaUserCircle, FaUserEdit, FaHistory } from "react-icons/fa";
 import { MdDashboard, MdSubscriptions, MdPlaylistPlay, MdLogout } from "react-icons/md";
 
 const Navbar = () => {
@@ -186,6 +186,16 @@ const Navbar = () => {
                           >
                             <span>My Playlists</span>
                             <MdPlaylistPlay />
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            href="/history"
+                            onClick={() => setIsProfileMenuOpen(false)}
+                            className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            <span>History</span>
+                            <FaHistory />
                           </Link>
                         </li>
                         <li>
