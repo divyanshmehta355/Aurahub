@@ -6,7 +6,12 @@ import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import Image from 'next/image';
 import NotificationsPanel from "./NotificationsPanel";
-import { FaUserCircle, FaUserEdit, FaHistory } from "react-icons/fa";
+import {
+  FaUserCircle,
+  FaUserEdit,
+  FaHistory,
+  FaHourglassStart,
+} from "react-icons/fa";
 import { MdDashboard, MdSubscriptions, MdPlaylistPlay, MdLogout } from "react-icons/md";
 
 const Navbar = () => {
@@ -176,6 +181,16 @@ const Navbar = () => {
                           >
                             <span>Dashboard</span>
                             <MdDashboard />
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            href="/watch-later"
+                            onClick={() => setIsProfileMenuOpen(false)}
+                            className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            <span>Watch Later</span>
+                            <FaHourglassStart />
                           </Link>
                         </li>
                         <li>

@@ -108,9 +108,9 @@ const HistoryPage = () => {
               </div>
               <button
                 onClick={(e) => handleRemove(e, video._id)}
-                className="p-2 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="p-2 text-gray-400 transition-opacity"
               >
-                <MdDelete/>
+                <MdDelete className="hover:text-red-600 h-5 w-5" />
               </button>
             </Link>
           ))
