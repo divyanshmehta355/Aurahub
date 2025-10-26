@@ -288,7 +288,7 @@ const VideoPlayerPage = () => {
 
       <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <div className="w-full h-[576px] rounded-lg overflow-hidden shadow-xl bg-black">
+          <div className="w-full h-[576px] rounded-lg overflow-hidden shadow-xl">
             <iframe
               src={`https://streamtape.com/e/${video.fileId}`}
               title={video.title}
