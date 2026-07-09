@@ -117,7 +117,7 @@ const MyPlaylistsPage = () => {
                 />
             )}
             <main className="container mx-auto px-6 py-8">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">My Playlists</h1>
+                <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white font-display tracking-tight mb-6">My Playlists</h1>
                 
                 <div className="mb-8 p-6 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm transition-colors duration-300">
                     <form onSubmit={handleCreatePlaylist} className="flex flex-col sm:flex-row items-center gap-3">
@@ -132,7 +132,7 @@ const MyPlaylistsPage = () => {
                             <div key={playlist._id} className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-gray-100 dark:border-slate-700 hover:border-indigo-500/50 dark:hover:border-indigo-500/50 hover:shadow-lg p-5 group flex flex-col justify-between transition-all duration-300">
                                 <div>
                                     <div className="flex items-start justify-between">
-                                        <h2 className="text-lg font-bold text-gray-900 dark:text-white truncate pr-2">{playlist.title}</h2>
+                                        <h2 className="text-xl font-bold text-gray-900 dark:text-white font-display tracking-tight truncate pr-2">{playlist.title}</h2>
                                         {playlist.isPublic ? (
                                             <FaGlobeAsia title="Public" className="h-4 w-4 text-gray-400 flex-shrink-0" />
                                         ) : (

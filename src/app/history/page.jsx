@@ -75,7 +75,7 @@ const HistoryPage = () => {
   return (
     <main className="container mx-auto px-6 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Watch History</h1>
+        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white font-display tracking-tight">Watch History</h1>
         {history.length > 0 && (
           <button
             onClick={handleClearAll}
@@ -94,12 +94,12 @@ const HistoryPage = () => {
               href={`/video/${video._id}`}
               className="flex items-center space-x-4 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800/50 border border-transparent hover:border-gray-100 dark:hover:border-slate-700 transition-all group"
             >
-              <div className="w-48 h-28 flex-shrink-0">
+              <div className="w-48 h-28 flex-shrink-0 shadow-sm group-hover:shadow-md transition-shadow rounded-xl overflow-hidden">
                 <VideoThumbnail videoId={video._id} altText={video.title} />
               </div>
               <div className="w-0 flex-grow">
-                <h3 className="font-bold text-gray-900 dark:text-white truncate">{video.title}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white font-display tracking-tight truncate mb-1">{video.title}</h3>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                   {video.uploader?.username}
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
