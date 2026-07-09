@@ -46,7 +46,7 @@ Make sure you have Node.js installed on your machine. You will also need a Mongo
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/aurahub.git
+git clone https://github.com/divyanshmehta355/aurahub.git
 cd aurahub
 ```
 
