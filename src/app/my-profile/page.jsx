@@ -256,15 +256,15 @@ const MyProfilePage = () => {
   return (
     <>
       {showCropperModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full relative">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl max-w-lg w-full relative border border-gray-200 dark:border-slate-700">
             <button
               onClick={() => setShowCropperModal(false)}
-              className="absolute top-3 right-3 text-gray-600 hover:text-gray-900"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
             >
               <FaTimes size={20} />
             </button>
-            <h2 className="text-2xl font-bold mb-4">Crop your avatar</h2>
+            <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Crop your avatar</h2>
             {upImg && (
               <div className="max-h-96 overflow-y-auto">
                 <ReactCrop
@@ -286,7 +286,7 @@ const MyProfilePage = () => {
             <button
               onClick={handleSaveCroppedAvatar}
               disabled={!completedCrop || isUploading}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md disabled:bg-blue-300 w-full"
+              className="mt-6 px-4 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl disabled:bg-indigo-400 hover:bg-indigo-700 transition-colors w-full shadow-sm"
             >
               {isUploading ? "Uploading..." : "Save Cropped Avatar"}
             </button>
@@ -295,9 +295,9 @@ const MyProfilePage = () => {
       )}
 
       <main className="container mx-auto px-6 py-8 max-w-2xl">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">My Profile</h1>
-        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4">Profile Picture</h2>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">My Profile</h1>
+        <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-800 mb-8 transition-colors duration-300">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Profile Picture</h2>
           <div className="flex items-center space-x-4">
             {session?.user?.image ? (
               <Image
@@ -305,15 +305,15 @@ const MyProfilePage = () => {
                 alt={session.user.name}
                 width={80}
                 height={80}
-                className="rounded-full object-cover"
+                className="rounded-full object-cover ring-2 ring-indigo-500/30"
               />
             ) : (
-              <FaUserCircle size={80} className="text-gray-300" />
+              <FaUserCircle size={80} className="text-gray-300 dark:text-slate-700" />
             )}
             <div className="flex flex-col">
               <label
                 htmlFor="avatarInput"
-                className="cursor-pointer px-4 py-2 bg-gray-200 text-gray-800 text-sm rounded-md hover:bg-gray-300"
+                className="cursor-pointer px-4 py-2.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 font-medium text-sm rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors border border-transparent dark:border-slate-700"
               >
                 Change Avatar
               </label>
@@ -328,8 +328,8 @@ const MyProfilePage = () => {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4">Profile Details</h2>
+        <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-800 mb-8 transition-colors duration-300">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Profile Details</h2>
           <form
             onSubmit={handleProfileSubmit(onProfileSubmit)}
             className="space-y-4"
@@ -337,41 +337,41 @@ const MyProfilePage = () => {
             <div>
               <label
                 htmlFor="username"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
               >
                 Username
               </label>
-              <div className="relative">
+              <div className="relative mt-1">
                 <input
                   id="username"
                   {...registerProfile("username", {
                     onBlur: (e) => checkUsername(e.target.value),
                   })}
-                  className="w-full mt-1 px-3 py-2 border rounded-md pr-10"
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all pr-10"
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                   {usernameStatus.loading && (
                     <FaSpinner className="animate-spin text-gray-400" />
                   )}
                   {usernameStatus.message.includes("available") && (
-                    <FaCheckCircle className="text-green-500" />
+                    <FaCheckCircle className="text-emerald-500" />
                   )}
                   {usernameStatus.message &&
                     !usernameStatus.message.includes("available") && (
-                      <FaTimesCircle className="text-red-500" />
+                      <FaTimesCircle className="text-rose-500" />
                     )}
                 </div>
               </div>
               {profileErrors.username ? (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-rose-500 mt-1">
                   {profileErrors.username.message}
                 </p>
               ) : (
                 <p
                   className={`text-xs mt-1 h-4 ${
                     usernameStatus.message.includes("available")
-                      ? "text-green-600"
-                      : "text-red-600"
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-rose-600 dark:text-rose-400"
                   }`}
                 >
                   {usernameStatus.message}
@@ -381,42 +381,42 @@ const MyProfilePage = () => {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
               >
                 Email
               </label>
-              <div className="relative">
+              <div className="relative mt-1">
                 <input
                   id="email"
                   type="email"
                   {...registerProfile("email", {
                     onBlur: (e) => checkEmail(e.target.value),
                   })}
-                  className="w-full mt-1 px-3 py-2 border rounded-md pr-10"
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all pr-10"
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                   {emailStatus.loading && (
                     <FaSpinner className="animate-spin text-gray-400" />
                   )}
                   {emailStatus.message.includes("available") && (
-                    <FaCheckCircle className="text-green-500" />
+                    <FaCheckCircle className="text-emerald-500" />
                   )}
                   {emailStatus.message &&
                     !emailStatus.message.includes("available") && (
-                      <FaTimesCircle className="text-red-500" />
+                      <FaTimesCircle className="text-rose-500" />
                     )}
                 </div>
               </div>
               {profileErrors.email ? (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-rose-500 mt-1">
                   {profileErrors.email.message}
                 </p>
               ) : (
                 <p
                   className={`text-xs mt-1 h-4 ${
                     emailStatus.message.includes("available")
-                      ? "text-green-600"
-                      : "text-red-600"
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-rose-600 dark:text-rose-400"
                   }`}
                 >
                   {emailStatus.message}
@@ -425,15 +425,15 @@ const MyProfilePage = () => {
             </div>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md"
+              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-colors"
             >
               Save Changes
             </button>
           </form>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Change Password</h2>
+        <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-800 transition-colors duration-300">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Change Password</h2>
           <form
             onSubmit={handlePasswordSubmit(onPasswordSubmit)}
             className="space-y-4"
@@ -441,7 +441,7 @@ const MyProfilePage = () => {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
               >
                 New Password
               </label>
@@ -449,10 +449,10 @@ const MyProfilePage = () => {
                 id="password"
                 type="password"
                 {...registerPassword("password")}
-                className="w-full mt-1 px-3 py-2 border rounded-md"
+                className="w-full mt-1 px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
               />
               {passwordErrors.password && (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-rose-500 mt-1">
                   {passwordErrors.password.message}
                 </p>
               )}
@@ -460,7 +460,7 @@ const MyProfilePage = () => {
             <div>
               <label
                 htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
               >
                 Confirm New Password
               </label>
@@ -468,17 +468,17 @@ const MyProfilePage = () => {
                 id="confirmPassword"
                 type="password"
                 {...registerPassword("confirmPassword")}
-                className="w-full mt-1 px-3 py-2 border rounded-md"
+                className="w-full mt-1 px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
               />
               {passwordErrors.confirmPassword && (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-rose-500 mt-1">
                   {passwordErrors.confirmPassword.message}
                 </p>
               )}
             </div>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md"
+              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-colors"
             >
               Change Password
             </button>
