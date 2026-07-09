@@ -4,8 +4,12 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 import API from "@/lib/api";
 import AnalyticsChart from "@/components/AnalyticsChart";
+import CreatorStatCards from "@/components/CreatorStatCards";
+import TimeSeriesChart from "@/components/TimeSeriesChart";
 import { useDebounce } from "@/hooks/useDebounce";
 import VideoThumbnail from "@/components/VideoThumbnail";
 import EditVideoModal from "@/components/EditVideoModal";
@@ -13,6 +17,7 @@ import ChangeThumbnailModal from "@/components/ChangeThumbnailModal";
 import { toast } from "react-toastify";
 import { MdOutlineAddPhotoAlternate } from "react-icons/md";
 import { IoMdLink, IoIosLock, IoIosGlobe } from "react-icons/io";
+import { motion } from "framer-motion";
 
 const VisibilityDropdown = ({ video, onVisibilityChange }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -46,7 +51,7 @@ const VisibilityDropdown = ({ video, onVisibilityChange }) => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center text-sm rounded-md border border-gray-300 px-3 py-1 bg-white hover:bg-gray-50 w-full justify-between"
+        className="flex items-center text-sm rounded-xl border border-gray-200 dark:border-slate-700 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 w-full justify-between transition-colors"
       >
         <div className="flex items-center">
           {selectedOption.icon}
@@ -66,7 +71,7 @@ const VisibilityDropdown = ({ video, onVisibilityChange }) => {
         </svg>
       </button>
       {isOpen && (
-        <div className="absolute left-0 mt-2 w-full bg-white rounded-md shadow-lg border z-10">
+        <div className="absolute left-0 mt-2 w-full bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 z-10 overflow-hidden">
           {Object.entries(options).map(([key, { icon, label }]) => (
             <button
               key={key}
@@ -74,7 +79,7 @@ const VisibilityDropdown = ({ video, onVisibilityChange }) => {
                 onVisibilityChange(video._id, key);
                 setIsOpen(false);
               }}
-              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+              className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center transition-colors"
             >
               {icon} <span className="ml-2">{label}</span>
             </button>
@@ -86,41 +91,33 @@ const VisibilityDropdown = ({ video, onVisibilityChange }) => {
 };
 
 const DashboardClient = () => {
-  const [videos, setVideos] = useState([]);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
   const [editingVideo, setEditingVideo] = useState(null);
   const [changingThumbnailVideo, setChangingThumbnailVideo] = useState(null);
 
-  const { data: session, status } = useSession();
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  const { data: session, status } = useSession();
+
+  const { data: videos, error, mutate, isLoading } = useSWR(
+    status === "authenticated" 
+      ? `/creator/dashboard${debouncedSearchTerm ? `?q=${encodeURIComponent(debouncedSearchTerm)}` : ""}` 
+      : null,
+    fetcher
+  );
+
+  const { data: analytics, error: analyticsError, isLoading: analyticsLoading } = useSWR(
+    status === "authenticated" ? `/creator/analytics` : null,
+    fetcher
+  );
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
-      return;
     }
-    if (status === "authenticated") {
-      const fetchDashboardData = async () => {
-        try {
-          setLoading(true);
-          const params = {};
-          if (debouncedSearchTerm) {
-            params.q = debouncedSearchTerm;
-          }
-          const response = await API.get("/creator/dashboard", { params });
-          setVideos(response.data);
-        } catch (error) {
-          toast.error("Could not load dashboard data.");
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchDashboardData();
-    }
-  }, [status, router, debouncedSearchTerm]);
+  }, [status, router]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -138,7 +135,7 @@ const DashboardClient = () => {
     if (window.confirm("Are you sure you want to delete this video?")) {
       try {
         await API.delete(`/videos/${videoId}`);
-        setVideos((prev) => prev.filter((v) => v._id !== videoId));
+        mutate(videos.filter((v) => v._id !== videoId), false);
         toast.success("Video deleted successfully!");
       } catch (err) {
         toast.error("Failed to delete video.");
@@ -149,9 +146,7 @@ const DashboardClient = () => {
   const handleSaveEdits = async (data) => {
     try {
       const response = await API.put(`/videos/${editingVideo._id}`, data);
-      setVideos((prev) =>
-        prev.map((v) => (v._id === editingVideo._id ? response.data : v))
-      );
+      mutate(videos.map((v) => (v._id === editingVideo._id ? response.data : v)), false);
       setEditingVideo(null);
       toast.success("Video updated successfully!");
     } catch (err) {
@@ -161,10 +156,11 @@ const DashboardClient = () => {
 
   const handleVisibilityChange = async (videoId, newVisibility) => {
     try {
-      setVideos((prev) =>
-        prev.map((v) =>
+      mutate(
+        videos.map((v) =>
           v._id === videoId ? { ...v, visibility: newVisibility } : v
-        )
+        ),
+        false
       );
       await API.put(`/videos/${videoId}`, { visibility: newVisibility });
       toast.success("Visibility updated!");
@@ -174,18 +170,22 @@ const DashboardClient = () => {
   };
 
   const handleThumbnailSave = (videoId, newThumbnailUrl) => {
-    setVideos((prev) =>
-      prev.map((v) =>
+    mutate(
+      videos.map((v) =>
         v._id === videoId ? { ...v, thumbnailUrl: newThumbnailUrl } : v
-      )
+      ),
+      false
     );
     setChangingThumbnailVideo(null);
   };
 
-  if (status === "loading" || loading) {
+  if (status === "loading" || isLoading || analyticsLoading) {
     return (
       <main className="container mx-auto px-6 py-8 animate-pulse">
         <div className="h-10 bg-gray-300 rounded w-1/3 mb-6"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-gray-300 rounded-2xl"></div>)}
+        </div>
         <div className="mb-8 bg-white p-6 rounded-lg shadow-md">
           <div className="h-8 bg-gray-300 rounded w-1/4 mb-4"></div>
           <div className="h-80 bg-gray-300 rounded"></div>
@@ -215,26 +215,31 @@ const DashboardClient = () => {
         />
       )}
 
-      <main className="container mx-auto px-6 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">
+      <motion.main 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="container mx-auto px-6 py-8"
+      >
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
           Creator Dashboard
         </h1>
 
-        <div className="mb-8 bg-white p-6 rounded-lg shadow-md">
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
-            <h2 className="text-xl font-semibold">Analytics Overview</h2>
+        <div className="mb-8 bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-800 transition-colors duration-300">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Analytics Overview</h2>
             <div className="relative w-full sm:w-1/3">
               <input
                 type="text"
                 placeholder="Search to filter..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-md"
+                className="w-full pl-4 pr-10 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
               />
               {searchTerm && (
                 <button
                   onClick={handleClearSearch}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -255,10 +260,27 @@ const DashboardClient = () => {
             </div>
           </div>
 
-          {videos.length > 0 ? (
-            <AnalyticsChart videos={videos} />
+          {analyticsError ? (
+            <div className="text-center text-rose-500 dark:text-rose-400 p-8 font-medium">Failed to load analytics data.</div>
+          ) : analytics ? (
+            <>
+              <CreatorStatCards stats={analytics.lifetimeStats} />
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">30-Day Channel Growth</h3>
+                <TimeSeriesChart timeSeries={analytics.timeSeries} />
+              </div>
+            </>
+          ) : null}
+
+          {error ? (
+            <div className="text-center text-rose-500 dark:text-rose-400 p-8 font-medium">Failed to load video data.</div>
+          ) : videos && videos.length > 0 ? (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 mt-8 pt-8 border-t border-gray-100 dark:border-slate-800">Video Performance Comparison</h3>
+              <AnalyticsChart videos={videos} />
+            </div>
           ) : (
-            <div className="text-center text-gray-400 p-8">
+            <div className="text-center text-gray-500 dark:text-gray-400 p-8 font-medium">
               {searchTerm
                 ? "No videos found matching your search."
                 : "No data to display."}
@@ -266,21 +288,21 @@ const DashboardClient = () => {
           )}
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
-            <h2 className="text-xl font-semibold">Your Videos</h2>
+        <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-800 transition-colors duration-300">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Your Videos</h2>
             <div className="relative w-full sm:w-1/3">
               <input
                 type="text"
                 placeholder="Search your videos..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-md"
+                className="w-full pl-4 pr-10 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
               />
               {searchTerm && (
                 <button
                   onClick={handleClearSearch}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -301,20 +323,20 @@ const DashboardClient = () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-slate-700">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+              <thead className="bg-gray-50 dark:bg-slate-800/50">
                 <tr>
-                  <th className="px-6 py-3 ...">Thumbnail</th>
-                  <th className="px-6 py-3 ...">Video Title</th>
-                  <th className="px-6 py-3 ...">Visibility</th>
-                  <th className="px-6 py-3 ...">Views</th>
-                  <th className="px-6 py-3 ...">Likes</th>
-                  <th className="px-6 py-3 ...">Comments</th>
-                  <th className="px-6 py-3 ...">Actions</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Thumbnail</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Video Title</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Visibility</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Views</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Likes</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comments</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
                 {videos.length > 0 ? (
                   videos.map((video) => (
                     <tr key={video._id}>
@@ -333,7 +355,7 @@ const DashboardClient = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <Link href={`/video/${video._id}`}>{video.title}</Link>
+                        <Link href={`/video/${video._id}`} className="font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{video.title}</Link>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <VisibilityDropdown
@@ -341,15 +363,15 @@ const DashboardClient = () => {
                           onVisibilityChange={handleVisibilityChange}
                         />
                       </td>
-                      <td className="px-6 py-4 ...">{video.views}</td>
-                      <td className="px-6 py-4 ...">{video.likesCount}</td>
-                      <td className="px-6 py-4 ...">{video.commentCount}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400 font-medium">{video.views}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400 font-medium">{video.likesCount}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400 font-medium">{video.commentCount}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center space-x-2">
-                          <button onClick={() => setEditingVideo(video)}>
+                        <div className="flex items-center space-x-3">
+                          <button onClick={() => setEditingVideo(video)} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors">
                             Edit
                           </button>
-                          <button onClick={() => handleDelete(video._id)}>
+                          <button onClick={() => handleDelete(video._id)} className="text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-300 transition-colors">
                             Delete
                           </button>
                         </div>
@@ -360,7 +382,7 @@ const DashboardClient = () => {
                   <tr>
                     <td
                       colSpan="7"
-                      className="px-6 py-4 text-center text-gray-500"
+                      className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
                     >
                       {searchTerm
                         ? "No videos found..."
@@ -372,7 +394,7 @@ const DashboardClient = () => {
             </table>
           </div>
         </div>
-      </main>
+      </motion.main>
     </>
   );
 };
