@@ -64,7 +64,7 @@ const VideoCard = ({ video, isSaved, onToggleWatchLater }) => {
 
         <div className="flex flex-col w-0 flex-grow pt-0.5">
           <Link href={`/video/${video._id}`}>
-            <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 leading-snug line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+            <h3 className="tracking-tight text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 leading-snug line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
               {video.title}
             </h3>
           </Link>

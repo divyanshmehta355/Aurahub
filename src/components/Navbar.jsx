@@ -53,7 +53,7 @@ const Navbar = () => {
         <div className="flex justify-between items-center">
           <Link
             href="/"
-            className="text-2xl font-black bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent hover:from-indigo-400 hover:to-violet-400 transition-all duration-300"
+            className="font-display text-3xl tracking-tighter font-extrabold bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent hover:from-indigo-400 hover:to-violet-400 transition-all duration-300"
             onClick={() => setMobileMenuOpen(false)}
           >
             Aurahub

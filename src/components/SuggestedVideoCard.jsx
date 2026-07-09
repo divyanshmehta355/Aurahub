@@ -15,7 +15,7 @@ const SuggestedVideoCard = ({ video }) => {
             </div>
             
             <div className="flex flex-col w-0 flex-grow py-1">
-                <h4 className="font-bold text-sm text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 leading-tight line-clamp-2 transition-colors">
+                <h4 className="tracking-tight font-bold text-sm text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 leading-tight line-clamp-2 transition-colors">
                     {video.title}
                 </h4>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5 truncate group-hover:text-indigo-500 dark:group-hover:text-indigo-300 transition-colors">
