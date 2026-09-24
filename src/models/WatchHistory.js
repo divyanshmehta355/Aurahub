@@ -17,6 +17,7 @@ const watchHistorySchema = new mongoose.Schema(
 );
 
 watchHistorySchema.index({ userId: 1, videoId: 1 }, { unique: true });
+watchHistorySchema.index({ userId: 1, updatedAt: -1 });
 
 const WatchHistory =
   mongoose.models.WatchHistory ||

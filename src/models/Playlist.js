@@ -25,6 +25,9 @@ const playlistSchema = new mongoose.Schema({
     },
 }, { timestamps: true });
 
+playlistSchema.index({ owner: 1, createdAt: -1 });
+playlistSchema.index({ isPublic: 1, createdAt: -1 });
+
 const Playlist = mongoose.models.Playlist || mongoose.model('Playlist', playlistSchema);
 
 export default Playlist;

@@ -68,6 +68,10 @@ videoSchema.index({
 videoSchema.index({ uploader: 1, createdAt: -1 });
 videoSchema.index({ category: 1, views: -1 });
 videoSchema.index({ visibility: 1 });
+videoSchema.index({ visibility: 1, isShort: 1, createdAt: -1 });
+videoSchema.index({ visibility: 1, isShort: 1, views: -1 });
+videoSchema.index({ visibility: 1, category: 1, isShort: 1, createdAt: -1 });
+videoSchema.index({ visibility: 1, category: 1, isShort: 1, views: -1 });
 
 
 const Video = mongoose.models.Video || mongoose.model('Video', videoSchema);

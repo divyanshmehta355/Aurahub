@@ -17,6 +17,7 @@ const watchLaterSchema = new mongoose.Schema(
 );
 
 watchLaterSchema.index({ userId: 1, videoId: 1 }, { unique: true });
+watchLaterSchema.index({ userId: 1, createdAt: -1 });
 
 const WatchLater =
   mongoose.models.WatchLater || mongoose.model("WatchLater", watchLaterSchema);

@@ -26,6 +26,10 @@ const commentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+commentSchema.index({ video: 1, parentComment: 1, createdAt: -1 });
+commentSchema.index({ parentComment: 1, createdAt: 1 });
+commentSchema.index({ author: 1 });
+
 const Comment =
   mongoose.models.Comment || mongoose.model("Comment", commentSchema);
 
