@@ -141,14 +141,14 @@ const MyPlaylistsPage = () => {
                                     </div>
                                     <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">{playlist.videos.length} videos</p>
                                 </div>
-                                <div className="mt-6 flex items-center justify-between">
-                                    <Link href={`/playlist/${playlist._id}/edit`} className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors">Manage</Link>
-                                    <div className="flex items-center space-x-3 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                <div className="mt-5 pt-3 border-t border-gray-100 dark:border-slate-700/60 flex items-center justify-between gap-2 flex-wrap">
+                                    <Link href={`/playlist/${playlist._id}/edit`} className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors">Manage</Link>
+                                    <div className="flex items-center space-x-2.5">
                                         <button onClick={() => handleShare(playlist._id)} className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Share</button>
-                                        <button onClick={() => handlePrivacyToggle(playlist)} className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{playlist.isPublic ? 'Make Private' : 'Make Public'}</button>
+                                        <button onClick={() => handlePrivacyToggle(playlist)} className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{playlist.isPublic ? 'Private' : 'Public'}</button>
                                         <button onClick={() => setEditingPlaylist(playlist)} className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Rename</button>
-                                        <button onClick={() => handleDeletePlaylist(playlist._id)} className="text-gray-400 dark:text-gray-500 hover:text-rose-500 dark:hover:text-rose-500 transition-colors">
-                                            <FaTrash />
+                                        <button onClick={() => handleDeletePlaylist(playlist._id)} className="text-gray-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors p-1" title="Delete playlist">
+                                            <FaTrash size={12} />
                                         </button>
                                     </div>
                                 </div>

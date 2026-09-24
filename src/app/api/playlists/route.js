@@ -65,23 +65,43 @@ export async function PUT(request) {
             return NextResponse.json({ message: 'User not authorized to edit this playlist' }, { status: 403 });
         }
 
-        if (videoId) {
-            const videoIndex = playlist.videos.indexOf(videoId);
-            if (videoIndex > -1) {
-                playlist.videos.splice(videoIndex, 1);
-            } else {
-                playlist.videos.push(videoId);
-            }
-        }
-
-        if (title) playlist.title = title;
-        if (description) playlist.description = description;
+        const updateDoc = {};
+        if (title) updateDoc.title = title;
+        if (description !== undefined) updateDoc.description = description;
 
         if (newVideoOrder) {
-            playlist.videos = newVideoOrder;
+            updateDoc.videos = newVideoOrder;
+            const updated = await Playlist.findOneAndUpdate(
+                { _id: playlistId, owner: session.user.id },
+                { $set: updateDoc },
+                { new: true }
+            );
+            return NextResponse.json(updated);
         }
-        
-        await playlist.save();
+
+        if (videoId) {
+            const hasVideo = playlist.videos.some(v => v.toString() === videoId.toString());
+            const updateOps = hasVideo ? { $pull: { videos: videoId } } : { $addToSet: { videos: videoId } };
+            if (Object.keys(updateDoc).length > 0) {
+                updateOps.$set = updateDoc;
+            }
+            const updated = await Playlist.findOneAndUpdate(
+                { _id: playlistId, owner: session.user.id },
+                updateOps,
+                { new: true }
+            );
+            return NextResponse.json(updated);
+        }
+
+        if (Object.keys(updateDoc).length > 0) {
+            const updated = await Playlist.findOneAndUpdate(
+                { _id: playlistId, owner: session.user.id },
+                { $set: updateDoc },
+                { new: true }
+            );
+            return NextResponse.json(updated);
+        }
+
         return NextResponse.json(playlist);
     } catch (error) {
         console.error("Error updating playlist:", error);

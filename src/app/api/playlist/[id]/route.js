@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Playlist from '@/models/Playlist';
+import Video from '@/models/Video';
+import User from '@/models/User';
 import mongoose from 'mongoose';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
