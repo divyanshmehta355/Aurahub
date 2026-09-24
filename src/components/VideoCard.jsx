@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import VideoThumbnail from "./VideoThumbnail";
+import { getAvatarUrl } from "@/lib/identicon";
 import { FaUserCircle, FaClock, FaCheck } from "react-icons/fa";
 import { useSession } from "next-auth/react";
 
@@ -47,19 +48,14 @@ const VideoCard = ({ video, isSaved, onToggleWatchLater }) => {
           className="flex-shrink-0"
           onClick={handleAvatarClick}
         >
-          {video.uploader?.avatar ? (
-            <Image
-              src={video.uploader.avatar}
-              alt={video.uploader.username}
-              width={36}
-              height={36}
-              className="rounded-full ring-2 ring-transparent hover:ring-indigo-500 transition-all duration-300 object-cover"
-            />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center hover:ring-2 hover:ring-indigo-500 transition-all">
-              <FaUserCircle size={24} className="text-gray-400 dark:text-gray-500" />
-            </div>
-          )}
+          <Image
+            src={getAvatarUrl(video.uploader?.username, video.uploader?.avatar)}
+            alt={video.uploader?.username || "Uploader"}
+            width={36}
+            height={36}
+            unoptimized
+            className="rounded-full ring-2 ring-transparent hover:ring-indigo-500 transition-all duration-300 object-cover w-9 h-9"
+          />
         </div>
 
         <div className="flex flex-col w-0 flex-grow pt-0.5">

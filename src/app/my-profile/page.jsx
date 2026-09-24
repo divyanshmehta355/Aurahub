@@ -11,13 +11,13 @@ import API from "@/lib/api";
 import axios from "axios";
 import Image from "next/image";
 import {
-  FaUserCircle,
   FaTimes,
   FaCheckCircle,
   FaSpinner,
   FaTimesCircle,
   FaImage,
 } from "react-icons/fa";
+import { getAvatarUrl } from "@/lib/identicon";
 import { MdSecurity, MdPerson } from "react-icons/md";
 import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
@@ -375,19 +375,14 @@ const MyProfilePage = () => {
                   {/* Avatar */}
                   <div className="px-6 pb-6 relative flex justify-between items-end">
                     <div className="relative -mt-12 sm:-mt-16 group inline-block z-10">
-                      {session?.user?.image ? (
-                        <Image
-                          src={session.user.image}
-                          alt={session.user.name}
-                          width={100}
-                          height={100}
-                          className="rounded-full object-cover ring-4 ring-white dark:ring-slate-900 bg-white dark:bg-slate-900 w-24 h-24 sm:w-32 sm:h-32"
-                        />
-                      ) : (
-                        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full ring-4 ring-white dark:ring-slate-900 bg-gray-200 dark:bg-slate-800 flex items-center justify-center">
-                           <FaUserCircle size={60} className="text-gray-400" />
-                        </div>
-                      )}
+                      <Image
+                        src={getAvatarUrl(session?.user?.name, session?.user?.image)}
+                        alt={session?.user?.name || "Profile picture"}
+                        width={100}
+                        height={100}
+                        unoptimized
+                        className="rounded-full object-cover ring-4 ring-white dark:ring-slate-900 bg-white dark:bg-slate-900 w-24 h-24 sm:w-32 sm:h-32"
+                      />
                       <label className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity duration-300">
                         <span className="text-white text-xs font-medium text-center">Change<br/>Avatar</span>
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageSelect(e, 'avatar')} />

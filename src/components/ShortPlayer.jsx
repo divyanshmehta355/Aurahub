@@ -5,6 +5,7 @@ import { useInView } from 'react-intersection-observer';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FaHeart, FaCommentDots, FaShare, FaPlay } from 'react-icons/fa';
+import { getAvatarUrl } from '@/lib/identicon';
 
 const ShortPlayer = ({ video }) => {
     const videoRef = useRef(null);
@@ -61,13 +62,14 @@ const ShortPlayer = ({ video }) => {
                 <div className="flex-1 pr-12 text-white">
                     <Link href={`/profile/${video.uploader._id}`} className="flex items-center gap-2 mb-3">
                         <div className="w-10 h-10 rounded-full overflow-hidden border border-white/30">
-                            {video.uploader.avatar ? (
-                                <Image src={video.uploader.avatar} alt={video.uploader.username} width={40} height={40} className="object-cover w-full h-full" />
-                            ) : (
-                                <div className="w-full h-full bg-indigo-600 flex justify-center items-center font-bold">
-                                    {video.uploader.username?.charAt(0).toUpperCase()}
-                                </div>
-                            )}
+                            <Image 
+                                src={getAvatarUrl(video.uploader?.username, video.uploader?.avatar)} 
+                                alt={video.uploader?.username || "Uploader"} 
+                                width={40} 
+                                height={40} 
+                                unoptimized
+                                className="object-cover w-full h-full" 
+                            />
                         </div>
                         <span className="font-bold text-sm">@{video.uploader.username}</span>
                     </Link>

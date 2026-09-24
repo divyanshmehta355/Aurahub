@@ -4,9 +4,10 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import API from "@/lib/api";
 import { useSession } from "next-auth/react";
-import { FaBell, FaUserCircle } from "react-icons/fa";
+import { FaBell } from "react-icons/fa";
 import { toast } from "react-toastify";
 import Image from "next/image";
+import { getAvatarUrl } from "@/lib/identicon";
 const NotificationsPanel = () => {
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
@@ -161,17 +162,14 @@ const NotificationsPanel = () => {
                     }`}
                   >
                     <div className="flex-shrink-0 mt-1">
-                      {notif.sender.avatar ? (
-                        <Image
-                          src={notif.sender.avatar}
-                          alt={notif.sender.username}
-                          width={32}
-                          height={32}
-                          className="rounded-full"
-                        />
-                      ) : (
-                        <FaUserCircle size={32} className="text-gray-400" />
-                      )}
+                      <Image
+                        src={getAvatarUrl(notif.sender?.username, notif.sender?.avatar)}
+                        alt={notif.sender?.username || "User"}
+                        width={32}
+                        height={32}
+                        unoptimized
+                        className="rounded-full w-8 h-8 object-cover"
+                      />
                     </div>
                     <div className="w-0 flex-grow text-gray-800 dark:text-gray-200">
                       <p>

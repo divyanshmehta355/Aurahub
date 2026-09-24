@@ -6,6 +6,7 @@ import API from '@/lib/api';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-toastify';
 import Image from 'next/image';
+import { getAvatarUrl } from '@/lib/identicon';
 
 const Comment = ({ comment, videoId, onCommentDeleted, onCommentUpdated, onReplySubmitted }) => {
     const [showReplyForm, setShowReplyForm] = useState(false);
@@ -82,19 +83,14 @@ const Comment = ({ comment, videoId, onCommentDeleted, onCommentUpdated, onReply
         <div className="flex space-x-3">
             <div className="flex-shrink-0">
                 <Link href={`/profile/${comment.author.username}`}>
-                    {comment.author?.avatar ? (
-                        <Image
-                            src={comment.author.avatar}
-                            alt={comment.author.username}
-                            width={40}
-                            height={40}
-                            className="rounded-full"
-                        />
-                    ) : (
-                        <div className="w-10 h-10 bg-gray-200 dark:bg-slate-700 rounded-full flex items-center justify-center font-bold text-gray-600 dark:text-gray-300">
-                             {comment.author.username.charAt(0).toUpperCase()}
-                        </div>
-                    )}
+                    <Image
+                        src={getAvatarUrl(comment.author?.username, comment.author?.avatar)}
+                        alt={comment.author?.username || "User"}
+                        width={40}
+                        height={40}
+                        unoptimized
+                        className="rounded-full w-10 h-10 object-cover"
+                    />
                 </Link>
             </div>
             <div className="flex-1">

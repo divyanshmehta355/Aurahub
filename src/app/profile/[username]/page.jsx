@@ -12,7 +12,8 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import VideoCard from '@/components/VideoCard';
 import VideoCardSkeleton from '@/components/VideoCardSkeleton';
-import { FaUserCircle, FaImage } from 'react-icons/fa';
+import { FaImage } from 'react-icons/fa';
+import { getAvatarUrl } from '@/lib/identicon';
 
 const ProfilePage = () => {
     const params = useParams();
@@ -106,19 +107,14 @@ const ProfilePage = () => {
                     
                     <div className="flex flex-col md:flex-row gap-6 md:items-end w-full">
                         <div className="flex-shrink-0">
-                            {profile.user.avatar ? (
-                                <Image
-                                    src={profile.user.avatar}
-                                    alt={profile.user.username}
-                                    width={144}
-                                    height={144}
-                                    className="w-24 h-24 sm:w-36 sm:h-36 rounded-full ring-4 ring-white dark:ring-slate-900 object-cover bg-white dark:bg-slate-900"
-                                />
-                            ) : (
-                                <div className="w-24 h-24 sm:w-36 sm:h-36 rounded-full ring-4 ring-white dark:ring-slate-900 bg-gray-200 dark:bg-slate-800 flex items-center justify-center">
-                                    <FaUserCircle size={72} className="text-gray-400" />
-                                </div>
-                            )}
+                            <Image
+                                src={getAvatarUrl(profile.user.username, profile.user.avatar)}
+                                alt={profile.user.username}
+                                width={144}
+                                height={144}
+                                unoptimized
+                                className="w-24 h-24 sm:w-36 sm:h-36 rounded-full ring-4 ring-white dark:ring-slate-900 object-cover bg-white dark:bg-slate-900"
+                            />
                         </div>
 
                         <div className="flex-grow pb-2">

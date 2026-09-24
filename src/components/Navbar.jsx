@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import Image from 'next/image';
+import { getAvatarUrl } from "@/lib/identicon";
 import NotificationsPanel from "./NotificationsPanel";
 import ThemeToggle from "./ThemeToggle";
 import SearchAutocomplete from "./SearchAutocomplete";
@@ -82,17 +83,14 @@ const Navbar = () => {
                     onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                     className="flex items-center justify-center p-1 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors duration-300"
                   >
-                    {user?.image ? (
-                      <Image
-                        src={user.image}
-                        alt={user.name || "User avatar"}
-                        width={36}
-                        height={36}
-                        className="rounded-full ring-2 ring-transparent hover:ring-indigo-500 transition-all duration-300"
-                      />
-                    ) : (
-                      <FaUserCircle size={32} className="text-gray-500 dark:text-gray-400" />
-                    )}
+                    <Image
+                      src={getAvatarUrl(user?.name, user?.image)}
+                      alt={user?.name || "User avatar"}
+                      width={36}
+                      height={36}
+                      unoptimized
+                      className="rounded-full ring-2 ring-transparent hover:ring-indigo-500 transition-all duration-300 w-9 h-9 object-cover"
+                    />
                   </button>
                   {isProfileMenuOpen && (
                     <div className="absolute right-0 mt-3 w-64 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-100 dark:border-slate-700 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">

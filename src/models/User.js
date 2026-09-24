@@ -21,7 +21,9 @@ const userSchema = new mongoose.Schema({
     },
     avatar: {
         type: String,
-        required: false,
+        default: function () {
+            return `/api/avatar/${encodeURIComponent(this.username || 'user')}`;
+        },
     },
     banner: {
         type: String,

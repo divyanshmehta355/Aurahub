@@ -42,6 +42,9 @@ export const authOptions = {
                     if (profile.avatar_url || profile.picture) {
                        existingUser.avatar = profile.avatar_url || profile.picture;
                        await existingUser.save();
+                    } else if (!existingUser.avatar) {
+                       existingUser.avatar = `/api/avatar/${encodeURIComponent(existingUser.username)}`;
+                       await existingUser.save();
                     }
                     user.id = existingUser._id.toString();
                     user.username = existingUser.username;
@@ -49,10 +52,13 @@ export const authOptions = {
                     return true;
                 }
 
+                const username = profile.login || profile.name.replace(/\s/g, '');
+                const avatar = profile.avatar_url || profile.picture || `/api/avatar/${encodeURIComponent(username)}`;
+
                 const newUser = new User({
                     email: profile.email,
-                    username: profile.login || profile.name.replace(/\s/g, ''),
-                    avatar: profile.avatar_url || profile.picture,
+                    username,
+                    avatar,
                     password: Math.random().toString(36).slice(-8)
                 });
                 await newUser.save();

@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { getAvatarUrl } from "@/lib/identicon";
 import { useSession } from "next-auth/react";
 import { FcLike } from "react-icons/fc";
 import { FaClock, FaCheck } from "react-icons/fa";
@@ -213,15 +215,27 @@ const VideoInfoPanel = ({ initialVideo }) => {
         </div>
         <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-800">
           <div className="flex justify-between items-center">
-            <p className="text-gray-800 dark:text-gray-200 font-medium">
-              Uploaded by{" "}
-              <Link
-                href={`/profile/${video.uploader?.username}`}
-                className="font-bold hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline transition-colors"
-              >
-                {video.uploader?.username || "Unknown"}
+            <div className="flex items-center gap-3">
+              <Link href={`/profile/${video.uploader?.username}`}>
+                <Image
+                  src={getAvatarUrl(video.uploader?.username, video.uploader?.avatar)}
+                  alt={video.uploader?.username || "Uploader"}
+                  width={40}
+                  height={40}
+                  unoptimized
+                  className="rounded-full w-10 h-10 object-cover ring-2 ring-transparent hover:ring-indigo-500 transition-all duration-300"
+                />
               </Link>
-            </p>
+              <p className="text-gray-800 dark:text-gray-200 font-medium">
+                Uploaded by{" "}
+                <Link
+                  href={`/profile/${video.uploader?.username}`}
+                  className="font-bold hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline transition-colors"
+                >
+                  {video.uploader?.username || "Unknown"}
+                </Link>
+              </p>
+            </div>
             {user && user.id === video.uploader?._id && (
               <div className="flex space-x-3">
                 <button

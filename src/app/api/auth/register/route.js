@@ -20,7 +20,7 @@ export async function POST(request) {
             username,
             email,
             password,
-            avatar,
+            avatar: avatar || `/api/avatar/${encodeURIComponent(username)}`,
         });
 
         await newUser.save();

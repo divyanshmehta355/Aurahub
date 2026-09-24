@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { FaUserCircle, FaSearch } from "react-icons/fa";
+import { FaSearch } from "react-icons/fa";
+import { getAvatarUrl } from "@/lib/identicon";
 import { MdClose } from "react-icons/md";
 import { useAppStore } from "@/store/useAppStore";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -143,17 +144,14 @@ const SearchAutocomplete = ({ className, inputClassName }) => {
                     onClick={() => navigateAndClose(`/profile/${user.username}`)}
                     className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
                   >
-                    {user.image ? (
-                      <Image
-                        src={user.image}
-                        alt={user.username}
-                        width={32}
-                        height={32}
-                        className="rounded-full object-cover mr-3"
-                      />
-                    ) : (
-                      <FaUserCircle size={32} className="text-gray-400 mr-3" />
-                    )}
+                    <Image
+                      src={getAvatarUrl(user.username || user.name, user.image || user.avatar)}
+                      alt={user.username || user.name || "User"}
+                      width={32}
+                      height={32}
+                      unoptimized
+                      className="rounded-full object-cover mr-3 w-8 h-8"
+                    />
                     <div>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {user.name}
