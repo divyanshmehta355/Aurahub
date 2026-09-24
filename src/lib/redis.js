@@ -1,16 +1,58 @@
-import { Redis } from '@upstash/redis';
+import { createClient } from 'redis';
+import { env } from '../env.mjs';
 
-let rawRedis = null;
+const REDIS_URL = env.REDIS_URL;
 
-try {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    rawRedis = Redis.fromEnv();
+const REDIS_CONFIG = {
+  url: REDIS_URL,
+  pingInterval: 30000,
+  socket: {
+    reconnectStrategy: (retries) => {
+      if (retries > 10) {
+        return new Error('Redis maximum reconnect attempts reached');
+      }
+      return Math.min(retries * 100, 3000);
+    },
+  },
+};
+
+// Reuse client across module re-evaluations in Next.js development
+let client = globalThis.__redisClient || null;
+let connectingPromise = null;
+
+export function getClient() {
+  if (!client) {
+    client = createClient(REDIS_CONFIG);
+    client.on('error', (err) => {
+      if (err?.message?.includes('Socket closed unexpectedly')) return;
+      console.log('Redis Client Error', err);
+    });
+    globalThis.__redisClient = client;
   }
-} catch {
-  rawRedis = null;
+  return client;
 }
 
-// In-Memory L1 Cache Layer to eliminate external network latency
+export async function getConnectedClient() {
+  const c = getClient();
+  if (c.isOpen) {
+    return c;
+  }
+
+  if (!connectingPromise) {
+    connectingPromise = c.connect().catch((err) => {
+      console.log('Redis Client Error', err);
+      connectingPromise = null;
+      throw err;
+    }).finally(() => {
+      connectingPromise = null;
+    });
+  }
+
+  await connectingPromise;
+  return c;
+}
+
+// In-Memory L1 Cache Layer to eliminate external network latency for ultra-fast response
 const memoryCache = globalThis.__aurahub_memoryCache || (globalThis.__aurahub_memoryCache = new Map());
 const MAX_MEMORY_ITEMS = 1000;
 
@@ -26,7 +68,6 @@ function getFromMemory(key) {
 
 function setInMemory(key, value, ttlSeconds = 60) {
   if (memoryCache.size >= MAX_MEMORY_ITEMS) {
-    // Evict oldest item
     const oldestKey = memoryCache.keys().next().value;
     if (oldestKey) memoryCache.delete(oldestKey);
   }
@@ -48,10 +89,11 @@ const safeRedis = {
       return memVal;
     }
 
-    // 2. Fallback to Upstash Redis (L2)
-    if (!rawRedis) return null;
+    // 2. Fetch from Redis (L2)
     try {
-      const val = await rawRedis.get(key);
+      const c = await getConnectedClient();
+      if (!c) return null;
+      const val = await c.get(key);
       if (val !== null && val !== undefined) {
         setInMemory(key, val, 60);
       }
@@ -63,29 +105,43 @@ const safeRedis = {
 
   set: async (key, value, options) => {
     // 1. Write to L1 in-memory cache immediately
-    const ttl = options && typeof options.ex === 'number' ? options.ex : 60;
+    const ttl = options && (typeof options.ex === 'number' ? options.ex : typeof options.EX === 'number' ? options.EX : 60);
     setInMemory(key, value, ttl);
 
-    // 2. Persist to Upstash Redis (L2)
-    if (!rawRedis) return null;
+    // 2. Persist to Redis (L2)
     try {
-      return await rawRedis.set(key, value, options);
+      const c = await getConnectedClient();
+      if (!c) return null;
+
+      const payload = typeof value === 'string' || Buffer.isBuffer(value)
+        ? value
+        : JSON.stringify(value);
+
+      if (options) {
+        return await c.set(key, payload, options);
+      }
+      return await c.set(key, payload);
     } catch {
       return null;
     }
   },
 
   del: async (...args) => {
-    for (const k of args) {
+    const keys = args.flat();
+    for (const k of keys) {
       deleteFromMemory(k);
     }
-    if (!rawRedis) return null;
     try {
-      return await rawRedis.del(...args);
+      const c = await getConnectedClient();
+      if (!c || keys.length === 0) return null;
+      return await c.del(keys);
     } catch {
       return null;
     }
   },
+
+  getClient: getConnectedClient,
 };
 
+export { createClient };
 export default safeRedis;
