@@ -14,13 +14,14 @@ export async function generateMetadata({ params }) {
         description: 'This video could not be found.',
       };
     }
+    const pageDescription = video.description || `Watch ${video.title} on Aurahub`;
     return {
       title: `${video.title} - Aurahub`,
-      description: video.description,
-      keywords: video.tags.join(', '),
+      description: pageDescription,
+      keywords: video.tags ? video.tags.join(', ') : '',
       openGraph: {
         title: video.title,
-        description: video.description,
+        description: pageDescription,
         images: [
           {
             url: video.thumbnailUrl,

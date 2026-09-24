@@ -20,7 +20,7 @@ export async function POST(request) {
 
         const formData = await request.formData();
         const title = formData.get("title");
-        const description = formData.get("description");
+        const description = formData.get("description") || "";
         const videoId = formData.get("videoId");
         const thumbnailFile = formData.get("thumbnailFile");
         const category = formData.get('category');
@@ -29,8 +29,8 @@ export async function POST(request) {
         const playlistId = formData.get('playlistId');
         const isShort = formData.get('isShort') === 'true';
 
-        if (!title || !description || !videoId) {
-            return NextResponse.json({ message: "Title, description, and videoId are required." }, { status: 400 });
+        if (!title || !videoId) {
+            return NextResponse.json({ message: "Title and videoId are required." }, { status: 400 });
         }
 
         const tags = tagsString ? JSON.parse(tagsString) : [];

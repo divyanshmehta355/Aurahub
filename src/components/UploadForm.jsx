@@ -8,10 +8,11 @@ import API from "@/lib/api";
 import CATEGORIES from "@/constants/categories";
 import { useVideoUpload } from "@/hooks/useVideoUpload";
 import { toast } from 'react-toastify';
+import PlaylistUploadForm from "./PlaylistUploadForm";
 
 const schema = yup.object().shape({
   title: yup.string().required("Title is required"),
-  description: yup.string().required("Description is required"),
+  description: yup.string().optional(),
   category: yup.string().required("Category is required"),
   tags: yup.string(),
   visibility: yup.string().required("Visibility is required"),
@@ -86,9 +87,9 @@ const UploadForm = () => {
 
   return (
     <div className="bg-gray-50 dark:bg-slate-900 flex items-center justify-center min-h-screen py-12 transition-colors duration-300">
-      <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-2xl border border-gray-100 dark:border-slate-700 transition-colors duration-300">
+      <div className={`bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-2xl shadow-xl w-full ${uploadType === 'playlist' ? 'max-w-3xl' : 'max-w-2xl'} border border-gray-100 dark:border-slate-700 transition-all duration-300`}>
         <h2 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-white tracking-tight">
-          Upload a New Video 🎬
+          {uploadType === 'playlist' ? 'Playlist Video Upload 📑' : 'Upload a New Video 🎬'}
         </h2>
         
         <div className="flex justify-center mb-6 rounded-xl p-1 bg-gray-100 dark:bg-slate-900 shadow-inner">
@@ -96,7 +97,7 @@ const UploadForm = () => {
                 type="button"
                 onClick={() => setUploadType("direct")}
                 disabled={isBusy}
-                className={`w-1/2 p-2 rounded-lg font-semibold transition-all duration-300 ${uploadType === "direct" ? "bg-indigo-600 text-white shadow-md transform hover:-translate-y-0.5" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700"} disabled:opacity-50`}
+                className={`w-1/3 p-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-300 ${uploadType === "direct" ? "bg-indigo-600 text-white shadow-md transform hover:-translate-y-0.5" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700"} disabled:opacity-50`}
             >
                 Direct Upload
             </button>
@@ -104,11 +105,26 @@ const UploadForm = () => {
                 type="button"
                 onClick={() => setUploadType("remote")}
                 disabled={isBusy}
-                className={`w-1/2 p-2 rounded-lg font-semibold transition-all duration-300 ${uploadType === "remote" ? "bg-indigo-600 text-white shadow-md transform hover:-translate-y-0.5" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700"} disabled:opacity-50`}
+                className={`w-1/3 p-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-300 ${uploadType === "remote" ? "bg-indigo-600 text-white shadow-md transform hover:-translate-y-0.5" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700"} disabled:opacity-50`}
             >
                 Remote URL
             </button>
+            <button
+                type="button"
+                onClick={() => setUploadType("playlist")}
+                disabled={isBusy}
+                className={`w-1/3 p-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-300 ${uploadType === "playlist" ? "bg-indigo-600 text-white shadow-md transform hover:-translate-y-0.5" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700"} disabled:opacity-50`}
+            >
+                Playlist Upload
+            </button>
         </div>
+
+        {uploadType === "playlist" ? (
+          <PlaylistUploadForm
+            playlists={playlists}
+            onPlaylistCreated={(newPl) => setPlaylists((prev) => [...prev, newPl])}
+          />
+        ) : (
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
@@ -124,7 +140,9 @@ const UploadForm = () => {
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Optional)</span>
+                </label>
                 <textarea {...register("description")} placeholder="A short description of your video..." className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white h-24 resize-none transition-all"/>
                 {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
             </div>
@@ -218,6 +236,7 @@ const UploadForm = () => {
                 {isUploading ? `Uploading... (${uploadProgress}%)` : isPolling ? "Processing..." : "Upload Video"}
             </button>
         </form>
+        )}
       </div>
     </div>
   );

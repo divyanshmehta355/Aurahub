@@ -253,9 +253,11 @@ const VideoInfoPanel = ({ initialVideo }) => {
               </div>
             )}
           </div>
-          <p className="mt-4 text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-            {video.description}
-          </p>
+          {video.description ? (
+            <p className="mt-4 text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+              {video.description}
+            </p>
+          ) : null}
           {video.tags && video.tags.length > 0 && (
             <div className="mt-6 flex flex-wrap gap-2">
               {video.tags.map((tag) => (

@@ -5,7 +5,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 
 const editSchema = Yup.object().shape({
   title: Yup.string().required("Title is required"),
-  description: Yup.string().required("Description is required"),
+  description: Yup.string().optional(),
 });
 
 const EditVideoModal = ({ video, onSave, onCancel }) => {
@@ -52,7 +52,7 @@ const EditVideoModal = ({ video, onSave, onCancel }) => {
               htmlFor="description"
               className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
             >
-              Description
+              Description <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Optional)</span>
             </label>
             <textarea
               id="description"

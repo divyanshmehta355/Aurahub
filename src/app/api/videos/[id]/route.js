@@ -98,7 +98,7 @@ export async function PUT(request, { params }) {
     const body = await request.json();
     const { title, description, visibility } = body;
     if (title) video.title = title;
-    if (description) video.description = description;
+    if (description !== undefined) video.description = description;
     if (visibility) video.visibility = visibility;
 
     if (title || description) {

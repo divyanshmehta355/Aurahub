@@ -46,7 +46,7 @@ export const useVideoUpload = () => {
     toast.info("Publishing video...");
     const finalFormData = new FormData();
     finalFormData.append("title", data.title);
-    finalFormData.append("description", data.description);
+    finalFormData.append("description", data.description || "");
     finalFormData.append("videoId", videoId);
     finalFormData.append("category", data.category);
     finalFormData.append("visibility", data.visibility);
