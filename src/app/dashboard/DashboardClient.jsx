@@ -441,6 +441,9 @@ const DashboardClient = () => {
                                   <VideoThumbnail
                                     videoId={video._id}
                                     altText={video.title}
+                                    title={video.title}
+                                    category={video.category}
+                                    thumbnailUrl={video.thumbnailUrl}
                                   />
                                   <button
                                     onClick={() => setChangingThumbnailVideo(video)}

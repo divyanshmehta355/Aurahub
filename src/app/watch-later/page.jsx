@@ -62,7 +62,13 @@ const WatchLaterPage = () => {
               className="flex items-center space-x-4 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800/50 border border-transparent hover:border-gray-100 dark:hover:border-slate-700 transition-all group"
             >
               <div className="w-48 h-28 flex-shrink-0 shadow-sm group-hover:shadow-md transition-shadow rounded-xl overflow-hidden">
-                <VideoThumbnail videoId={video._id} altText={video.title} />
+                <VideoThumbnail
+                  videoId={video._id}
+                  altText={video.title}
+                  title={video.title}
+                  category={video.category}
+                  thumbnailUrl={video.thumbnailUrl}
+                />
               </div>
               <div className="w-0 flex-grow">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white font-display tracking-tight truncate mb-1">{video.title}</h3>

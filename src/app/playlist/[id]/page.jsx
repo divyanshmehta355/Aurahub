@@ -57,6 +57,9 @@ const ViewPlaylistPage = () => {
                                 <VideoThumbnail 
                                     videoId={video._id}
                                     altText={video.title}
+                                    title={video.title}
+                                    category={video.category}
+                                    thumbnailUrl={video.thumbnailUrl}
                                 />
                             </div>
                             <div className="w-0 flex-grow">

@@ -46,8 +46,10 @@ const SortableVideoItem = ({ video, onRemove }) => {
             <span {...attributes} {...listeners} className="text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 cursor-grab touch-none p-1 transition-colors">☰</span>
             <div className="w-20 h-12 object-cover rounded flex-shrink-0">
                 <VideoThumbnail
-                    fileId={video.fileId}
-                    customThumbnailUrl={video.thumbnailUrl}
+                    videoId={video._id}
+                    thumbnailUrl={video.thumbnailUrl}
+                    title={video.title}
+                    category={video.category}
                     altText={video.title}
                 />
             </div>

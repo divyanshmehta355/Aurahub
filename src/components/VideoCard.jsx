@@ -30,7 +30,13 @@ const VideoCard = ({ video, isSaved, onToggleWatchLater }) => {
     <div className="block group cursor-pointer flex flex-col gap-3">
       <div className="relative w-full aspect-video rounded-xl overflow-hidden shadow-sm group-hover:shadow-lg transition-all duration-300">
         <Link href={`/video/${video._id}`} className="w-full h-full block transform group-hover:scale-105 transition-transform duration-500">
-          <VideoThumbnail videoId={video._id} altText={video.title} />
+          <VideoThumbnail
+            videoId={video._id}
+            altText={video.title}
+            title={video.title}
+            category={video.category}
+            thumbnailUrl={video.thumbnailUrl}
+          />
         </Link>
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 pointer-events-none" />
         {isAuthenticated && (

@@ -48,6 +48,9 @@ const SortableVideoItem = ({ video, onRemove }) => {
                  <VideoThumbnail
                     videoId={video._id}
                     altText={video.title}
+                    title={video.title}
+                    category={video.category}
+                    thumbnailUrl={video.thumbnailUrl}
                 />
             </div>
             <div className="flex-grow w-0 px-2">

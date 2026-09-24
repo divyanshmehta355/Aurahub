@@ -21,10 +21,14 @@ const GlobalVideoPlayer = () => {
     if (isMainVideoPage) {
       // Find the slot element in the DOM
       // We use an interval in case the page component hasn't fully mounted its DOM yet
+      let attempts = 0;
       const findSlot = () => {
+        attempts++;
         const el = document.getElementById("video-player-slot");
         if (el) {
           setSlotElement(el);
+          clearInterval(intervalId);
+        } else if (attempts >= 30) {
           clearInterval(intervalId);
         }
       };

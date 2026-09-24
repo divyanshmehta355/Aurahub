@@ -5,30 +5,37 @@ import API from '@/lib/api';
 import Image from 'next/image';
 import { getFallbackThumbnailUrl } from '@/lib/thumbnailSvg';
 
-const VideoThumbnail = ({ videoId, altText, title, category }) => {
+const VideoThumbnail = ({ videoId, altText, title, category, thumbnailUrl }) => {
     const videoTitle = title || altText;
     const fallbackUrl = getFallbackThumbnailUrl(videoId, videoTitle, category);
-    const [imageUrl, setImageUrl] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
+
+    // If thumbnail URL is already provided by parent, render immediately with 0 delay/waterfalls!
+    const [imageUrl, setImageUrl] = useState(thumbnailUrl || fallbackUrl);
+    const [isLoading, setIsLoading] = useState(!thumbnailUrl && !videoId);
 
     useEffect(() => {
+        // If thumbnailUrl was passed from parent, use it directly without making an HTTP request
+        if (thumbnailUrl) {
+            setImageUrl(thumbnailUrl);
+            setIsLoading(false);
+            return;
+        }
+
+        // If no videoId, use fallback immediately
+        if (!videoId) {
+            setImageUrl(fallbackUrl);
+            setIsLoading(false);
+            return;
+        }
+
         let isMounted = true;
         const fetchThumbnail = async () => {
-            if (!videoId) {
-                if (isMounted) {
-                    setImageUrl(fallbackUrl);
-                    setIsLoading(false);
-                }
-                return;
-            }
             try {
                 const response = await API.get(`/videos/${videoId}/thumbnail`);
-                if (isMounted) {
+                if (isMounted && response.data?.thumbnailUrl) {
                     setImageUrl(response.data.thumbnailUrl);
                 }
-
             } catch (error) {
-                console.error(`Could not fetch thumbnail for ${videoId}, using dynamic fallback.`);
                 if (isMounted) {
                     setImageUrl(fallbackUrl);
                 }
@@ -44,10 +51,10 @@ const VideoThumbnail = ({ videoId, altText, title, category }) => {
         return () => {
             isMounted = false;
         };
-    }, [videoId, fallbackUrl]);
+    }, [videoId, thumbnailUrl, fallbackUrl]);
 
     if (isLoading) {
-        return <div className="w-full h-full bg-gray-300 dark:bg-slate-800 animate-pulse rounded-lg"></div>;
+        return <div className="w-full h-full bg-gray-200 dark:bg-slate-800 animate-pulse rounded-lg" />;
     }
 
     return (

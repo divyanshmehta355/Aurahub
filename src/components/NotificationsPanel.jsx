@@ -82,7 +82,7 @@ const NotificationsPanel = () => {
         ws.close();
       }
     };
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user?.id]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
