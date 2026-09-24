@@ -23,7 +23,29 @@ const ShortsFeedClient = () => {
 
     const containerRef = useRef(null);
 
-    // Basic intersection observer for infinite scroll
+    // Keyboard navigation (Arrow keys / J / K)
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            const container = containerRef.current;
+            if (!container) return;
+
+            // Don't trigger if user is typing in an input
+            if (["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
+
+            if (e.key === "ArrowDown" || e.key === "j" || e.key === "PageDown") {
+                e.preventDefault();
+                container.scrollBy({ top: container.clientHeight, behavior: "smooth" });
+            } else if (e.key === "ArrowUp" || e.key === "k" || e.key === "PageUp") {
+                e.preventDefault();
+                container.scrollBy({ top: -container.clientHeight, behavior: "smooth" });
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, []);
+
+    // Infinite scroll handler
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;

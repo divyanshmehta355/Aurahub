@@ -8,6 +8,7 @@ import { buildVideoAggregation } from '@/lib/videoUtils';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import redis from '@/lib/redis';
+import { generateVideoEmbedding } from '@/lib/gemini';
 
 const AURA_API_BASE_URL = "https://aurahub-api.ashwathama249.workers.dev";
 
@@ -92,6 +93,16 @@ export async function PUT(request, { params }) {
     if (title) video.title = title;
     if (description) video.description = description;
     if (visibility) video.visibility = visibility;
+
+    if (title || description) {
+      try {
+        const newEmbedding = await generateVideoEmbedding(video);
+        if (newEmbedding) video.embedding = newEmbedding;
+      } catch (embErr) {
+        // Non-blocking
+      }
+    }
+
     const updatedVideo = await video.save();
     return NextResponse.json(updatedVideo);
   } catch (error) {

@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import axios from 'axios';
 import FormData from 'form-data';
+import { generateVideoEmbedding } from '@/lib/gemini';
 
 const FREEIMAGE_API_URL = "https://freeimage.host/api/1/upload";
 
@@ -67,6 +68,15 @@ export async function POST(request) {
             } catch (uploadError) {
                 console.error("Freeimage.host upload failed:", uploadError);
             }
+        }
+
+        try {
+            const embedding = await generateVideoEmbedding(videoData);
+            if (embedding) {
+                videoData.embedding = embedding;
+            }
+        } catch (embedError) {
+            // Non-blocking: video still publishes even if embedding fails
         }
 
         const newVideo = new Video(videoData);

@@ -178,9 +178,10 @@ const SearchAutocomplete = ({ className, inputClassName }) => {
                   >
                     <div className="w-16 h-9 relative rounded overflow-hidden mr-3 flex-shrink-0 bg-gray-200 dark:bg-slate-700">
                       <Image
-                        src={video.thumbnailUrl || '/placeholder-thumb.jpg'}
+                        src={video.thumbnailUrl || 'https://iili.io/Ku93A2n.png'}
                         alt={video.title}
                         fill
+                        sizes="64px"
                         className="object-cover"
                       />
                     </div>
