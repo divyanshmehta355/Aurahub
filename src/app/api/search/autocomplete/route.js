@@ -3,6 +3,7 @@ import dbConnect from "@/lib/dbConnect";
 import Video from "@/models/Video";
 import User from "@/models/User";
 import { correctSearchQuery } from "@/lib/gemini";
+import redis from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +16,18 @@ export async function GET(request) {
       return NextResponse.json({ videos: [], users: [] });
     }
 
+    const cleanQuery = query.trim();
+    const cacheKey = `ac:${cleanQuery.toLowerCase()}`;
+
+    // Fast L1 / L2 cache hit
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      const parsed = typeof cached === "string" ? JSON.parse(cached) : cached;
+      return NextResponse.json(parsed);
+    }
+
     await dbConnect();
 
-    const cleanQuery = query.trim();
     const words = cleanQuery.split(/\s+/).filter(Boolean);
     const flexiblePattern = words.join(".*");
     const regex = new RegExp(flexiblePattern, "i");
@@ -30,7 +40,7 @@ export async function GET(request) {
         { tags: { $in: [new RegExp(cleanQuery, "i")] } },
       ],
     })
-      .select("_id title thumbnailUrl")
+      .select("_id title thumbnailUrl category")
       .limit(4)
       .lean();
 
@@ -41,7 +51,7 @@ export async function GET(request) {
         { name: { $regex: regex } },
       ],
     })
-      .select("username name image")
+      .select("username name image avatar")
       .limit(2)
       .lean();
 
@@ -63,7 +73,7 @@ export async function GET(request) {
               { tags: { $in: [new RegExp(didYouMean, "i")] } },
             ],
           })
-            .select("_id title thumbnailUrl")
+            .select("_id title thumbnailUrl category")
             .limit(4)
             .lean();
 
@@ -76,7 +86,10 @@ export async function GET(request) {
       }
     }
 
-    return NextResponse.json({ videos, users });
+    const responseData = { videos, users };
+    await redis.set(cacheKey, JSON.stringify(responseData), { ex: 300 });
+
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error("Autocomplete Error:", error);
     return NextResponse.json(

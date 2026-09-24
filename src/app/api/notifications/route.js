@@ -14,13 +14,15 @@ export async function GET(request) {
 
         const userId = session.user.id;
 
-        const notifications = await Notification.find({ recipient: userId })
-            .populate('sender', 'username avatar')
-            .populate('video', 'title')
-            .sort({ createdAt: -1 })
-            .limit(20);
-        
-        const unreadCount = await Notification.countDocuments({ recipient: userId, isRead: false });
+        const [notifications, unreadCount] = await Promise.all([
+            Notification.find({ recipient: userId })
+                .populate('sender', 'username avatar')
+                .populate('video', 'title')
+                .sort({ createdAt: -1 })
+                .limit(20)
+                .lean(),
+            Notification.countDocuments({ recipient: userId, isRead: false })
+        ]);
 
         return NextResponse.json({ notifications, unreadCount });
     } catch (error) {

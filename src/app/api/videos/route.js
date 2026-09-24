@@ -18,7 +18,8 @@ export async function GET(request) {
         const cachedData = await redis.get(cacheKey);
 
         if (cachedData) {
-            return NextResponse.json(cachedData);
+            const parsed = typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData;
+            return NextResponse.json(parsed);
         }
         
         await dbConnect();
@@ -43,12 +44,12 @@ export async function GET(request) {
             filter.isShort = { $ne: true };
         }
 
-        const totalVideos = await Video.countDocuments(filter);
-        const aggregation = buildVideoAggregation(filter, sortCriteria);
-        aggregation.push({ $skip: skip });
-        aggregation.push({ $limit: limit });
+        const aggregation = buildVideoAggregation(filter, sortCriteria, { skip, limit });
 
-        const videos = await Video.aggregate(aggregation);
+        const [totalVideos, videos] = await Promise.all([
+            Video.countDocuments(filter),
+            Video.aggregate(aggregation)
+        ]);
 
         const responseData = {
             videos,
@@ -56,7 +57,7 @@ export async function GET(request) {
             totalPages: Math.ceil(totalVideos / limit),
         };
 
-        const cacheExpiry = type === 'short' ? 10 : 300;
+        const cacheExpiry = type === 'short' ? 30 : 180;
         await redis.set(cacheKey, JSON.stringify(responseData), { ex: cacheExpiry });
 
         return NextResponse.json(responseData);

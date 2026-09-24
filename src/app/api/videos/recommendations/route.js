@@ -39,12 +39,11 @@ export async function GET(request) {
     let userTasteVector = null;
 
     if (session?.user?.id) {
-      user = await User.findById(session.user.id);
-      if (user) {
-        // Fetch recent interactions (views & likes)
-        const recentActivities = await UserActivity.find({ userId: user._id })
-          .sort({ createdAt: -1 })
-          .limit(20);
+      // Fetch recent interactions (views & likes) directly using index
+      const recentActivities = await UserActivity.find({ userId: session.user.id })
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .lean();
 
         interactedVideoIds = recentActivities.map((a) => a.videoId);
 
@@ -92,7 +91,6 @@ export async function GET(request) {
 
         // Compute AI taste vector
         userTasteVector = computeUserTasteVector(vectorInteractions);
-      }
     }
 
     let currentVideo = null;

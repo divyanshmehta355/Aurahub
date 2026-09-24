@@ -16,16 +16,24 @@ export async function GET(request, { params }) {
     const cachedProfile = await redis.get(cacheKey);
 
     if (cachedProfile) {
-      const profileData = cachedProfile;
+      const profileData = typeof cachedProfile === 'string' ? JSON.parse(cachedProfile) : cachedProfile;
+      if (profileData && profileData.user) {
+        const session = await getServerSession(authOptions);
+        const viewingUser = session?.user;
+        const isSubscribed = Boolean(
+          viewingUser &&
+          Array.isArray(profileData.user.subscribers) &&
+          profileData.user.subscribers.includes(viewingUser.id)
+        );
 
-      const session = await getServerSession(authOptions);
-      const viewingUser = session?.user;
-      profileData.user.isSubscribed =
-        viewingUser && profileData.user.subscribers
-          ? profileData.user.subscribers.includes(viewingUser.id)
-          : false;
-
-      return NextResponse.json(profileData);
+        return NextResponse.json({
+          ...profileData,
+          user: {
+            ...profileData.user,
+            isSubscribed,
+          },
+        });
+      }
     }
 
     await dbConnect();

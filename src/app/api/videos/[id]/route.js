@@ -24,20 +24,24 @@ export async function GET(request, { params }) {
 
     const cachedVideo = await redis.get(cacheKey);
     if (cachedVideo) {
-      const videoObject = cachedVideo;
-      const session = await getServerSession(authOptions);
-      const user = session?.user;
-      if (user && videoObject.likes) {
-        videoObject.isLiked = videoObject.likes.map(likeId => likeId.toString()).includes(user.id);
-      } else {
-        videoObject.isLiked = false;
+      const parsedVideo = typeof cachedVideo === 'string' ? JSON.parse(cachedVideo) : cachedVideo;
+      if (parsedVideo && typeof parsedVideo === 'object') {
+        const session = await getServerSession(authOptions);
+        const user = session?.user;
+        const isLiked = Boolean(
+          user &&
+          Array.isArray(parsedVideo.likes) &&
+          parsedVideo.likes.some((likeId) => likeId.toString() === user.id.toString())
+        );
+        return NextResponse.json({ ...parsedVideo, isLiked });
       }
-      return NextResponse.json(videoObject);
     }
     
     await dbConnect();
 
-    const video = await Video.findById(id);
+    const video = await Video.findById(id)
+      .populate('uploader', 'username avatar')
+      .lean();
     if (!video) {
         return NextResponse.json({ message: 'Video not found' }, { status: 404 });
     }
@@ -45,24 +49,27 @@ export async function GET(request, { params }) {
     const session = await getServerSession(authOptions);
     const user = session?.user;
 
-    if (video.visibility === 'private' && video.uploader.toString() !== user?.id) {
+    const uploaderId = video.uploader?._id?.toString() || video.uploader?.toString();
+    if (video.visibility === 'private' && uploaderId !== user?.id) {
         return NextResponse.json({ message: 'This video is private' }, { status: 403 });
     }
 
-    const videoId = new mongoose.Types.ObjectId(id);
-    const aggregation = buildVideoAggregation({ _id: videoId });
-    const results = await Video.aggregate(aggregation);
-    const videoObject = results[0];
+    const commentCount = await Comment.countDocuments({ video: id });
+    const videoObject = {
+      ...video,
+      likesCount: video.likes?.length || 0,
+      commentCount,
+    };
 
     await redis.set(cacheKey, JSON.stringify(videoObject), { ex: 3600 });
 
-    if (user && videoObject.likes) {
-      videoObject.isLiked = videoObject.likes.map((likeId) => likeId.toString()).includes(user.id);
-    } else {
-      videoObject.isLiked = false;
-    }
+    const isLiked = Boolean(
+      user &&
+      Array.isArray(videoObject.likes) &&
+      videoObject.likes.some((likeId) => likeId.toString() === user.id.toString())
+    );
     
-    return NextResponse.json(videoObject);
+    return NextResponse.json({ ...videoObject, isLiked });
   } catch (error) {
     console.error("Error fetching video by ID:", error);
     return NextResponse.json({ message: "Server error" }, { status: 500 });

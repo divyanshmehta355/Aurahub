@@ -10,26 +10,27 @@ export async function POST(request, { params }) {
   await dbConnect();
   try {
     const { id } = await params;
-    await Video.findByIdAndUpdate(id, { $inc: { views: 1 } });
-
     const session = await getServerSession(authOptions);
     const user = session?.user;
 
+    const tasks = [Video.findByIdAndUpdate(id, { $inc: { views: 1 } })];
+
     if (user) {
-      await UserActivity.updateOne(
-        { userId: user.id, videoId: id, interactionType: "view" },
-        { $set: { updatedAt: new Date() } },
-        { upsert: true }
+      tasks.push(
+        UserActivity.updateOne(
+          { userId: user.id, videoId: id, interactionType: "view" },
+          { $set: { updatedAt: new Date() } },
+          { upsert: true }
+        ),
+        WatchHistory.updateOne(
+          { userId: user.id, videoId: id },
+          { $set: { updatedAt: new Date() } },
+          { upsert: true }
+        )
       );
     }
 
-    if (user) {
-      await WatchHistory.updateOne(
-        { userId: user.id, videoId: id },
-        { $set: { updatedAt: new Date() } },
-        { upsert: true }
-      );
-    }
+    await Promise.all(tasks);
 
     return NextResponse.json({ success: true });
   } catch (error) {
