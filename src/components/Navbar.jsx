@@ -16,7 +16,7 @@ import {
   FaHistory,
   FaHourglassStart,
 } from "react-icons/fa";
-import { MdDashboard, MdSubscriptions, MdPlaylistPlay, MdLogout, MdExplore, MdAmpStories } from "react-icons/md";
+import { MdDashboard, MdSubscriptions, MdPlaylistPlay, MdLogout, MdAmpStories } from "react-icons/md";
 
 const Navbar = () => {
   const { data: session, status } = useSession();
@@ -105,7 +105,6 @@ const Navbar = () => {
                         </li>
                         <div className="py-2">
                           {[
-                            { name: "Explore", icon: MdExplore, href: "/explore" },
                             { name: "Shorts", icon: MdAmpStories, href: "/shorts" },
                             { name: "My Profile", icon: FaUserEdit, href: "/my-profile" },
                             { name: "Dashboard", icon: MdDashboard, href: "/dashboard" },
@@ -197,7 +196,6 @@ const Navbar = () => {
                     <NotificationsPanel />
                   </div>
                   {[
-                    { name: "Explore", href: "/explore" },
                     { name: "Shorts", href: "/shorts" },
                     { name: "Dashboard", href: "/dashboard" },
                     { name: "My Playlists", href: "/my-playlists" },

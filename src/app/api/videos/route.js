@@ -9,11 +9,11 @@ export async function GET(request) {
         const { searchParams } = request.nextUrl;
         const sortOption = searchParams.get('sort') || 'trending';
         const page = parseInt(searchParams.get('page') || '1');
-        const limit = parseInt(searchParams.get('limit') || '12');
+        const limit = parseInt(searchParams.get('limit') || '8');
         const category = searchParams.get('category');
-        const type = searchParams.get('type') || 'standard';
+        const type = searchParams.get('type') || 'all';
 
-        const cacheKey = `videos_v2:${category || 'all'}:${sortOption}:p${page}:t${type}`;
+        const cacheKey = `videos_v4:${category || 'all'}:${sortOption}:p${page}:l${limit}:t${type}`;
 
         const cachedData = await redis.get(cacheKey);
 
@@ -26,12 +26,12 @@ export async function GET(request) {
         
         const skip = (page - 1) * limit;
         const sortCriteria = {
-            'trending': { trendingScore: -1 },
-            'date_desc': { createdAt: -1 },
-            'views_desc': { views: -1 },
-            'likes_desc': { likesCount: -1 },
-            'comments_desc': { commentCount: -1 }
-        }[sortOption] || { trendingScore: -1 };
+            'trending': { trendingScore: -1, createdAt: -1, _id: -1 },
+            'date_desc': { createdAt: -1, _id: -1 },
+            'views_desc': { views: -1, createdAt: -1, _id: -1 },
+            'likes_desc': { likesCount: -1, createdAt: -1, _id: -1 },
+            'comments_desc': { commentCount: -1, createdAt: -1, _id: -1 }
+        }[sortOption] || { trendingScore: -1, createdAt: -1, _id: -1 };
 
         const filter = { visibility: 'public' };
         if (category && category !== "All") {
@@ -40,7 +40,7 @@ export async function GET(request) {
         
         if (type === 'short') {
             filter.isShort = true;
-        } else {
+        } else if (type === 'standard') {
             filter.isShort = { $ne: true };
         }
 
@@ -55,9 +55,10 @@ export async function GET(request) {
             videos,
             currentPage: page,
             totalPages: Math.ceil(totalVideos / limit),
+            totalVideos,
         };
 
-        const cacheExpiry = type === 'short' ? 30 : 180;
+        const cacheExpiry = 30;
         await redis.set(cacheKey, JSON.stringify(responseData), { ex: cacheExpiry });
 
         return NextResponse.json(responseData);
