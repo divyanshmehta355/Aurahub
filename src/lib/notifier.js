@@ -1,5 +1,3 @@
-import axios from "axios";
-
 const NOTIFICATION_SERVER_URL =
   process.env.NOTIFICATION_SERVER_URL || "https://aurahub-go-notifier.onrender.com";
 
@@ -13,20 +11,16 @@ export async function sendRealtimeNotification(recipientId, notification) {
 
   try {
     const url = `${NOTIFICATION_SERVER_URL.replace(/\/$/, "")}/api/notify`;
-    await axios.post(
-      url,
-      {
+    await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         recipientId: recipientId.toString(),
         notification,
-      },
-      {
-        timeout: 4000,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-  } catch (error) {
+      }),
+      signal: AbortSignal.timeout(4000),
+    });
+  } catch {
     // Non-blocking: If Go Notifier is temporarily spinning up on Render free tier or offline,
     // the notification is already persisted in MongoDB so the user will still receive it.
   }

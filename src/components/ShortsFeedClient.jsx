@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import useSWRInfinite from 'swr/infinite';
 import { fetcher } from '@/lib/fetcher';
 import ShortPlayer from '@/components/ShortPlayer';
@@ -47,7 +47,7 @@ const ShortsFeedClient = () => {
         >
             {videos.map((video, index) => (
                 <div key={video._id} className="h-full w-full snap-start flex justify-center items-center">
-                    <ShortPlayer video={video} isActive={false} />
+                    <ShortPlayer video={video} />
                 </div>
             ))}
             

@@ -37,22 +37,4 @@ const safeRedis = {
     }
 };
 
-const redis = new Proxy(safeRedis, {
-    get(target, prop) {
-        if (prop in target) {
-            return target[prop];
-        }
-        if (rawRedis && typeof rawRedis[prop] === 'function') {
-            return async (...args) => {
-                try {
-                    return await rawRedis[prop](...args);
-                } catch {
-                    return null;
-                }
-            };
-        }
-        return rawRedis ? rawRedis[prop] : undefined;
-    }
-});
-
-export default redis;
+export default safeRedis;

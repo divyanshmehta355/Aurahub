@@ -7,8 +7,6 @@ import { useSession } from "next-auth/react";
 import { FaBell, FaUserCircle } from "react-icons/fa";
 import { toast } from "react-toastify";
 import Image from "next/image";
-// REMOVED: import io from 'socket.io-client';
-
 const NotificationsPanel = () => {
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
@@ -18,8 +16,6 @@ const NotificationsPanel = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef(null);
-
-  const socketRef = useRef(null);
 
   useEffect(() => {
     if (!isAuthenticated || !user) return;
