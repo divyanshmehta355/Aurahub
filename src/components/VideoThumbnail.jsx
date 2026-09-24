@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import API from '@/lib/api';
 import Image from 'next/image';
+import { getFallbackThumbnailUrl } from '@/lib/thumbnailSvg';
 
-const FALLBACK_IMAGE_URL = 'https://iili.io/Ku93A2n.png';
-
-const VideoThumbnail = ({ videoId, altText }) => {
+const VideoThumbnail = ({ videoId, altText, title, category }) => {
+    const videoTitle = title || altText;
+    const fallbackUrl = getFallbackThumbnailUrl(videoId, videoTitle, category);
     const [imageUrl, setImageUrl] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -15,7 +16,7 @@ const VideoThumbnail = ({ videoId, altText }) => {
         const fetchThumbnail = async () => {
             if (!videoId) {
                 if (isMounted) {
-                    setImageUrl(FALLBACK_IMAGE_URL);
+                    setImageUrl(fallbackUrl);
                     setIsLoading(false);
                 }
                 return;
@@ -27,9 +28,9 @@ const VideoThumbnail = ({ videoId, altText }) => {
                 }
 
             } catch (error) {
-                console.error(`Could not fetch thumbnail for ${videoId}, using fallback.`);
+                console.error(`Could not fetch thumbnail for ${videoId}, using dynamic fallback.`);
                 if (isMounted) {
-                    setImageUrl(FALLBACK_IMAGE_URL);
+                    setImageUrl(fallbackUrl);
                 }
             } finally {
                 if (isMounted) {
@@ -43,19 +44,20 @@ const VideoThumbnail = ({ videoId, altText }) => {
         return () => {
             isMounted = false;
         };
-    }, [videoId]);
+    }, [videoId, fallbackUrl]);
 
     if (isLoading) {
-        return <div className="w-full h-full bg-gray-300 animate-pulse rounded-lg"></div>;
+        return <div className="w-full h-full bg-gray-300 dark:bg-slate-800 animate-pulse rounded-lg"></div>;
     }
 
     return (
         <Image
-            src={imageUrl || FALLBACK_IMAGE_URL}
-            alt={altText}
+            src={imageUrl || fallbackUrl}
+            alt={altText || videoTitle || 'Video Thumbnail'}
             width={500}
             height={300}
-            onError={() => setImageUrl(FALLBACK_IMAGE_URL)}
+            unoptimized
+            onError={() => setImageUrl(fallbackUrl)}
             className="w-full h-full object-cover rounded-lg"
         />
     );
