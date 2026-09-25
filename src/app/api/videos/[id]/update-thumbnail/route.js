@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import axios from "axios";
 import FormData from "form-data";
+import redis from "@/lib/redis";
 
 const FREEIMAGE_API_URL = "https://freeimage.host/api/1/upload";
 
@@ -52,6 +53,7 @@ export async function POST(request, { params }) {
     if (freeimageRes.data.status_code === 200) {
       video.thumbnailUrl = freeimageRes.data.image.url;
       await video.save();
+      await redis.invalidateVideoCaches(id);
       return NextResponse.json({ thumbnailUrl: video.thumbnailUrl });
     } else {
       throw new Error("Image upload failed");

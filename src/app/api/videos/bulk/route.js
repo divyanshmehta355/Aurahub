@@ -4,6 +4,7 @@ import Video from '@/models/Video';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import mongoose from 'mongoose';
+import redis from '@/lib/redis';
 
 // Bulk Update Visibility
 export async function PUT(request) {
@@ -36,6 +37,8 @@ export async function PUT(request) {
             { _id: { $in: validIds }, uploader: session.user.id },
             { $set: { visibility } }
         );
+
+        await redis.invalidateVideoCaches(validIds);
 
         return NextResponse.json({ 
             message: 'Bulk visibility update successful', 
@@ -74,6 +77,8 @@ export async function DELETE(request) {
         const result = await Video.deleteMany(
             { _id: { $in: validIds }, uploader: session.user.id }
         );
+
+        await redis.invalidateVideoCaches(validIds);
 
         return NextResponse.json({ 
             message: 'Bulk deletion successful', 

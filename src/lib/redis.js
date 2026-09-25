@@ -95,7 +95,16 @@ const safeRedis = {
       if (!c) return null;
       const val = await c.get(key);
       if (val !== null && val !== undefined) {
-        setInMemory(key, val, 60);
+        let remTtl = 30;
+        try {
+          const ttl = await c.ttl(key);
+          if (ttl > 0) {
+            remTtl = ttl;
+          } else if (ttl === -2) {
+            return null;
+          }
+        } catch {}
+        setInMemory(key, val, Math.min(remTtl, 60));
       }
       return val;
     } catch {
@@ -104,11 +113,47 @@ const safeRedis = {
   },
 
   set: async (key, value, options) => {
-    // 1. Write to L1 in-memory cache immediately
-    const ttl = options && (typeof options.ex === 'number' ? options.ex : typeof options.EX === 'number' ? options.EX : 60);
-    setInMemory(key, value, ttl);
+    let ttlSeconds = 60;
+    let redisOptions = undefined;
 
-    // 2. Persist to Redis (L2)
+    if (typeof options === 'number') {
+      ttlSeconds = options;
+      redisOptions = { EX: options };
+    } else if (options && typeof options === 'object') {
+      const ex = typeof options.EX === 'number'
+        ? options.EX
+        : (typeof options.ex === 'number' ? options.ex : null);
+      const px = typeof options.PX === 'number'
+        ? options.PX
+        : (typeof options.px === 'number' ? options.px : null);
+
+      redisOptions = { ...options };
+
+      if (ex !== null) {
+        ttlSeconds = ex;
+        redisOptions.EX = ex;
+        delete redisOptions.ex;
+      }
+      if (px !== null) {
+        ttlSeconds = Math.max(1, Math.ceil(px / 1000));
+        redisOptions.PX = px;
+        delete redisOptions.px;
+      }
+
+      // Default to 60s if neither EX nor PX was specified (prevents unexpired ghost keys)
+      if (ex === null && px === null && !redisOptions.KEEPTTL) {
+        redisOptions.EX = 60;
+        ttlSeconds = 60;
+      }
+    } else {
+      redisOptions = { EX: 60 };
+      ttlSeconds = 60;
+    }
+
+    // 1. Write to L1 in-memory cache with exact TTL
+    setInMemory(key, value, ttlSeconds);
+
+    // 2. Persist to Redis (L2) with normalized uppercase EX/PX option
     try {
       const c = await getConnectedClient();
       if (!c) return null;
@@ -117,17 +162,15 @@ const safeRedis = {
         ? value
         : JSON.stringify(value);
 
-      if (options) {
-        return await c.set(key, payload, options);
-      }
-      return await c.set(key, payload);
-    } catch {
+      return await c.set(key, payload, redisOptions);
+    } catch (err) {
+      console.error('Redis set error:', err);
       return null;
     }
   },
 
   del: async (...args) => {
-    const keys = args.flat();
+    const keys = args.flat().filter(Boolean);
     for (const k of keys) {
       deleteFromMemory(k);
     }
@@ -137,6 +180,58 @@ const safeRedis = {
       return await c.del(keys);
     } catch {
       return null;
+    }
+  },
+
+  delPattern: async (pattern) => {
+    // 1. Remove matching keys from L1 memoryCache
+    const regex = new RegExp('^' + pattern.replace(/([.+?^=!:${}()|\[\]\/\\])/g, '\\$1').replace(/\*/g, '.*') + '$');
+    for (const k of memoryCache.keys()) {
+      if (regex.test(k)) {
+        memoryCache.delete(k);
+      }
+    }
+
+    // 2. Remove matching keys from Redis L2
+    try {
+      const c = await getConnectedClient();
+      if (!c) return null;
+
+      const keysToDelete = [];
+      for await (const key of c.scanIterator({ MATCH: pattern, COUNT: 100 })) {
+        keysToDelete.push(key);
+      }
+
+      if (keysToDelete.length > 0) {
+        for (let i = 0; i < keysToDelete.length; i += 200) {
+          await c.del(keysToDelete.slice(i, i + 200));
+        }
+        return keysToDelete.length;
+      }
+      return 0;
+    } catch (err) {
+      console.error('Error in redis.delPattern:', err);
+      return null;
+    }
+  },
+
+  invalidateVideoCaches: async (videoIds) => {
+    const ids = Array.isArray(videoIds) ? videoIds : (videoIds ? [videoIds] : []);
+
+    // Invalidate all video feed listings across categories, sort orders, and pages
+    await safeRedis.delPattern('videos_*');
+    await safeRedis.delPattern('suggestions:*');
+    await safeRedis.delPattern('recommendations:*');
+    await safeRedis.delPattern('search:*');
+
+    // Invalidate individual video caches
+    for (const id of ids) {
+      const idStr = id?.toString?.() || String(id);
+      if (idStr) {
+        await safeRedis.del(`video:${idStr}`);
+        await safeRedis.del(`stream:${idStr}`);
+        await safeRedis.delPattern(`*${idStr}*`);
+      }
     }
   },
 

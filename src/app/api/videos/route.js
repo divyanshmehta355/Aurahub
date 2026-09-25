@@ -13,13 +13,17 @@ export async function GET(request) {
         const category = searchParams.get('category');
         const type = searchParams.get('type') || 'all';
 
-        const cacheKey = `videos_v4:${category || 'all'}:${sortOption}:p${page}:l${limit}:t${type}`;
+        const cacheKey = `videos_v5:${category || 'all'}:${sortOption}:p${page}:l${limit}:t${type}`;
 
         const cachedData = await redis.get(cacheKey);
 
         if (cachedData) {
             const parsed = typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData;
-            return NextResponse.json(parsed);
+            return NextResponse.json(parsed, {
+                headers: {
+                    'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=15',
+                },
+            });
         }
         
         await dbConnect();
@@ -59,9 +63,13 @@ export async function GET(request) {
         };
 
         const cacheExpiry = 30;
-        await redis.set(cacheKey, JSON.stringify(responseData), { ex: cacheExpiry });
+        await redis.set(cacheKey, JSON.stringify(responseData), { EX: cacheExpiry });
 
-        return NextResponse.json(responseData);
+        return NextResponse.json(responseData, {
+            headers: {
+                'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=15',
+            },
+        });
 
     } catch (error) {
         console.error('Error fetching videos:', error);

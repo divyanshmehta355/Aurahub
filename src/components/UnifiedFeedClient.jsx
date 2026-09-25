@@ -93,10 +93,11 @@ const UnifiedFeedContent = () => {
     return url;
   };
 
-  const { data, error, isLoading, isValidating, size, setSize } =
+  const { data, error, isLoading, isValidating, size, setSize, mutate } =
     useSWRInfinite(getKey, fetcher, {
-      revalidateFirstPage: false,
-      revalidateOnFocus: false,
+      revalidateFirstPage: true,
+      revalidateOnFocus: true,
+      revalidateIfStale: true,
     });
 
   // Deduplicate videos across all pages

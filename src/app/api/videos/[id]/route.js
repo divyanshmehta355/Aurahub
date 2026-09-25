@@ -111,6 +111,7 @@ export async function PUT(request, { params }) {
     }
 
     const updatedVideo = await video.save();
+    await redis.invalidateVideoCaches(id);
     return NextResponse.json(updatedVideo);
   } catch (error) {
     console.error("Error updating video:", error);
@@ -147,6 +148,7 @@ export async function DELETE(request, { params }) {
 
         await Video.deleteOne({ _id: id });
         await Comment.deleteMany({ video: id });
+        await redis.invalidateVideoCaches(id);
 
         return NextResponse.json({ message: 'Video deleted successfully' });
     } catch (error) {
