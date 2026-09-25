@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import axios from "axios";
 
-const AURA_API_BASE_URL = "https://aurahub-api.ashwathama249.workers.dev";
+const AURA_API_BASE_URL = "https://aurahub-api-hono.ashwathama249.workers.dev";
 
 export async function GET(request) {
   const { searchParams } = request.nextUrl;

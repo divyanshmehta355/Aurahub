@@ -10,7 +10,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import redis from '@/lib/redis';
 import { generateVideoEmbedding } from '@/lib/gemini';
 
-const AURA_API_BASE_URL = "https://aurahub-api.ashwathama249.workers.dev";
+const AURA_API_BASE_URL = "https://aurahub-api-hono.ashwathama249.workers.dev";
 
 export async function GET(request, { params }) {
   await dbConnect();
@@ -36,14 +36,14 @@ export async function GET(request, { params }) {
         return NextResponse.json({ ...parsedVideo, isLiked });
       }
     }
-    
+
     await dbConnect();
 
     const video = await Video.findById(id)
       .populate('uploader', 'username avatar')
       .lean();
     if (!video) {
-        return NextResponse.json({ message: 'Video not found' }, { status: 404 });
+      return NextResponse.json({ message: 'Video not found' }, { status: 404 });
     }
 
     const session = await getServerSession(authOptions);
@@ -51,7 +51,7 @@ export async function GET(request, { params }) {
 
     const uploaderId = video.uploader?._id?.toString() || video.uploader?.toString();
     if (video.visibility === 'private' && uploaderId !== user?.id) {
-        return NextResponse.json({ message: 'This video is private' }, { status: 403 });
+      return NextResponse.json({ message: 'This video is private' }, { status: 403 });
     }
 
     const commentCount = await Comment.countDocuments({ video: id });
@@ -68,7 +68,7 @@ export async function GET(request, { params }) {
       Array.isArray(videoObject.likes) &&
       videoObject.likes.some((likeId) => likeId.toString() === user.id.toString())
     );
-    
+
     return NextResponse.json({ ...videoObject, isLiked });
   } catch (error) {
     console.error("Error fetching video by ID:", error);
@@ -120,39 +120,39 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
-    await dbConnect();
-    try {
-        const session = await getServerSession(authOptions);
-        const user = session?.user;
-        if (!user) {
-          return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { id } = await params;
-
-        const video = await Video.findById(id);
-        if (!video) {
-          return NextResponse.json({ message: 'Video not found' }, { status: 404 });
-        }
-        
-        if (video.uploader.toString() !== user.id) {
-            return NextResponse.json({ message: 'User not authorized to delete this video' }, { status: 403 });
-        }
-
-        try {
-            await axios.delete(`${AURA_API_BASE_URL}/fs/files/delete/${video.fileId}`);
-            console.log(`Successfully deleted file ${video.fileId} from AuraHub.`);
-        } catch (auraError) {
-            console.error(`Failed to delete file ${video.fileId} from AuraHub:`, auraError.message);
-        }
-
-        await Video.deleteOne({ _id: id });
-        await Comment.deleteMany({ video: id });
-        await redis.invalidateVideoCaches(id);
-
-        return NextResponse.json({ message: 'Video deleted successfully' });
-    } catch (error) {
-        console.error("Error deleting video:", error);
-        return NextResponse.json({ message: 'Server error while deleting video' }, { status: 500 });
+  await dbConnect();
+  try {
+    const session = await getServerSession(authOptions);
+    const user = session?.user;
+    if (!user) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
+
+    const { id } = await params;
+
+    const video = await Video.findById(id);
+    if (!video) {
+      return NextResponse.json({ message: 'Video not found' }, { status: 404 });
+    }
+
+    if (video.uploader.toString() !== user.id) {
+      return NextResponse.json({ message: 'User not authorized to delete this video' }, { status: 403 });
+    }
+
+    try {
+      await axios.delete(`${AURA_API_BASE_URL}/fs/files/delete/${video.fileId}`);
+      console.log(`Successfully deleted file ${video.fileId} from AuraHub.`);
+    } catch (auraError) {
+      console.error(`Failed to delete file ${video.fileId} from AuraHub:`, auraError.message);
+    }
+
+    await Video.deleteOne({ _id: id });
+    await Comment.deleteMany({ video: id });
+    await redis.invalidateVideoCaches(id);
+
+    return NextResponse.json({ message: 'Video deleted successfully' });
+  } catch (error) {
+    console.error("Error deleting video:", error);
+    return NextResponse.json({ message: 'Server error while deleting video' }, { status: 500 });
+  }
 }

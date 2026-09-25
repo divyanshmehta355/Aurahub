@@ -6,7 +6,7 @@ import axios from 'axios';
 import mongoose from 'mongoose';
 import { getFallbackThumbnailUrl } from '@/lib/thumbnailSvg';
 
-const AURA_API_BASE_URL = "https://aurahub-api.ashwathama249.workers.dev";
+const AURA_API_BASE_URL = "https://aurahub-api-hono.ashwathama249.workers.dev";
 const OLD_STATIC_FALLBACK = 'https://iili.io/Ku93A2n.png';
 
 export async function GET(request, { params }) {
