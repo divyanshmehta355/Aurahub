@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import useSWR from "swr";
+import useSWR, { preload } from "swr";
 import { fetcher } from "@/lib/fetcher";
 import API from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -92,15 +92,41 @@ const UnifiedFeedContent = () => {
     return url;
   }, [sortBy, currentPage, videoType, activeCategory]);
 
-  // Standard useSWR for discrete page fetching with keepPreviousData for smooth transitions
+  // Discrete page fetching without keepPreviousData so page 1 data never lingers on page 2
   const { data, error, isLoading, isValidating } = useSWR(apiEndpoint, fetcher, {
-    keepPreviousData: true,
     revalidateOnFocus: false,
   });
 
-  const videos = data?.videos || [];
+  // Verify that the data in memory actually belongs to the current page
+  const isPageLoading = isLoading || !data || (data && data.currentPage !== currentPage);
+
+  const videos = isPageLoading ? [] : (data?.videos || []);
   const totalPages = data?.totalPages || 1;
   const totalVideos = data?.totalVideos || 0;
+
+  // Background preload for adjacent pages (next and previous) for 0ms instant page switching
+  useEffect(() => {
+    if (!data) return;
+    const totalP = data.totalPages || 1;
+
+    // Preload next page into SWR cache
+    if (currentPage < totalP) {
+      let nextUrl = `/videos?sort=${sortBy}&page=${currentPage + 1}&limit=${PAGE_LIMIT}&type=${videoType}`;
+      if (activeCategory && activeCategory !== "All") {
+        nextUrl += `&category=${encodeURIComponent(activeCategory)}`;
+      }
+      preload(nextUrl, fetcher);
+    }
+
+    // Preload previous page into SWR cache
+    if (currentPage > 1) {
+      let prevUrl = `/videos?sort=${sortBy}&page=${currentPage - 1}&limit=${PAGE_LIMIT}&type=${videoType}`;
+      if (activeCategory && activeCategory !== "All") {
+        prevUrl += `&category=${encodeURIComponent(activeCategory)}`;
+      }
+      preload(prevUrl, fetcher);
+    }
+  }, [currentPage, sortBy, videoType, activeCategory, data]);
 
   // Build pagination numbers array with ellipsis
   const paginationItems = useMemo(() => {
@@ -169,10 +195,10 @@ const UnifiedFeedContent = () => {
     setCurrentPage(newPage);
     updateUrlParams(activeCategory, sortBy, videoType, newPage);
 
-    // Smooth scroll back to the top of the video grid
+    // Scroll smoothly to top of video grid with clearance for sticky navbar
     if (gridRef.current) {
-      const topOffset = gridRef.current.getBoundingClientRect().top + window.scrollY - 80;
-      window.scrollTo({ top: topOffset, behavior: "smooth" });
+      const topOffset = gridRef.current.getBoundingClientRect().top + window.scrollY - 90;
+      window.scrollTo({ top: Math.max(0, topOffset), behavior: "smooth" });
     } else {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -315,28 +341,22 @@ const UnifiedFeedContent = () => {
         ref={gridRef}
         className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 min-h-[400px]"
       >
-        {isLoading && videos.length === 0
+        {isPageLoading
           ? Array.from({ length: PAGE_LIMIT }).map((_, idx) => (
-              <VideoCardSkeleton key={idx} />
+              <VideoCardSkeleton key={`skeleton-${idx}`} />
             ))
-          : videos.map((video, idx) => (
-              <motion.div
+          : videos.map((video) => (
+              <VideoCard
                 key={video._id}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: (idx % 4) * 0.04 }}
-              >
-                <VideoCard
-                  video={video}
-                  isSaved={watchLaterIds.has(video._id)}
-                  onToggleWatchLater={() => handleToggleWatchLater(video._id)}
-                />
-              </motion.div>
+                video={video}
+                isSaved={watchLaterIds.has(video._id)}
+                onToggleWatchLater={() => handleToggleWatchLater(video._id)}
+              />
             ))}
       </div>
 
       {/* Empty State */}
-      {!isLoading && videos.length === 0 && (
+      {!isPageLoading && videos.length === 0 && (
         <div className="text-center py-16 px-4 bg-white dark:bg-slate-900/40 rounded-2xl border border-gray-100 dark:border-slate-800 my-6 shadow-sm">
           <FaCompass size={40} className="mx-auto text-indigo-400 mb-3 opacity-80" />
           <h3 className="text-lg font-bold text-gray-900 dark:text-white">
@@ -376,7 +396,7 @@ const UnifiedFeedContent = () => {
             {/* Previous Page Button */}
             <button
               onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage <= 1 || isLoading}
+              disabled={currentPage <= 1 || isPageLoading}
               aria-label="Previous Page"
               className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-gray-200 shadow-sm cursor-pointer"
             >
@@ -402,7 +422,7 @@ const UnifiedFeedContent = () => {
                 <button
                   key={item}
                   onClick={() => handlePageChange(item)}
-                  disabled={isLoading}
+                  disabled={isPageLoading}
                   aria-current={isCurrent ? "page" : undefined}
                   className={`min-w-[36px] sm:min-w-[40px] h-9 sm:h-10 px-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${
                     isCurrent
@@ -418,7 +438,7 @@ const UnifiedFeedContent = () => {
             {/* Next Page Button */}
             <button
               onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage >= totalPages || isLoading}
+              disabled={currentPage >= totalPages || isPageLoading}
               aria-label="Next Page"
               className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-gray-200 shadow-sm cursor-pointer"
             >
