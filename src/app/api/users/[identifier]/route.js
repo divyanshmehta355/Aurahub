@@ -64,7 +64,7 @@ export async function GET(request, { params }) {
       videos: videos,
     };
 
-    await redis.set(cacheKey, JSON.stringify(profileData), { ex: 900 });
+    await redis.set(cacheKey, JSON.stringify(profileData), { ex: 900, tags: [`profile:${username}`] });
 
     const session = await getServerSession(authOptions);
     const viewingUser = session?.user;

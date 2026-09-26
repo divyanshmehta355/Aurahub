@@ -199,7 +199,7 @@ export async function GET(request) {
             totalPages: Math.ceil(totalVideos / limit),
             isAiVectorSearch: true,
           };
-          await redis.set(cacheKey, JSON.stringify(responseData), { ex: 300 });
+          await redis.set(cacheKey, JSON.stringify(responseData), { ex: 300, tags: ['recommendations'] });
           return NextResponse.json(responseData);
         }
       } catch (vectorSearchError) {
@@ -368,7 +368,7 @@ export async function GET(request) {
       isAiVectorSearch: false,
     };
 
-    await redis.set(cacheKey, JSON.stringify(responseData), { ex: 300 });
+    await redis.set(cacheKey, JSON.stringify(responseData), { ex: 300, tags: ['recommendations'] });
     return NextResponse.json(responseData);
   } catch (error) {
     console.error("Error fetching recommendations:", error);

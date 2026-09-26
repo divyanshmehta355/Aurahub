@@ -1,3 +1,4 @@
+import redis from '@/lib/redis';
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Video from "@/models/Video";
@@ -61,6 +62,8 @@ export async function POST(request, { params }) {
     }
 
     await video.save();
+    await redis.del(`video:${id}`);
+    await redis.invalidateTags('videos');
     return NextResponse.json({
       likes: video.likes.length,
       isLiked: userIndex === -1,

@@ -63,7 +63,7 @@ export async function GET(request) {
         };
 
         const cacheExpiry = 30;
-        await redis.set(cacheKey, JSON.stringify(responseData), { EX: cacheExpiry });
+        await redis.set(cacheKey, JSON.stringify(responseData), { EX: cacheExpiry, tags: ['videos'] });
 
         return NextResponse.json(responseData, {
             headers: {

@@ -1,3 +1,4 @@
+import redis from '@/lib/redis';
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Video from "@/models/Video";
@@ -31,6 +32,7 @@ export async function POST(request, { params }) {
     }
 
     await Promise.all(tasks);
+    await redis.del(`video:${id}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

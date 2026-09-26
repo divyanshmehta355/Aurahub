@@ -235,7 +235,7 @@ export async function GET(request) {
 
     // Cache results for 5 minutes
     try {
-      await redis.set(cacheKey, JSON.stringify(responsePayload), { ex: 300 });
+      await redis.set(cacheKey, JSON.stringify(responsePayload), { ex: 300, tags: ['search'] });
     } catch (e) {
       // Non-blocking
     }

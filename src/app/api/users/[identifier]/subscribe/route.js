@@ -1,3 +1,4 @@
+import redis from '@/lib/redis';
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
@@ -40,6 +41,9 @@ export async function POST(request, { params }) {
         }
         
         const updatedTargetUser = await User.findById(targetUserId);
+        if (targetUser.username) {
+            await redis.invalidateProfile(targetUser.username);
+        }
         
         return NextResponse.json({
             isSubscribed: !isSubscribed,

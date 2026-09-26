@@ -53,7 +53,8 @@ export async function POST(request, { params }) {
     if (freeimageRes.data.status_code === 200) {
       video.thumbnailUrl = freeimageRes.data.image.url;
       await video.save();
-      await redis.invalidateVideoCaches(id);
+      await redis.del("thumbnail:" + id);
+      await redis.invalidateVideo({ id, uploaderUsername: session.user.name || session.user.username, fileId: video.fileId });
       return NextResponse.json({ thumbnailUrl: video.thumbnailUrl });
     } else {
       throw new Error("Image upload failed");

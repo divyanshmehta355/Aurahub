@@ -94,7 +94,11 @@ export async function POST(request) {
             );
         }
 
-        await redis.invalidateVideoCaches(newVideo._id);
+        await redis.invalidateVideo({
+            id: newVideo._id,
+            uploaderUsername: session.user.name || session.user.username,
+            fileId: videoId,
+        });
 
         return NextResponse.json(
             { message: "Video published successfully!", video: newVideo },

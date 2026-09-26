@@ -111,7 +111,11 @@ export async function PUT(request, { params }) {
     }
 
     const updatedVideo = await video.save();
-    await redis.invalidateVideoCaches(id);
+    await redis.invalidateVideo({
+      id,
+      uploaderUsername: user.name || user.username,
+      fileId: video.fileId,
+    });
     return NextResponse.json(updatedVideo);
   } catch (error) {
     console.error("Error updating video:", error);

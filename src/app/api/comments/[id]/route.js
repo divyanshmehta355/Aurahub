@@ -1,3 +1,4 @@
+import redis from '@/lib/redis';
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Comment from '@/models/Comment';
@@ -57,6 +58,9 @@ export async function DELETE(request, { params }) {
         }
 
         await Comment.deleteMany({ $or: [{ _id: id }, { parentComment: id }] });
+        if (comment.video) {
+            await redis.del(`video:${comment.video}`);
+        }
 
         return NextResponse.json({ message: 'Comment deleted successfully' });
     } catch (error) {

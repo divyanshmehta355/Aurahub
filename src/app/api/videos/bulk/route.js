@@ -39,6 +39,9 @@ export async function PUT(request) {
         );
 
         await redis.invalidateVideoCaches(validIds);
+        if (session.user.name || session.user.username) {
+            await redis.invalidateProfile(session.user.name || session.user.username);
+        }
 
         return NextResponse.json({ 
             message: 'Bulk visibility update successful', 
@@ -79,6 +82,9 @@ export async function DELETE(request) {
         );
 
         await redis.invalidateVideoCaches(validIds);
+        if (session.user.name || session.user.username) {
+            await redis.invalidateProfile(session.user.name || session.user.username);
+        }
 
         return NextResponse.json({ 
             message: 'Bulk deletion successful', 

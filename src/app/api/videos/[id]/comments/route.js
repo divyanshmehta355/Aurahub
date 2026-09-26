@@ -1,3 +1,4 @@
+import redis from '@/lib/redis';
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Comment from '@/models/Comment';
@@ -66,6 +67,7 @@ export async function POST(request, { params }) {
     });
 
     await newComment.save();
+    await redis.del(`video:${id}`);
 
     if (video.uploader.toString() !== user.id) {
       const notification = await new Notification({
