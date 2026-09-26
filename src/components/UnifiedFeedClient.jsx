@@ -1,10 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef, useCallback, Suspense } from "react";
-import { useInView } from "react-intersection-observer";
+import React, { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
-import useSWRInfinite from "swr/infinite";
 import { fetcher } from "@/lib/fetcher";
 import API from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,7 +18,8 @@ import {
   FaHeart,
   FaComments,
   FaCompass,
-  FaLayerGroup,
+  FaChevronLeft,
+  FaChevronRight,
 } from "react-icons/fa";
 
 const SORT_OPTIONS = [
@@ -31,6 +30,8 @@ const SORT_OPTIONS = [
   { id: "comments_desc", label: "Comments", icon: FaComments },
 ];
 
+const PAGE_LIMIT = 12;
+
 const UnifiedFeedContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -38,27 +39,34 @@ const UnifiedFeedContent = () => {
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
 
-  const PAGE_LIMIT = 8;
+  const gridRef = useRef(null);
 
-  const [sortBy, setSortBy] = useState(searchParams.get("sort") || "trending");
+  // Parse state from URL search params
+  const [currentPage, setCurrentPage] = useState(() => {
+    const p = parseInt(searchParams.get("page") || "1", 10);
+    return isNaN(p) || p < 1 ? 1 : p;
+  });
+  const [sortBy, setSortBy] = useState(() => searchParams.get("sort") || "trending");
   const [activeCategory, setActiveCategory] = useState(
-    searchParams.get("category") || "All"
+    () => searchParams.get("category") || "All"
   );
   const [videoType, setVideoType] = useState(
-    searchParams.get("type") || "all" // "all", "standard", "short"
+    () => searchParams.get("type") || "all" // "all", "standard", "short"
   );
-  const [hasScrolled, setHasScrolled] = useState(false);
 
-  // Only trigger auto-loading when user has deliberately scrolled
+  // Synchronize state when browser navigation (back/forward) alters URL params
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 40) {
-        setHasScrolled(true);
-      }
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    const p = parseInt(searchParams.get("page") || "1", 10);
+    const validPage = isNaN(p) || p < 1 ? 1 : p;
+    const sort = searchParams.get("sort") || "trending";
+    const cat = searchParams.get("category") || "All";
+    const type = searchParams.get("type") || "all";
+
+    setCurrentPage(validPage);
+    setSortBy(sort);
+    setActiveCategory(cat);
+    setVideoType(type);
+  }, [searchParams]);
 
   // Watch Later Cache
   const { data: watchLaterData, mutate: mutateWatchLater } = useSWR(
@@ -75,173 +83,99 @@ const UnifiedFeedContent = () => {
     );
   }, [watchLaterData]);
 
-  // Synchronize state when browser navigation (back/forward) alters URL params
-  useEffect(() => {
-    const sort = searchParams.get("sort") || "trending";
-    const cat = searchParams.get("category") || "All";
-    const type = searchParams.get("type") || "all";
-
-    if (sort !== sortBy || cat !== activeCategory || type !== videoType) {
-      setSortBy(sort);
-      setActiveCategory(cat);
-      setVideoType(type);
-      setHasScrolled(false);
-    }
-  }, [searchParams]);
-
-  // SWR Infinite Key Generator: stops requesting when last page is reached
-  const getKey = (pageIndex, previousPageData) => {
-    if (previousPageData) {
-      const vids = previousPageData.videos;
-      if (!Array.isArray(vids) || vids.length === 0 || vids.length < PAGE_LIMIT) {
-        return null;
-      }
-      if (
-        previousPageData.totalPages &&
-        previousPageData.currentPage >= previousPageData.totalPages
-      ) {
-        return null;
-      }
-    }
-
-    let url = `/videos?sort=${sortBy}&page=${pageIndex + 1}&limit=${PAGE_LIMIT}&type=${videoType}`;
+  // Construct discrete page endpoint for traditional pagination
+  const apiEndpoint = useMemo(() => {
+    let url = `/videos?sort=${sortBy}&page=${currentPage}&limit=${PAGE_LIMIT}&type=${videoType}`;
     if (activeCategory && activeCategory !== "All") {
       url += `&category=${encodeURIComponent(activeCategory)}`;
     }
     return url;
-  };
+  }, [sortBy, currentPage, videoType, activeCategory]);
 
-  // SWR Infinite configured to prevent cascading re-fetches on scroll
-  const { data, error, isLoading, isValidating, size, setSize, mutate } =
-    useSWRInfinite(getKey, fetcher, {
-      revalidateFirstPage: false,
-      revalidateAll: false,
-      revalidateOnFocus: false,
-      revalidateIfStale: false,
-      persistSize: false,
-    });
-
-  // Deduplicate videos across all pages
-  const videos = useMemo(() => {
-    if (!data) return [];
-    const seen = new Set();
-    const result = [];
-    for (const page of data) {
-      if (Array.isArray(page?.videos)) {
-        for (const v of page.videos) {
-          if (v && v._id && !seen.has(v._id)) {
-            seen.add(v._id);
-            result.push(v);
-          }
-        }
-      }
-    }
-    return result;
-  }, [data]);
-
-  const totalVideos = data?.[0]?.totalVideos ?? videos.length;
-  const lastPage = data?.[data.length - 1];
-
-  const isEmpty = Boolean(data?.[0]?.videos && data[0].videos.length === 0);
-
-  const isReachingEnd = Boolean(
-    isEmpty ||
-      (data &&
-        (lastPage?.videos?.length === 0 ||
-          (lastPage?.totalPages && lastPage?.currentPage >= lastPage?.totalPages) ||
-          (lastPage?.videos && lastPage.videos.length < PAGE_LIMIT) ||
-          (lastPage?.totalVideos !== undefined && videos.length >= lastPage.totalVideos)))
-  );
-
-  const isLoadingMore =
-    isLoading ||
-    isValidating ||
-    Boolean(size > 0 && data && typeof data[size - 1] === "undefined");
-
-  // In-flight and cooldown locks to break infinite request loops
-  const isFetchingRef = useRef(false);
-  const wasLoadingMoreRef = useRef(false);
-
-  useEffect(() => {
-    if (isLoadingMore) {
-      isFetchingRef.current = true;
-    } else {
-      const timer = setTimeout(() => {
-        isFetchingRef.current = false;
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoadingMore]);
-
-  // Load more handler
-  const handleLoadMore = useCallback(() => {
-    if (isReachingEnd || isLoadingMore || isFetchingRef.current) return;
-    setHasScrolled(true);
-    isFetchingRef.current = true;
-    setSize((prev) => prev + 1);
-  }, [isReachingEnd, isLoadingMore, setSize]);
-
-  // Intersection observer for sentinel
-  const { ref, inView } = useInView({
-    threshold: 0,
-    rootMargin: "200px",
+  // Standard useSWR for discrete page fetching with keepPreviousData for smooth transitions
+  const { data, error, isLoading, isValidating } = useSWR(apiEndpoint, fetcher, {
+    keepPreviousData: true,
+    revalidateOnFocus: false,
   });
 
-  // Infinite scroll trigger: ONLY trigger when sentinel is in view and user has scrolled.
-  // Explicitly ignore effect runs caused merely by loading finishing.
-  useEffect(() => {
-    const justFinishedLoading = wasLoadingMoreRef.current && !isLoadingMore;
-    wasLoadingMoreRef.current = isLoadingMore;
+  const videos = data?.videos || [];
+  const totalPages = data?.totalPages || 1;
+  const totalVideos = data?.totalVideos || 0;
 
-    if (justFinishedLoading) {
-      return;
+  // Build pagination numbers array with ellipsis
+  const paginationItems = useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
-
-    if (
-      inView &&
-      hasScrolled &&
-      !isReachingEnd &&
-      !isLoadingMore &&
-      !isFetchingRef.current
-    ) {
-      handleLoadMore();
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, 5, "...", totalPages];
     }
-  }, [inView, hasScrolled, isReachingEnd, isLoadingMore, handleLoadMore]);
+    if (currentPage >= totalPages - 3) {
+      return [
+        1,
+        "...",
+        totalPages - 4,
+        totalPages - 3,
+        totalPages - 2,
+        totalPages - 1,
+        totalPages,
+      ];
+    }
+    return [
+      1,
+      "...",
+      currentPage - 1,
+      currentPage,
+      currentPage + 1,
+      "...",
+      totalPages,
+    ];
+  }, [currentPage, totalPages]);
 
-  // Handlers - Reset pagination size to 1 when filters change to prevent bulk page refetches
-  const handleCategoryClick = (category) => {
-    const nextCat = activeCategory === category ? "All" : category;
-    setActiveCategory(nextCat);
-    setSize(1);
-    setHasScrolled(false);
-    isFetchingRef.current = false;
-    updateUrlParams(nextCat, sortBy, videoType);
-  };
-
-  const handleSortChange = (newSort) => {
-    setSortBy(newSort);
-    setSize(1);
-    setHasScrolled(false);
-    isFetchingRef.current = false;
-    updateUrlParams(activeCategory, newSort, videoType);
-  };
-
-  const handleTypeChange = (newType) => {
-    setVideoType(newType);
-    setSize(1);
-    setHasScrolled(false);
-    isFetchingRef.current = false;
-    updateUrlParams(activeCategory, sortBy, newType);
-  };
-
-  const updateUrlParams = (cat, sort, type) => {
+  // URL updater
+  const updateUrlParams = (cat, sort, type, page = 1) => {
     const params = new URLSearchParams();
     if (cat && cat !== "All") params.set("category", cat);
     if (sort && sort !== "trending") params.set("sort", sort);
     if (type && type !== "all") params.set("type", type);
+    if (page && page > 1) params.set("page", page.toString());
     const queryString = params.toString();
     const targetUrl = queryString ? `/?${queryString}` : "/";
-    router.replace(targetUrl, { scroll: false });
+    router.push(targetUrl, { scroll: false });
+  };
+
+  // Filter change handlers (always reset to page 1)
+  const handleCategoryClick = (category) => {
+    const nextCat = activeCategory === category ? "All" : category;
+    setActiveCategory(nextCat);
+    setCurrentPage(1);
+    updateUrlParams(nextCat, sortBy, videoType, 1);
+  };
+
+  const handleSortChange = (newSort) => {
+    setSortBy(newSort);
+    setCurrentPage(1);
+    updateUrlParams(activeCategory, newSort, videoType, 1);
+  };
+
+  const handleTypeChange = (newType) => {
+    setVideoType(newType);
+    setCurrentPage(1);
+    updateUrlParams(activeCategory, sortBy, newType, 1);
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
+    setCurrentPage(newPage);
+    updateUrlParams(activeCategory, sortBy, videoType, newPage);
+
+    // Smooth scroll back to the top of the video grid
+    if (gridRef.current) {
+      const topOffset = gridRef.current.getBoundingClientRect().top + window.scrollY - 80;
+      window.scrollTo({ top: topOffset, behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const handleToggleWatchLater = async (videoId) => {
@@ -271,6 +205,9 @@ const UnifiedFeedContent = () => {
 
   const currentSortObj =
     SORT_OPTIONS.find((s) => s.id === sortBy) || SORT_OPTIONS[0];
+
+  const startIndex = totalVideos > 0 ? (currentPage - 1) * PAGE_LIMIT + 1 : 0;
+  const endIndex = Math.min(currentPage * PAGE_LIMIT, totalVideos);
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
@@ -310,9 +247,12 @@ const UnifiedFeedContent = () => {
                 ? `${currentSortObj.label} Videos`
                 : `${activeCategory} Videos`}
             </h1>
+            {isValidating && !isLoading && (
+              <div className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" title="Refreshing..." />
+            )}
           </div>
           <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Browse trending, popular, and latest uploads in one unified place.
+            Browse trending, popular, and latest uploads with traditional page navigation.
           </p>
         </div>
 
@@ -339,7 +279,7 @@ const UnifiedFeedContent = () => {
             ))}
           </div>
 
-          {/* Quick Sort Tabs on larger screens, Dropdown on small */}
+          {/* Quick Sort Dropdown */}
           <div className="flex items-center space-x-2">
             <label
               htmlFor="unified-sort"
@@ -371,9 +311,12 @@ const UnifiedFeedContent = () => {
       )}
 
       {/* 3. Responsive Video Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div
+        ref={gridRef}
+        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 min-h-[400px]"
+      >
         {isLoading && videos.length === 0
-          ? Array.from({ length: 8 }).map((_, idx) => (
+          ? Array.from({ length: PAGE_LIMIT }).map((_, idx) => (
               <VideoCardSkeleton key={idx} />
             ))
           : videos.map((video, idx) => (
@@ -381,7 +324,7 @@ const UnifiedFeedContent = () => {
                 key={video._id}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, delay: (idx % 8) * 0.03 }}
+                transition={{ duration: 0.2, delay: (idx % 4) * 0.04 }}
               >
                 <VideoCard
                   video={video}
@@ -415,34 +358,76 @@ const UnifiedFeedContent = () => {
         </div>
       )}
 
-      {/* 4. Infinite Scroll Sentinel & Load More Fallback */}
-      <div
-        ref={ref}
-        className="py-10 flex flex-col items-center justify-center space-y-3"
-      >
-        {isLoadingMore && (
-          <div className="flex items-center space-x-2 text-indigo-600 dark:text-indigo-400 font-semibold text-xs sm:text-sm">
-            <div className="w-4 h-4 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin" />
-            <span>Loading more videos...</span>
+      {/* 4. Traditional Pagination Navigation Bar */}
+      {totalPages > 1 && (
+        <nav
+          aria-label="Pagination Navigation"
+          className="mt-10 pt-6 border-t border-gray-100 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4"
+        >
+          {/* Summary / Range text */}
+          <div className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 order-2 sm:order-1">
+            Showing <span className="font-bold text-gray-900 dark:text-white">{startIndex}</span>–
+            <span className="font-bold text-gray-900 dark:text-white">{endIndex}</span> of{" "}
+            <span className="font-bold text-gray-900 dark:text-white">{totalVideos}</span> videos
           </div>
-        )}
 
-        {!isReachingEnd && !isLoadingMore && videos.length > 0 && (
-          <button
-            type="button"
-            onClick={handleLoadMore}
-            className="px-6 py-2.5 bg-white dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-800 dark:text-gray-200 font-bold text-xs sm:text-sm rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
-          >
-            Load More Videos
-          </button>
-        )}
+          {/* Pagination Controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2 order-1 sm:order-2">
+            {/* Previous Page Button */}
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage <= 1 || isLoading}
+              aria-label="Previous Page"
+              className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-gray-200 shadow-sm cursor-pointer"
+            >
+              <FaChevronLeft className="w-3 h-3" />
+              <span>Prev</span>
+            </button>
 
-        {isReachingEnd && videos.length > 0 && (
-          <div className="text-center py-3 px-6 rounded-2xl bg-gray-50 dark:bg-slate-800/40 border border-gray-200/60 dark:border-slate-800 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
-            🎉 You've reached the end of the feed.
+            {/* Page Number Buttons */}
+            {paginationItems.map((item, idx) => {
+              if (item === "...") {
+                return (
+                  <span
+                    key={`ellipsis-${idx}`}
+                    className="w-8 h-9 sm:h-10 flex items-center justify-center text-xs sm:text-sm text-gray-400 dark:text-gray-500 select-none"
+                  >
+                    …
+                  </span>
+                );
+              }
+
+              const isCurrent = item === currentPage;
+              return (
+                <button
+                  key={item}
+                  onClick={() => handlePageChange(item)}
+                  disabled={isLoading}
+                  aria-current={isCurrent ? "page" : undefined}
+                  className={`min-w-[36px] sm:min-w-[40px] h-9 sm:h-10 px-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${
+                    isCurrent
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/25 scale-105"
+                      : "bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-gray-300"
+                  }`}
+                >
+                  {item}
+                </button>
+              );
+            })}
+
+            {/* Next Page Button */}
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage >= totalPages || isLoading}
+              aria-label="Next Page"
+              className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-gray-200 shadow-sm cursor-pointer"
+            >
+              <span>Next</span>
+              <FaChevronRight className="w-3 h-3" />
+            </button>
           </div>
-        )}
-      </div>
+        </nav>
+      )}
     </main>
   );
 };
@@ -454,7 +439,7 @@ const UnifiedFeedClient = () => {
         <div className="container mx-auto px-4 sm:px-6 py-8">
           <div className="h-10 bg-gray-100 dark:bg-slate-800 rounded-full w-2/3 mb-8 animate-pulse" />
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 8 }).map((_, i) => (
+            {Array.from({ length: PAGE_LIMIT }).map((_, i) => (
               <VideoCardSkeleton key={i} />
             ))}
           </div>
