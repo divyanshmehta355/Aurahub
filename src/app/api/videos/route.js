@@ -37,7 +37,7 @@ export async function GET(request) {
             'comments_desc': { commentCount: -1, createdAt: -1, _id: -1 }
         }[sortOption] || { trendingScore: -1, createdAt: -1, _id: -1 };
 
-        const filter = { visibility: 'public' };
+        const filter = { visibility: 'public', streamtapeStatus: { $ne: 'dead' } };
         if (category && category !== "All") {
             filter.category = category;
         }

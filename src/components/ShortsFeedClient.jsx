@@ -7,21 +7,39 @@ import ShortPlayer from '@/components/ShortPlayer';
 
 const ShortsFeedClient = () => {
     const getKey = (pageIndex, previousPageData) => {
-        if (previousPageData && !previousPageData.videos?.length) return null;
+        if (previousPageData && (!previousPageData.videos?.length || previousPageData.videos.length < 5)) return null;
         return `/videos?sort=trending&type=short&page=${pageIndex + 1}&limit=5`;
     };
 
     const { data, error, isLoading, isValidating, size, setSize } = useSWRInfinite(
         getKey,
         fetcher,
-        { revalidateFirstPage: false }
+        {
+            revalidateFirstPage: false,
+            revalidateAll: false,
+            revalidateOnFocus: false,
+            revalidateIfStale: false,
+            persistSize: false,
+        }
     );
 
-    const videos = data ? data.flatMap(page => page.videos) : [];
+    const videos = data ? data.flatMap(page => page.videos || []) : [];
     const isEmpty = data?.[0]?.videos?.length === 0;
-    const isReachingEnd = isEmpty || (data && data[data.length - 1]?.videos?.length < 5);
+    const isReachingEnd = isEmpty || Boolean(data && data[data.length - 1]?.videos?.length < 5);
 
     const containerRef = useRef(null);
+    const isFetchingRef = useRef(false);
+
+    useEffect(() => {
+        if (isValidating || isLoading) {
+            isFetchingRef.current = true;
+        } else {
+            const timer = setTimeout(() => {
+                isFetchingRef.current = false;
+            }, 400);
+            return () => clearTimeout(timer);
+        }
+    }, [isValidating, isLoading]);
 
     // Keyboard navigation (Arrow keys / J / K)
     useEffect(() => {
@@ -52,15 +70,16 @@ const ShortsFeedClient = () => {
 
         const handleScroll = () => {
             if (container.scrollTop + container.clientHeight >= container.scrollHeight - 200) {
-                if (!isReachingEnd && !isValidating) {
-                    setSize(size + 1);
+                if (!isReachingEnd && !isValidating && !isLoading && !isFetchingRef.current) {
+                    isFetchingRef.current = true;
+                    setSize((prev) => prev + 1);
                 }
             }
         };
 
         container.addEventListener('scroll', handleScroll);
         return () => container.removeEventListener('scroll', handleScroll);
-    }, [isReachingEnd, isValidating, setSize, size]);
+    }, [isReachingEnd, isValidating, isLoading, setSize]);
 
     return (
         <div 

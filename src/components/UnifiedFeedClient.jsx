@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback, Suspense } from "react";
 import { useInView } from "react-intersection-observer";
 import { useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
@@ -75,15 +75,33 @@ const UnifiedFeedContent = () => {
     );
   }, [watchLaterData]);
 
-  // SWR Infinite Key Generator
+  // Synchronize state when browser navigation (back/forward) alters URL params
+  useEffect(() => {
+    const sort = searchParams.get("sort") || "trending";
+    const cat = searchParams.get("category") || "All";
+    const type = searchParams.get("type") || "all";
+
+    if (sort !== sortBy || cat !== activeCategory || type !== videoType) {
+      setSortBy(sort);
+      setActiveCategory(cat);
+      setVideoType(type);
+      setHasScrolled(false);
+    }
+  }, [searchParams]);
+
+  // SWR Infinite Key Generator: stops requesting when last page is reached
   const getKey = (pageIndex, previousPageData) => {
-    if (
-      previousPageData &&
-      (!previousPageData.videos?.length ||
-        (previousPageData.totalPages &&
-          previousPageData.currentPage >= previousPageData.totalPages))
-    ) {
-      return null;
+    if (previousPageData) {
+      const vids = previousPageData.videos;
+      if (!Array.isArray(vids) || vids.length === 0 || vids.length < PAGE_LIMIT) {
+        return null;
+      }
+      if (
+        previousPageData.totalPages &&
+        previousPageData.currentPage >= previousPageData.totalPages
+      ) {
+        return null;
+      }
     }
 
     let url = `/videos?sort=${sortBy}&page=${pageIndex + 1}&limit=${PAGE_LIMIT}&type=${videoType}`;
@@ -93,11 +111,14 @@ const UnifiedFeedContent = () => {
     return url;
   };
 
+  // SWR Infinite configured to prevent cascading re-fetches on scroll
   const { data, error, isLoading, isValidating, size, setSize, mutate } =
     useSWRInfinite(getKey, fetcher, {
-      revalidateFirstPage: true,
-      revalidateOnFocus: true,
-      revalidateIfStale: true,
+      revalidateFirstPage: false,
+      revalidateAll: false,
+      revalidateOnFocus: false,
+      revalidateIfStale: false,
+      persistSize: false,
     });
 
   // Deduplicate videos across all pages
@@ -121,43 +142,95 @@ const UnifiedFeedContent = () => {
   const totalVideos = data?.[0]?.totalVideos ?? videos.length;
   const lastPage = data?.[data.length - 1];
 
+  const isEmpty = Boolean(data?.[0]?.videos && data[0].videos.length === 0);
+
   const isReachingEnd = Boolean(
-    data &&
-      (lastPage?.videos?.length === 0 ||
-        (lastPage?.totalPages && lastPage?.currentPage >= lastPage?.totalPages) ||
-        (lastPage?.videos && lastPage.videos.length < PAGE_LIMIT) ||
-        videos.length >= totalVideos)
+    isEmpty ||
+      (data &&
+        (lastPage?.videos?.length === 0 ||
+          (lastPage?.totalPages && lastPage?.currentPage >= lastPage?.totalPages) ||
+          (lastPage?.videos && lastPage.videos.length < PAGE_LIMIT) ||
+          (lastPage?.totalVideos !== undefined && videos.length >= lastPage.totalVideos)))
   );
 
-  // Intersection observer: only trigger when user has actually scrolled down
-  const { ref, inView } = useInView({
-    threshold: 0.1,
-    rootMargin: "150px",
-  });
+  const isLoadingMore =
+    isLoading ||
+    isValidating ||
+    Boolean(size > 0 && data && typeof data[size - 1] === "undefined");
+
+  // In-flight and cooldown locks to break infinite request loops
+  const isFetchingRef = useRef(false);
+  const wasLoadingMoreRef = useRef(false);
 
   useEffect(() => {
-    if (hasScrolled && inView && !isReachingEnd && !isValidating && !isLoading) {
-      setSize((prev) => prev + 1);
+    if (isLoadingMore) {
+      isFetchingRef.current = true;
+    } else {
+      const timer = setTimeout(() => {
+        isFetchingRef.current = false;
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [hasScrolled, inView, isReachingEnd, isValidating, isLoading, setSize]);
+  }, [isLoadingMore]);
 
-  // Handlers
+  // Load more handler
+  const handleLoadMore = useCallback(() => {
+    if (isReachingEnd || isLoadingMore || isFetchingRef.current) return;
+    setHasScrolled(true);
+    isFetchingRef.current = true;
+    setSize((prev) => prev + 1);
+  }, [isReachingEnd, isLoadingMore, setSize]);
+
+  // Intersection observer for sentinel
+  const { ref, inView } = useInView({
+    threshold: 0,
+    rootMargin: "200px",
+  });
+
+  // Infinite scroll trigger: ONLY trigger when sentinel is in view and user has scrolled.
+  // Explicitly ignore effect runs caused merely by loading finishing.
+  useEffect(() => {
+    const justFinishedLoading = wasLoadingMoreRef.current && !isLoadingMore;
+    wasLoadingMoreRef.current = isLoadingMore;
+
+    if (justFinishedLoading) {
+      return;
+    }
+
+    if (
+      inView &&
+      hasScrolled &&
+      !isReachingEnd &&
+      !isLoadingMore &&
+      !isFetchingRef.current
+    ) {
+      handleLoadMore();
+    }
+  }, [inView, hasScrolled, isReachingEnd, isLoadingMore, handleLoadMore]);
+
+  // Handlers - Reset pagination size to 1 when filters change to prevent bulk page refetches
   const handleCategoryClick = (category) => {
     const nextCat = activeCategory === category ? "All" : category;
     setActiveCategory(nextCat);
+    setSize(1);
     setHasScrolled(false);
+    isFetchingRef.current = false;
     updateUrlParams(nextCat, sortBy, videoType);
   };
 
   const handleSortChange = (newSort) => {
     setSortBy(newSort);
+    setSize(1);
     setHasScrolled(false);
+    isFetchingRef.current = false;
     updateUrlParams(activeCategory, newSort, videoType);
   };
 
   const handleTypeChange = (newType) => {
     setVideoType(newType);
+    setSize(1);
     setHasScrolled(false);
+    isFetchingRef.current = false;
     updateUrlParams(activeCategory, sortBy, newType);
   };
 
@@ -347,20 +420,17 @@ const UnifiedFeedContent = () => {
         ref={ref}
         className="py-10 flex flex-col items-center justify-center space-y-3"
       >
-        {isValidating && !isLoading && (
+        {isLoadingMore && (
           <div className="flex items-center space-x-2 text-indigo-600 dark:text-indigo-400 font-semibold text-xs sm:text-sm">
             <div className="w-4 h-4 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin" />
             <span>Loading more videos...</span>
           </div>
         )}
 
-        {!isReachingEnd && !isValidating && videos.length > 0 && (
+        {!isReachingEnd && !isLoadingMore && videos.length > 0 && (
           <button
             type="button"
-            onClick={() => {
-              setHasScrolled(true);
-              setSize((prev) => prev + 1);
-            }}
+            onClick={handleLoadMore}
             className="px-6 py-2.5 bg-white dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-800 dark:text-gray-200 font-bold text-xs sm:text-sm rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
           >
             Load More Videos

@@ -1,20 +1,25 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 import useSWRInfinite from "swr/infinite";
 import { fetcher } from "@/lib/fetcher";
 import SuggestedVideoCard from "@/components/SuggestedVideoCard";
 import { useInView } from "react-intersection-observer";
 
 const VideoRecommendations = ({ videoId, isAuthenticated }) => {
-  const { ref, inView } = useInView({ threshold: 0.5 });
+  const { ref, inView } = useInView({ threshold: 0.2 });
 
   const endpoint = isAuthenticated ? "/videos/recommendations" : "/videos/suggestions";
 
   const getKey = (pageIndex, previousPageData) => {
-    // reached the end
-    if (previousPageData && previousPageData.videos && previousPageData.videos.length === 0) return null;
-    if (previousPageData && !previousPageData.videos && previousPageData.length === 0) return null;
+    // Reached the end
+    if (previousPageData) {
+      const vids = previousPageData.videos || (Array.isArray(previousPageData) ? previousPageData : null);
+      if (!vids || vids.length === 0 || vids.length < 10) return null;
+      if (previousPageData.totalPages && previousPageData.currentPage >= previousPageData.totalPages) {
+        return null;
+      }
+    }
 
     // add the cursor to the API endpoint
     return `${endpoint}?page=${pageIndex + 1}&limit=10&exclude=${videoId}`;
@@ -22,22 +27,66 @@ const VideoRecommendations = ({ videoId, isAuthenticated }) => {
 
   const { data, error, isLoading, isValidating, size, setSize } = useSWRInfinite(
     getKey,
-    fetcher
+    fetcher,
+    {
+      revalidateFirstPage: false,
+      revalidateAll: false,
+      revalidateOnFocus: false,
+      revalidateIfStale: false,
+      persistSize: false,
+    }
   );
 
   const videos = data 
-    ? data.flatMap(page => page.videos || page)
+    ? data.flatMap(page => page.videos || (Array.isArray(page) ? page : []))
     : [];
 
+  const lastPage = data?.[data.length - 1];
+  const lastPageVids = lastPage?.videos || (Array.isArray(lastPage) ? lastPage : []);
   const isEmpty = data?.[0]?.length === 0 || data?.[0]?.videos?.length === 0;
   const isReachingEnd =
-    isEmpty || (data && data[data.length - 1]?.videos?.length < 10) || (data && data[data.length - 1]?.length < 10);
-  
+    isEmpty ||
+    Boolean(
+      data &&
+        (lastPageVids.length < 10 ||
+          (lastPage?.totalPages && lastPage?.currentPage >= lastPage?.totalPages))
+    );
+
+  const isLoadingMore =
+    isLoading ||
+    isValidating ||
+    Boolean(size > 0 && data && typeof data[size - 1] === "undefined");
+
+  const isFetchingRef = useRef(false);
+  const wasLoadingMoreRef = useRef(false);
+
   useEffect(() => {
-    if (inView && !isReachingEnd && !isValidating) {
-      setSize(size + 1);
+    if (isLoadingMore) {
+      isFetchingRef.current = true;
+    } else {
+      const timer = setTimeout(() => {
+        isFetchingRef.current = false;
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [inView, isReachingEnd, isValidating, setSize, size]);
+  }, [isLoadingMore]);
+
+  const handleLoadMore = useCallback(() => {
+    if (isReachingEnd || isLoadingMore || isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    setSize((prev) => prev + 1);
+  }, [isReachingEnd, isLoadingMore, setSize]);
+
+  useEffect(() => {
+    const justFinishedLoading = wasLoadingMoreRef.current && !isLoadingMore;
+    wasLoadingMoreRef.current = isLoadingMore;
+
+    if (justFinishedLoading) return;
+
+    if (inView && !isReachingEnd && !isLoadingMore && !isFetchingRef.current) {
+      handleLoadMore();
+    }
+  }, [inView, isReachingEnd, isLoadingMore, handleLoadMore]);
 
   if (error) {
     return <div className="text-red-500">Failed to load recommendations.</div>;
@@ -53,8 +102,8 @@ const VideoRecommendations = ({ videoId, isAuthenticated }) => {
           <SuggestedVideoCard key={sidebarVideo._id} video={sidebarVideo} />
         ))}
         
-        {(isLoading || isValidating) && (
-          Array.from({ length: 5 }).map((_, index) => (
+        {isLoadingMore && (
+          Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="flex space-x-3 animate-pulse">
               <div className="flex-shrink-0 w-40 h-24 bg-gray-200 dark:bg-slate-800 rounded-lg"></div>
               <div className="flex-1 space-y-3 py-1">
@@ -66,8 +115,8 @@ const VideoRecommendations = ({ videoId, isAuthenticated }) => {
         )}
 
         <div ref={ref} className="h-10">
-          {!isReachingEnd && !isLoading && !isValidating && (
-             <p className="text-center text-sm font-medium text-gray-500 dark:text-gray-400 mt-4">
+          {!isReachingEnd && !isLoadingMore && (
+             <p className="text-center text-sm font-medium text-gray-500 dark:text-gray-400 mt-4 cursor-pointer" onClick={handleLoadMore}>
                Loading more...
              </p>
           )}

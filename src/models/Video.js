@@ -57,6 +57,27 @@ const videoSchema = new mongoose.Schema({
         default: undefined,
         select: false,
     },
+    streamtapeUrl: {
+        type: String,
+        required: false,
+    },
+    lastRefreshedAt: {
+        type: Date,
+        default: Date.now,
+    },
+    pendingRemoteUploadId: {
+        type: String,
+        default: null,
+    },
+    streamtapeStatus: {
+        type: String,
+        enum: ['active', 'dead', 'pending'],
+        default: 'active',
+    },
+    cloneAttempts: {
+        type: Number,
+        default: 0,
+    },
 }, { timestamps: true });
 
 videoSchema.index({
@@ -73,6 +94,8 @@ videoSchema.index({ visibility: 1, isShort: 1, createdAt: -1 });
 videoSchema.index({ visibility: 1, isShort: 1, views: -1 });
 videoSchema.index({ visibility: 1, category: 1, isShort: 1, createdAt: -1 });
 videoSchema.index({ visibility: 1, category: 1, isShort: 1, views: -1 });
+videoSchema.index({ streamtapeStatus: 1, lastRefreshedAt: 1, createdAt: 1 });
+videoSchema.index({ pendingRemoteUploadId: 1 }, { sparse: true });
 
 
 const Video = mongoose.models.Video || mongoose.model('Video', videoSchema);

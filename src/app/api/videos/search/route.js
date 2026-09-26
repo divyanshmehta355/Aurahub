@@ -144,6 +144,7 @@ export async function GET(request) {
     try {
       const keywordResults = await Video.find({
         visibility: "public",
+        streamtapeStatus: { $ne: "dead" },
         $or: orConditions,
       })
         .populate("uploader", "username avatar")
@@ -186,6 +187,7 @@ export async function GET(request) {
     if (candidateMap.size === 0 && didYouMean) {
       const fallbackResults = await Video.find({
         visibility: "public",
+        streamtapeStatus: { $ne: "dead" },
         $or: [
           { title: { $regex: didYouMean, $options: "i" } },
           { description: { $regex: didYouMean, $options: "i" } },
