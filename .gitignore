@@ -99,3 +99,6 @@ sketch
 .env.production.local
 *.env
 !.env.example
+# AI Agent Files
+.agents/
+graphify-out/

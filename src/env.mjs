@@ -18,7 +18,6 @@ const rawEnv = createEnv({
     JWT_SECRET: z.string().optional(),
     NOTIFICATION_SERVER_URL: z.string().optional(),
     UPLOAD_FOLDER_ID: z.string().optional(),
-    GEMINI_API_KEY: z.string().optional(),
   },
   client: {
     NEXT_PUBLIC_NOTIFICATION_SERVER_URL: z.string().optional(),

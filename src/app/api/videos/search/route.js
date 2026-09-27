@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Video from "@/models/Video";
-import { generateEmbedding, correctSearchQuery } from "@/lib/gemini";
 import redis from "@/lib/redis";
 import mongoose from "mongoose";
 
@@ -15,11 +14,11 @@ export async function GET(request) {
     const sortOption = searchParams.get("sort") || "relevance";
 
     if (!rawQuery || !rawQuery.trim()) {
-      return NextResponse.json({ videos: [], didYouMean: null });
+      return NextResponse.json({ videos: [], query: rawQuery, total: 0 });
     }
 
     const searchQuery = rawQuery.trim();
-    const cacheKey = `search_ai_v1:${encodeURIComponent(searchQuery)}:${sortOption}`;
+    const cacheKey = `search_fuzzy_v3:${encodeURIComponent(searchQuery)}:${sortOption}`;
 
     // Check Redis cache
     try {
@@ -32,31 +31,95 @@ export async function GET(request) {
       // Non-blocking cache error
     }
 
-    // Run AI Query Spell-Check & Query Embedding in parallel
-    const [didYouMean, queryVector] = await Promise.all([
-      correctSearchQuery(searchQuery).catch(() => null),
-      generateEmbedding(searchQuery).catch(() => null),
-    ]);
+    const candidateMap = new Map();
+    let usedAtlasSearch = false;
 
-    // Build words and search patterns
-    const terms = [searchQuery];
-    if (didYouMean && didYouMean.toLowerCase() !== searchQuery.toLowerCase()) {
-      terms.push(didYouMean);
+    // 1. Try MongoDB Atlas Search with fuzzy matching
+    try {
+      const atlasPipeline = [
+        {
+          $search: {
+            index: "default", // Assuming the default Atlas search index name
+            text: {
+              query: searchQuery,
+              path: ["title", "description", "category", "tags"],
+              fuzzy: {
+                maxEdits: 2,
+                prefixLength: 1,
+              },
+            },
+          },
+        },
+        {
+          $match: {
+            visibility: "public",
+            streamtapeStatus: { $ne: "dead" },
+          },
+        },
+        { $limit: 30 },
+        {
+          $lookup: {
+            from: "users",
+            localField: "uploader",
+            foreignField: "_id",
+            as: "uploaderDetails",
+          },
+        },
+        {
+          $unwind: {
+            path: "$uploaderDetails",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $addFields: {
+            searchScore: { $meta: "searchScore" },
+            likesCount: { $size: { $ifNull: ["$likes", []] } },
+            uploader: {
+              _id: "$uploaderDetails._id",
+              username: "$uploaderDetails.username",
+              avatar: "$uploaderDetails.avatar",
+            },
+          },
+        },
+        {
+          $project: {
+            uploaderDetails: 0,
+          },
+        },
+      ];
+
+      const atlasResults = await Video.aggregate(atlasPipeline);
+
+      if (atlasResults && atlasResults.length > 0) {
+        usedAtlasSearch = true;
+        atlasResults.forEach((v) => {
+          candidateMap.set(v._id.toString(), {
+            ...v,
+            matchType: "atlas_fuzzy",
+            // Amplify Atlas score to match our old scale somewhat
+            searchScore: (v.searchScore || 1) * 20, 
+          });
+        });
+      }
+    } catch (atlasErr) {
+      // Graceful fallback if Atlas Search is not available or index 'default' does not exist
+      console.warn("Atlas Search failed or index missing, falling back to regex:", atlasErr.message);
     }
 
-    // Build flexible multi-field fuzzy regex conditions
-    const orConditions = [];
-
-    terms.forEach((term) => {
-      const words = term.split(/\s+/).filter(Boolean);
+    // 2. Fallback to Regex Search if Atlas Search wasn't used or yielded no results
+    if (!usedAtlasSearch || candidateMap.size === 0) {
+      // Build flexible multi-field fuzzy regex conditions
+      const orConditions = [];
+      const words = searchQuery.split(/\s+/).filter(Boolean);
       const flexiblePattern = words.join(".*");
 
       // Phrase / flexible pattern match
       orConditions.push(
         { title: { $regex: flexiblePattern, $options: "i" } },
         { description: { $regex: flexiblePattern, $options: "i" } },
-        { category: { $regex: term, $options: "i" } },
-        { tags: { $in: [new RegExp(term, "i")] } }
+        { category: { $regex: searchQuery, $options: "i" } },
+        { tags: { $in: [new RegExp(searchQuery, "i")] } }
       );
 
       // Individual word token matches
@@ -68,146 +131,44 @@ export async function GET(request) {
           );
         }
       });
-    });
 
-    const candidateMap = new Map();
-
-    // 1. Run AI Vector Search if query embedding exists
-    if (queryVector && Array.isArray(queryVector) && queryVector.length > 0) {
       try {
-        const vectorResults = await Video.aggregate([
-          {
-            $vectorSearch: {
-              index: "vector_index",
-              path: "embedding",
-              queryVector,
-              numCandidates: 100,
-              limit: 25,
-              filter: { visibility: { $eq: "public" } },
-            },
-          },
-          {
-            $addFields: {
-              vectorScore: { $meta: "vectorSearchScore" },
-            },
-          },
-          {
-            $lookup: {
-              from: "users",
-              localField: "uploader",
-              foreignField: "_id",
-              as: "uploaderDetails",
-            },
-          },
-          {
-            $unwind: {
-              path: "$uploaderDetails",
-              preserveNullAndEmptyArrays: true,
-            },
-          },
-          {
-            $project: {
-              title: 1,
-              description: 1,
-              fileId: 1,
-              thumbnailUrl: 1,
-              views: 1,
-              likesCount: { $size: { $ifNull: ["$likes", []] } },
-              createdAt: 1,
-              isShort: 1,
-              vectorScore: 1,
-              uploader: {
-                _id: "$uploaderDetails._id",
-                username: "$uploaderDetails.username",
-                avatar: "$uploaderDetails.avatar",
-              },
-            },
-          },
-        ]);
+        const keywordResults = await Video.find({
+          visibility: "public",
+          streamtapeStatus: { $ne: "dead" },
+          $or: orConditions,
+        })
+          .populate("uploader", "username avatar")
+          .limit(30)
+          .lean();
 
-        if (vectorResults && vectorResults.length > 0) {
-          vectorResults.forEach((v) => {
-            const vScore = (v.vectorScore || 0) * 100;
-            candidateMap.set(v._id.toString(), {
-              ...v,
-              searchScore: vScore,
-              matchType: "semantic",
-            });
-          });
-        }
-      } catch (vectorErr) {
-        // Fall back gracefully if Atlas index is not ready
-      }
-    }
+        keywordResults.forEach((v) => {
+          const idStr = v._id.toString();
 
-    // 2. Run Fuzzy Keyword Search
-    try {
-      const keywordResults = await Video.find({
-        visibility: "public",
-        streamtapeStatus: { $ne: "dead" },
-        $or: orConditions,
-      })
-        .populate("uploader", "username avatar")
-        .limit(30)
-        .lean();
+          // Calculate text match score boost
+          let textBoost = 40;
+          const titleLower = (v.title || "").toLowerCase();
+          const qLower = searchQuery.toLowerCase();
 
-      keywordResults.forEach((v) => {
-        const idStr = v._id.toString();
-        const existing = candidateMap.get(idStr);
+          if (titleLower === qLower) {
+            textBoost += 60; // Exact match
+          } else if (titleLower.includes(qLower)) {
+            textBoost += 30; // Direct substring
+          }
 
-        // Calculate text match score boost
-        let textBoost = 40;
-        const titleLower = (v.title || "").toLowerCase();
-        const qLower = searchQuery.toLowerCase();
-
-        if (titleLower === qLower) {
-          textBoost += 60; // Exact match
-        } else if (titleLower.includes(qLower)) {
-          textBoost += 30; // Direct substring
-        }
-
-        if (existing) {
-          // Both vector and keyword matched!
-          existing.searchScore += textBoost;
-          existing.matchType = "hybrid";
-        } else {
           candidateMap.set(idStr, {
             ...v,
             likesCount: v.likes?.length || 0,
             searchScore: textBoost,
             matchType: "keyword",
           });
-        }
-      });
-    } catch (keywordErr) {
-      console.error("Keyword search error:", keywordErr);
-    }
-
-    // 3. Fallback: If still zero results and didYouMean exists, do a broadened text search
-    if (candidateMap.size === 0 && didYouMean) {
-      const fallbackResults = await Video.find({
-        visibility: "public",
-        streamtapeStatus: { $ne: "dead" },
-        $or: [
-          { title: { $regex: didYouMean, $options: "i" } },
-          { description: { $regex: didYouMean, $options: "i" } },
-        ],
-      })
-        .populate("uploader", "username avatar")
-        .limit(20)
-        .lean();
-
-      fallbackResults.forEach((v) => {
-        candidateMap.set(v._id.toString(), {
-          ...v,
-          likesCount: v.likes?.length || 0,
-          searchScore: 30,
-          matchType: "spell_corrected",
         });
-      });
+      } catch (keywordErr) {
+        console.error("Keyword search error:", keywordErr);
+      }
     }
 
-    // 4. Sort results
+    // Sort results
     let results = Array.from(candidateMap.values());
 
     if (sortOption === "date_desc") {
@@ -228,7 +189,6 @@ export async function GET(request) {
 
     const responsePayload = {
       videos: results,
-      didYouMean: didYouMean && didYouMean.toLowerCase() !== searchQuery.toLowerCase() ? didYouMean : null,
       query: searchQuery,
       total: results.length,
     };

@@ -52,11 +52,6 @@ const videoSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     }],
-    embedding: {
-        type: [Number],
-        default: undefined,
-        select: false,
-    },
     streamtapeUrl: {
         type: String,
         required: false,

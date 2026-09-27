@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Video from "@/models/Video";
 import User from "@/models/User";
-import { correctSearchQuery } from "@/lib/gemini";
 import redis from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +16,7 @@ export async function GET(request) {
     }
 
     const cleanQuery = query.trim();
-    const cacheKey = `ac:${cleanQuery.toLowerCase()}`;
+    const cacheKey = `ac_v2:${cleanQuery.toLowerCase()}`;
 
     // Fast L1 / L2 cache hit
     const cached = await redis.get(cacheKey);
@@ -56,35 +55,6 @@ export async function GET(request) {
       .lean();
 
     let [videos, users] = await Promise.all([videoPromise, userPromise]);
-
-    // If zero videos found and query is long enough, try AI typo correction
-    if (videos.length === 0 && cleanQuery.length >= 4) {
-      try {
-        const didYouMean = await correctSearchQuery(cleanQuery);
-        if (didYouMean && didYouMean.toLowerCase() !== cleanQuery.toLowerCase()) {
-          const correctedWords = didYouMean.split(/\s+/).filter(Boolean);
-          const correctedPattern = correctedWords.join(".*");
-          const correctedRegex = new RegExp(correctedPattern, "i");
-
-          const fallbackVideos = await Video.find({
-            visibility: "public",
-            $or: [
-              { title: { $regex: correctedRegex } },
-              { tags: { $in: [new RegExp(didYouMean, "i")] } },
-            ],
-          })
-            .select("_id title thumbnailUrl category")
-            .limit(4)
-            .lean();
-
-          if (fallbackVideos.length > 0) {
-            videos = fallbackVideos;
-          }
-        }
-      } catch (aiErr) {
-        // Non-blocking fallback
-      }
-    }
 
     const responseData = { videos, users };
     await redis.set(cacheKey, JSON.stringify(responseData), { ex: 300 });

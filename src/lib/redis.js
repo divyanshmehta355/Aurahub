@@ -46,6 +46,11 @@ function getFromMemory(key) {
     memoryCache.delete(key);
     return null;
   }
+  
+  // LRU bump: move to the end of Map insertion order
+  memoryCache.delete(key);
+  memoryCache.set(key, item);
+  
   return item.value;
 }
 
@@ -298,7 +303,10 @@ const safeRedis = {
       if (tags.length > 0) {
         for (const tag of tags) {
           if (!tag) continue;
-          await c.sAdd(`${TAG_PREFIX}${tag}`, key);
+          const tagKey = `${TAG_PREFIX}${tag}`;
+          await c.sAdd(tagKey, key);
+          // Set a rolling TTL on the tag Set to prevent ghost key memory bloat
+          await c.expire(tagKey, Math.max(ttlSeconds, 86400));
         }
       }
 
