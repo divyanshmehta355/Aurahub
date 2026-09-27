@@ -3,6 +3,18 @@ import { useForm } from "react-hook-form";
 import * as Yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+
 const editSchema = Yup.object().shape({
   title: Yup.string().required("Title is required"),
   description: Yup.string().optional(),
@@ -22,70 +34,53 @@ const EditVideoModal = ({ video, onSave, onCancel }) => {
   });
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-lg">
-        <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Edit Video Details</h2>
+    <Dialog open={true} onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Edit Video Details</DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleSubmit(onSave)} className="space-y-4">
-          <div>
-            <label
-              htmlFor="title"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              Title
-            </label>
-            <input
+          <div className="space-y-1.5">
+            <Label htmlFor="title">Title</Label>
+            <Input
               id="title"
               type="text"
               {...register("title")}
-              className={`w-full px-4 py-2 bg-white dark:bg-slate-800 border rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${
-                errors.title ? "border-rose-500" : "border-gray-200 dark:border-slate-700"
-              }`}
+              className={errors.title ? "border-destructive focus-visible:ring-destructive" : ""}
             />
             {errors.title && (
-              <p className="text-xs text-red-600 mt-1">
+              <p className="text-xs text-destructive mt-1">
                 {errors.title.message}
               </p>
             )}
           </div>
-          <div>
-            <label
-              htmlFor="description"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              Description <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">(Optional)</span>
-            </label>
-            <textarea
+          <div className="space-y-1.5">
+            <Label htmlFor="description">
+              Description <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+            </Label>
+            <Textarea
               id="description"
-              rows="5"
+              rows={5}
               {...register("description")}
-              className={`w-full px-4 py-2 bg-white dark:bg-slate-800 border rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none ${
-                errors.description ? "border-rose-500" : "border-gray-200 dark:border-slate-700"
-              }`}
-            ></textarea>
+              className={`resize-none ${errors.description ? "border-destructive focus-visible:ring-destructive" : ""}`}
+            />
             {errors.description && (
-              <p className="text-xs text-red-600 mt-1">
+              <p className="text-xs text-destructive mt-1">
                 {errors.description.message}
               </p>
             )}
           </div>
-          <div className="flex justify-end space-x-3 mt-8">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-5 py-2.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
-            >
+          <DialogFooter className="mt-8">
+            <Button variant="ghost" type="button" onClick={onCancel}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-md"
-            >
+            </Button>
+            <Button type="submit">
               Save Changes
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -29,19 +29,19 @@ const SearchResults = () => {
       className="container mx-auto px-4 sm:px-6 py-8"
     >
       <div className="mb-6">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white font-display tracking-tight">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground font-display tracking-tight">
           Search Results for:{" "}
-          <span className="text-indigo-600 dark:text-indigo-400">"{query}"</span>
+          <span className="text-primary">"{query}"</span>
         </h2>
 
         {/* AI Did You Mean Banner */}
         {didYouMean && (
-          <div className="mt-4 p-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 flex items-center gap-2.5 text-sm text-gray-800 dark:text-gray-200">
-            <FaMagic className="text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+          <div className="mt-4 p-4 rounded-2xl bg-muted border border-border flex items-center gap-2.5 text-sm text-foreground">
+            <FaMagic className="text-primary flex-shrink-0" />
             <span>Did you mean:</span>
             <Link
               href={`/search?q=${encodeURIComponent(didYouMean)}`}
-              className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline hover:text-indigo-700 transition-colors"
+              className="font-bold text-primary hover:underline hover:text-primary transition-colors"
             >
               {didYouMean}
             </Link>
@@ -66,16 +66,16 @@ const SearchResults = () => {
             </motion.div>
           ))
         ) : (
-          <div className="col-span-full text-center p-12 border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-3xl shadow-sm">
-            <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">
+          <div className="col-span-full text-center p-12 border border-border bg-card rounded-3xl shadow-sm">
+            <p className="text-muted-foreground text-lg font-medium">
               No videos found matching your search.
             </p>
             {didYouMean && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+              <p className="text-sm text-muted-foreground mt-2">
                 Try searching for{" "}
                 <Link
                   href={`/search?q=${encodeURIComponent(didYouMean)}`}
-                  className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                  className="font-bold text-primary hover:underline"
                 >
                   {didYouMean}
                 </Link>

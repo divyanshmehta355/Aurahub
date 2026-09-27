@@ -84,7 +84,7 @@ const ShortsFeedClient = () => {
     return (
         <div 
             ref={containerRef}
-            className="h-[calc(100vh-80px)] w-full bg-black overflow-y-scroll snap-y snap-mandatory scroll-smooth scrollbar-hide"
+            className="h-[calc(100vh-80px)] w-full bg-foreground overflow-y-scroll snap-y snap-mandatory scroll-smooth scrollbar-hide"
         >
             {videos.map((video, index) => (
                 <div key={video._id} className="h-full w-full snap-start flex justify-center items-center">
@@ -93,13 +93,13 @@ const ShortsFeedClient = () => {
             ))}
             
             {isLoading && (
-                <div className="h-full w-full snap-start flex justify-center items-center text-white">
+                <div className="h-full w-full snap-start flex justify-center items-center text-primary-foreground">
                     <div className="animate-pulse">Loading more shorts...</div>
                 </div>
             )}
             
             {isEmpty && !isLoading && (
-                <div className="h-full w-full snap-start flex justify-center items-center text-white">
+                <div className="h-full w-full snap-start flex justify-center items-center text-primary-foreground">
                     <p>No shorts available yet.</p>
                 </div>
             )}

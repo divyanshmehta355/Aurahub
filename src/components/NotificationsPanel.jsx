@@ -8,6 +8,11 @@ import { FaBell } from "react-icons/fa";
 import { toast } from "react-toastify";
 import Image from "next/image";
 import { getAvatarUrl } from "@/lib/identicon";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 const NotificationsPanel = () => {
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
@@ -56,9 +61,7 @@ const NotificationsPanel = () => {
           }
         };
 
-        ws.onerror = () => {
-          // Handled by onclose
-        };
+        ws.onerror = () => {};
 
         ws.onclose = () => {
           if (isMounted) {
@@ -125,77 +128,77 @@ const NotificationsPanel = () => {
 
   return (
     <div className="relative" ref={panelRef}>
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={handleBellClick}
-        className="relative text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 p-2 transition-colors"
+        className="relative rounded-full text-muted-foreground hover:text-foreground"
       >
-        <FaBell size={20} />
+        <FaBell size={18} />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+          <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
             {unreadCount}
           </span>
         )}
-      </button>
+      </Button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-100 dark:border-slate-700 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50">
-          <div className="p-3 flex justify-between items-center border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
-            <h3 className="font-bold text-sm text-gray-900 dark:text-gray-100">Notifications</h3>
+        <Card className="absolute right-0 mt-2 w-80 sm:w-96 overflow-hidden shadow-xl border-border z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="p-3 flex justify-between items-center border-b border-border bg-muted/50">
+            <h3 className="font-bold text-sm text-foreground">Notifications</h3>
             {notifications.length > 0 && (
-              <button
+              <Button
+                variant="link"
+                size="sm"
                 onClick={handleClearAll}
-                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline transition-colors"
+                className="h-auto p-0 text-xs text-foreground underline"
               >
                 Clear All
-              </button>
+              </Button>
             )}
           </div>
-          <ul className="max-h-96 overflow-y-auto">
-            {notifications.length > 0 ? (
-              notifications.map((notif) => (
-                <li key={notif._id}>
-                  <Link
-                    href={`/video/${notif.video?._id}`}
-                    onClick={() => setIsOpen(false)}
-                    className={`flex items-start gap-3 border-t border-gray-100 dark:border-slate-700 p-3 text-sm hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors ${
-                      !notif.isRead ? "bg-indigo-50 dark:bg-indigo-900/20" : ""
-                    }`}
-                  >
-                    <div className="flex-shrink-0 mt-1">
-                      <Image
-                        src={getAvatarUrl(notif.sender?.username, notif.sender?.avatar)}
-                        alt={notif.sender?.username || "User"}
-                        width={32}
-                        height={32}
-                        unoptimized
-                        className="rounded-full w-8 h-8 object-cover"
-                      />
-                    </div>
-                    <div className="w-0 flex-grow text-gray-800 dark:text-gray-200">
-                      <p>
-                        <strong className="font-semibold text-gray-900 dark:text-white">
-                          {notif.sender.username}
-                        </strong>
-                        {notif.type === "like" &&
-                          ` liked your video: "${notif.video?.title}"`}
-                        {notif.type === "comment" &&
-                          ` commented on your video: "${notif.video?.title}"`}
-                        {notif.type === "reply" && ` replied to your comment.`}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {new Date(notif.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                  </Link>
+          <ScrollArea className="h-96">
+            <ul className="flex flex-col">
+              {notifications.length > 0 ? (
+                notifications.map((notif) => (
+                  <li key={notif._id}>
+                    <Link
+                      href={`/video/${notif.video?._id}`}
+                      onClick={() => setIsOpen(false)}
+                      className={`flex items-start gap-3 border-b border-border last:border-0 p-3 text-sm hover:bg-muted/50 transition-colors ${
+                        !notif.isRead ? "bg-muted/80" : ""
+                      }`}
+                    >
+                      <Avatar className="h-8 w-8 mt-1 flex-shrink-0">
+                        <AvatarImage src={getAvatarUrl(notif.sender?.username, notif.sender?.avatar)} alt={notif.sender?.username} />
+                        <AvatarFallback>{notif.sender?.username?.charAt(0) || "U"}</AvatarFallback>
+                      </Avatar>
+                      <div className="w-0 flex-grow text-foreground">
+                        <p>
+                          <strong className="font-semibold">
+                            {notif.sender.username}
+                          </strong>
+                          {notif.type === "like" &&
+                            ` liked your video: "${notif.video?.title}"`}
+                          {notif.type === "comment" &&
+                            ` commented on your video: "${notif.video?.title}"`}
+                          {notif.type === "reply" && ` replied to your comment.`}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(notif.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <li className="p-4 text-center text-muted-foreground">
+                  No new notifications.
                 </li>
-              ))
-            ) : (
-              <li className="p-4 text-center text-gray-500 dark:text-gray-400">
-                No new notifications.
-              </li>
-            )}
-          </ul>
-        </div>
+              )}
+            </ul>
+          </ScrollArea>
+        </Card>
       )}
     </div>
   );

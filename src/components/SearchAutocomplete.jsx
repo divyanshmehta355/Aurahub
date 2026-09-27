@@ -11,7 +11,12 @@ import { useAppStore } from "@/store/useAppStore";
 import { useDebounce } from "@/hooks/useDebounce";
 import { motion, AnimatePresence } from "framer-motion";
 
-const SearchAutocomplete = ({ className, inputClassName }) => {
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
+
+const SearchAutocomplete = ({ className }) => {
   const router = useRouter();
   const setMobileMenuOpen = useAppStore((state) => state.setMobileMenuOpen);
   const searchQuery = useAppStore((state) => state.searchQuery);
@@ -89,9 +94,9 @@ const SearchAutocomplete = ({ className, inputClassName }) => {
 
   return (
     <div className={`relative ${className || ""}`} ref={dropdownRef}>
-      <input
+      <Input
         type="text"
-        className={inputClassName}
+        className="w-full rounded-full pl-4 pr-16 bg-muted/50 border-transparent focus-visible:ring-ring h-10 transition-all"
         placeholder="Search..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
@@ -102,21 +107,25 @@ const SearchAutocomplete = ({ className, inputClassName }) => {
           }
         }}
       />
-      <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+      <div className="absolute inset-y-0 right-0 flex items-center pr-1.5">
         {searchQuery && (
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={handleClear}
-            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
           >
-            <MdClose size={18} />
-          </button>
+            <MdClose size={16} />
+          </Button>
         )}
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={handleSearchSubmit}
-          className="p-2 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+          className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted ml-0.5"
         >
-          <FaSearch size={16} />
-        </button>
+          <FaSearch size={14} />
+        </Button>
       </div>
 
       <AnimatePresence>
@@ -126,81 +135,78 @@ const SearchAutocomplete = ({ className, inputClassName }) => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-full mt-2 w-full bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-100 dark:border-slate-700 overflow-hidden z-50"
+            className="absolute top-full mt-2 w-full z-50"
           >
-            {isLoading && (
-              <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                Searching...
-              </div>
-            )}
-            
-            {!isLoading && results.users.length > 0 && (
-              <div className="border-b border-gray-100 dark:border-slate-700">
-                <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-slate-800/50">
-                  Channels
+            <Card className="overflow-hidden shadow-2xl border-border">
+              {isLoading && (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  Searching...
                 </div>
-                {results.users.map((user) => (
-                  <div
-                    key={user._id}
-                    onClick={() => navigateAndClose(`/profile/${user.username}`)}
-                    className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
-                  >
-                    <Image
-                      src={getAvatarUrl(user.username || user.name, user.image || user.avatar)}
-                      alt={user.username || user.name || "User"}
-                      width={32}
-                      height={32}
-                      unoptimized
-                      className="rounded-full object-cover mr-3 w-8 h-8"
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {user.name}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        @{user.username}
-                      </p>
-                    </div>
+              )}
+              
+              {!isLoading && results.users.length > 0 && (
+                <div className="border-b border-border">
+                  <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-muted/50">
+                    Channels
                   </div>
-                ))}
-              </div>
-            )}
+                  {results.users.map((user) => (
+                    <div
+                      key={user._id}
+                      onClick={() => navigateAndClose(`/profile/${user.username}`)}
+                      className="flex items-center px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                    >
+                      <Avatar className="h-8 w-8 mr-3">
+                        <AvatarImage src={getAvatarUrl(user.username || user.name, user.image || user.avatar)} alt={user.name} />
+                        <AvatarFallback>{user.name?.charAt(0) || "U"}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {user.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          @{user.username}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-            {!isLoading && results.videos.length > 0 && (
-              <div>
-                <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-slate-800/50">
-                  Videos
-                </div>
-                {results.videos.map((video) => (
-                  <div
-                    key={video._id}
-                    onClick={() => navigateAndClose(`/video/${video._id}`)}
-                    className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
-                  >
-                    <div className="w-16 h-9 relative rounded overflow-hidden mr-3 flex-shrink-0 bg-gray-200 dark:bg-slate-700">
-                      <Image
-                        src={video.thumbnailUrl || getFallbackThumbnailUrl(video._id, video.title, video.category)}
-                        alt={video.title}
-                        fill
-                        unoptimized
-                        sizes="64px"
-                        className="object-cover"
-                      />
-                    </div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
-                      {video.title}
-                    </p>
+              {!isLoading && results.videos.length > 0 && (
+                <div>
+                  <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-muted/50">
+                    Videos
                   </div>
-                ))}
+                  {results.videos.map((video) => (
+                    <div
+                      key={video._id}
+                      onClick={() => navigateAndClose(`/video/${video._id}`)}
+                      className="flex items-center px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="w-16 h-9 relative rounded overflow-hidden mr-3 flex-shrink-0 bg-muted">
+                        <Image
+                          src={video.thumbnailUrl || getFallbackThumbnailUrl(video._id, video.title, video.category)}
+                          alt={video.title}
+                          fill
+                          unoptimized
+                          sizes="64px"
+                          className="object-cover"
+                        />
+                      </div>
+                      <p className="text-sm font-medium text-foreground line-clamp-2">
+                        {video.title}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div 
+                className="px-4 py-3 text-sm text-center text-foreground font-medium hover:bg-muted cursor-pointer border-t border-border transition-colors"
+                onClick={handleSearchSubmit}
+              >
+                See all results for "{searchQuery}"
               </div>
-            )}
-            
-            <div 
-              className="px-4 py-3 text-sm text-center text-indigo-600 dark:text-indigo-400 font-medium hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer border-t border-gray-100 dark:border-slate-700 transition-colors"
-              onClick={handleSearchSubmit}
-            >
-              See all results for "{searchQuery}"
-            </div>
+            </Card>
           </motion.div>
         )}
       </AnimatePresence>

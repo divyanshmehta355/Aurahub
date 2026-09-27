@@ -41,9 +41,9 @@ const SortableVideoItem = ({ video, onRemove }) => {
         <li
             ref={setNodeRef}
             style={style}
-            className="flex items-center space-x-3 p-3 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 hover:border-indigo-500/50 dark:hover:border-indigo-500/50 transition-all duration-300 shadow-sm mb-3"
+            className="flex items-center space-x-3 p-3 bg-card rounded-xl border border-border hover:border-border transition-all duration-300 shadow-sm mb-3"
         >
-            <span {...attributes} {...listeners} className="text-gray-400 dark:text-slate-500 cursor-grab touch-none px-2 py-4">☰</span>
+            <span {...attributes} {...listeners} className="text-muted-foreground cursor-grab touch-none px-2 py-4">☰</span>
             <div className="w-24 h-14 flex-shrink-0">
                  <VideoThumbnail
                     videoId={video._id}
@@ -54,9 +54,9 @@ const SortableVideoItem = ({ video, onRemove }) => {
                 />
             </div>
             <div className="flex-grow w-0 px-2">
-                <Link href={`/video/${video._id}`} className="font-bold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors truncate text-sm block">{video.title}</Link>
+                <Link href={`/video/${video._id}`} className="font-bold text-foreground hover:text-primary transition-colors truncate text-sm block">{video.title}</Link>
             </div>
-            <button onClick={onRemove} className="text-rose-500 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 text-sm font-semibold flex-shrink-0 px-3 transition-colors">Remove</button>
+            <button onClick={onRemove} className="text-rose-500 hover:text-rose-700 text-sm font-semibold flex-shrink-0 px-3 transition-colors">Remove</button>
         </li>
     );
 };
@@ -122,9 +122,9 @@ const EditPlaylistPage = () => {
                 <div className="h-10 bg-gray-300 rounded w-1/2 mb-2"></div>
                 <div className="h-4 bg-gray-300 rounded w-1/5 mb-6"></div>
                 <div className="max-w-2xl space-y-2">
-                    <div className="h-16 bg-gray-200 rounded"></div>
-                    <div className="h-16 bg-gray-200 rounded"></div>
-                    <div className="h-16 bg-gray-200 rounded"></div>
+                    <div className="h-16 bg-muted rounded"></div>
+                    <div className="h-16 bg-muted rounded"></div>
+                    <div className="h-16 bg-muted rounded"></div>
                 </div>
             </main>
         );
@@ -134,11 +134,11 @@ const EditPlaylistPage = () => {
 
     return (
         <main className="container mx-auto px-6 py-8">
-            <Link href="/my-playlists" className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 hover:underline mb-6 block transition-colors">&larr; Back to all playlists</Link>
+            <Link href="/my-playlists" className="text-sm font-semibold text-primary hover:text-primary hover:underline mb-6 block transition-colors">&larr; Back to all playlists</Link>
             
-            <div className="mb-8 p-8 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{playlist.title}</h1>
-                <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium">{playlist.videos.length} videos</p>
+            <div className="mb-8 p-8 bg-card rounded-2xl shadow-sm border border-border">
+                <h1 className="text-3xl font-bold text-foreground">{playlist.title}</h1>
+                <p className="text-muted-foreground mt-2 font-medium">{playlist.videos.length} videos</p>
             </div>
 
             <div className="max-w-3xl">
@@ -152,8 +152,8 @@ const EditPlaylistPage = () => {
                     </SortableContext>
                 </DndContext>
                  {playlist.videos.length === 0 && (
-                    <div className="mt-8 text-center p-12 border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
-                        <p className="text-gray-500 dark:text-gray-400 font-medium">This playlist is empty. Add videos by clicking the "Save" button on a video page.</p>
+                    <div className="mt-8 text-center p-12 border border-border bg-card rounded-2xl shadow-sm">
+                        <p className="text-muted-foreground font-medium">This playlist is empty. Add videos by clicking the "Save" button on a video page.</p>
                     </div>
                  )}
             </div>

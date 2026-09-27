@@ -4,24 +4,22 @@ import React, { useState, useEffect } from 'react';
 import API from '@/lib/api';
 import Image from 'next/image';
 import { getFallbackThumbnailUrl } from '@/lib/thumbnailSvg';
+import { Skeleton } from "@/components/ui/skeleton";
 
 const VideoThumbnail = ({ videoId, altText, title, category, thumbnailUrl }) => {
     const videoTitle = title || altText;
     const fallbackUrl = getFallbackThumbnailUrl(videoId, videoTitle, category);
 
-    // If thumbnail URL is already provided by parent, render immediately with 0 delay/waterfalls!
     const [imageUrl, setImageUrl] = useState(thumbnailUrl || fallbackUrl);
     const [isLoading, setIsLoading] = useState(!thumbnailUrl && !videoId);
 
     useEffect(() => {
-        // If thumbnailUrl was passed from parent, use it directly without making an HTTP request
         if (thumbnailUrl) {
             setImageUrl(thumbnailUrl);
             setIsLoading(false);
             return;
         }
 
-        // If no videoId, use fallback immediately
         if (!videoId) {
             setImageUrl(fallbackUrl);
             setIsLoading(false);
@@ -54,7 +52,7 @@ const VideoThumbnail = ({ videoId, altText, title, category, thumbnailUrl }) => 
     }, [videoId, thumbnailUrl, fallbackUrl]);
 
     if (isLoading) {
-        return <div className="w-full h-full bg-gray-200 dark:bg-slate-800 animate-pulse rounded-lg" />;
+        return <Skeleton className="w-full h-full rounded-lg" />;
     }
 
     return (

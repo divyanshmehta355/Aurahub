@@ -1,23 +1,27 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FaEye, FaThumbsUp, FaComment, FaUsers } from 'react-icons/fa';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const StatCard = ({ title, value, icon, index }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.4, delay: index * 0.1 }}
-    className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl border border-gray-100 dark:border-slate-700 flex items-center justify-between transition-colors"
   >
-    <div>
-      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{title}</p>
-      <h3 className="text-3xl font-bold text-gray-900 dark:text-white">
-        {value?.toLocaleString() || 0}
-      </h3>
-    </div>
-    <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shadow-inner">
-      {icon}
-    </div>
+    <Card className="rounded-2xl shadow-xl transition-colors h-full flex flex-col justify-between">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <div className="p-3 rounded-xl bg-muted text-foreground shadow-inner">
+          {icon}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-3xl font-bold text-foreground">
+          {value?.toLocaleString() || 0}
+        </div>
+      </CardContent>
+    </Card>
   </motion.div>
 );
 
@@ -25,10 +29,10 @@ const CreatorStatCards = ({ stats }) => {
   if (!stats) return null;
 
   const statItems = [
-    { title: 'Total Views', value: stats.views, icon: <FaEye size={24} /> },
-    { title: 'Total Likes', value: stats.likes, icon: <FaThumbsUp size={24} /> },
-    { title: 'Comments', value: stats.comments, icon: <FaComment size={24} /> },
-    { title: 'Subscribers', value: stats.subscribers, icon: <FaUsers size={24} /> },
+    { title: 'Total Views', value: stats.views, icon: <FaEye size={20} /> },
+    { title: 'Total Likes', value: stats.likes, icon: <FaThumbsUp size={20} /> },
+    { title: 'Comments', value: stats.comments, icon: <FaComment size={20} /> },
+    { title: 'Subscribers', value: stats.subscribers, icon: <FaUsers size={20} /> },
   ];
 
   return (

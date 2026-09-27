@@ -18,6 +18,22 @@ import {
 } from "react-icons/fa";
 import { MdPlaylistAdd, MdCheck } from "react-icons/md";
 
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
 // Utility to convert file URL to a clean default title
 function extractTitleFromUrl(url) {
   try {
@@ -341,23 +357,26 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Configuration Header Card */}
-      <div className="p-5 rounded-2xl bg-indigo-50/60 dark:bg-slate-900/60 border border-indigo-100 dark:border-slate-700/80 space-y-4">
-        <div className="flex items-center space-x-2 text-indigo-900 dark:text-indigo-200 font-bold text-base sm:text-lg">
-          <FaLayerGroup className="text-indigo-600 dark:text-indigo-400" />
+      <Card className="p-5 bg-muted/30 space-y-4">
+        <div className="flex items-center space-x-2 font-bold text-base sm:text-lg">
+          <FaLayerGroup className="text-muted-foreground" />
           <span>Shared Playlist Upload Settings</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Target Playlist */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-              Add to Playlist
-            </label>
+          <div className="space-y-1.5">
+            <Label>Add to Playlist</Label>
             <select
               value={playlistOption}
-              onChange={(e) => setPlaylistOption(e.target.value)}
+              onChange={(e) => {
+                setPlaylistOption(e.target.value);
+                if (e.target.value !== "create_new" && e.target.value !== "none") {
+                    setSelectedPlaylistId(e.target.value);
+                }
+              }}
               disabled={isRunning}
-              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer font-medium"
+              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="create_new">+ Create New Playlist (Recommended)</option>
               {playlists.length > 0 && (
@@ -374,15 +393,13 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
           </div>
 
           {/* Category */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-              Category
-            </label>
+          <div className="space-y-1.5">
+            <Label>Category</Label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               disabled={isRunning}
-              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
+              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>
@@ -393,15 +410,13 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
           </div>
 
           {/* Visibility */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-              Visibility
-            </label>
+          <div className="space-y-1.5">
+            <Label>Visibility</Label>
             <select
               value={visibility}
               onChange={(e) => setVisibility(e.target.value)}
               disabled={isRunning}
-              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
+              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="public">Public</option>
               <option value="unlisted">Unlisted</option>
@@ -412,19 +427,19 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
 
         {/* Inline New Playlist Name Input */}
         {playlistOption === "create_new" && (
-          <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-indigo-200 dark:border-indigo-900/50 space-y-1 animate-in fade-in duration-200">
-            <label className="block text-xs font-bold text-indigo-700 dark:text-indigo-400">
+          <div className="p-3 bg-background rounded-xl border border-border space-y-1.5 animate-in fade-in duration-200">
+            <Label>
               New Playlist Name *
-            </label>
+            </Label>
             <div className="flex items-center space-x-2">
-              <MdPlaylistAdd size={22} className="text-indigo-500 flex-shrink-0" />
-              <input
+              <MdPlaylistAdd size={22} className="text-muted-foreground flex-shrink-0" />
+              <Input
                 type="text"
                 placeholder="e.g. Next.js 16 Masterclass, Season 1, etc."
                 value={newPlaylistTitle}
                 onChange={(e) => setNewPlaylistTitle(e.target.value)}
                 disabled={isRunning}
-                className="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full bg-muted/50 border-input"
               />
             </div>
           </div>
@@ -432,43 +447,39 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
 
         {/* Shorts Toggle */}
         <div className="flex items-center space-x-2 pt-1">
-          <input
-            type="checkbox"
+          <Checkbox
             id="playlistIsShort"
             checked={isShort}
-            onChange={(e) => setIsShort(e.target.checked)}
+            onCheckedChange={(checked) => setIsShort(checked)}
             disabled={isRunning}
-            className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 dark:bg-slate-900 border-gray-300 dark:border-slate-600 cursor-pointer"
           />
-          <label
-            htmlFor="playlistIsShort"
-            className="text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
-          >
+          <Label htmlFor="playlistIsShort" className="cursor-pointer">
             Upload videos as Shorts (Vertical format)
-          </label>
+          </Label>
         </div>
-      </div>
+      </Card>
 
       {/* Action Header & Quick Paste Button */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
         <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          <h3 className="text-lg font-bold text-foreground">
             Playlist Videos Queue ({items.length})
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-muted-foreground">
             Enter each video's Title and Remote MP4/stream URL. They will be downloaded and added to your playlist one by one.
           </p>
         </div>
 
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => setShowPasteModal(true)}
           disabled={isRunning}
-          className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl transition-all disabled:opacity-50"
+          className="flex items-center space-x-1.5 font-semibold"
         >
-          <FaClipboardList className="text-indigo-500" />
+          <FaClipboardList />
           <span>Paste Batch URLs</span>
-        </button>
+        </Button>
       </div>
 
       {/* Video Row Items List */}
@@ -476,24 +487,24 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
         {items.map((item, index) => {
           const isCurrent = currentProcessingIndex === index;
           return (
-            <div
+            <Card
               key={item.id}
-              className={`p-4 rounded-xl border transition-all duration-300 ${
+              className={`p-4 transition-all duration-300 ${
                 isCurrent
-                  ? "bg-indigo-50/70 dark:bg-slate-800/90 border-indigo-400 ring-2 ring-indigo-500/20 shadow-md"
+                  ? "bg-muted/80 ring-2 ring-primary/20"
                   : item.status === "completed"
-                  ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/60"
+                  ? "bg-primary/5 border-primary/20"
                   : item.status === "error"
-                  ? "bg-rose-50/50 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800/60"
-                  : "bg-white dark:bg-slate-800/80 border-gray-200 dark:border-slate-700 shadow-sm"
+                  ? "bg-destructive/10 border-destructive/20"
+                  : "bg-card"
               }`}
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300">
+                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-muted text-muted-foreground">
                     {index + 1}
                   </span>
-                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                  <span className="text-xs font-semibold text-muted-foreground">
                     Video #{index + 1}
                   </span>
                 </div>
@@ -501,36 +512,36 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
                 <div className="flex items-center space-x-2">
                   {/* Status Indicator */}
                   {item.status === "idle" && (
-                    <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700">
+                    <span className="text-[11px] font-medium text-muted-foreground px-2 py-0.5 rounded-full bg-muted">
                       Ready
                     </span>
                   )}
                   {item.status === "queuing" && (
-                    <span className="flex items-center space-x-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40">
+                    <span className="flex items-center space-x-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                       <FaSpinner className="animate-spin text-[10px]" />
                       <span>Queuing...</span>
                     </span>
                   )}
                   {item.status === "downloading" && (
-                    <span className="flex items-center space-x-1 text-[11px] font-semibold text-cyan-700 dark:text-cyan-300 px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/40">
+                    <span className="flex items-center space-x-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-muted text-foreground">
                       <FaSpinner className="animate-spin text-[10px]" />
                       <span>Downloading {item.progress}%</span>
                     </span>
                   )}
                   {item.status === "publishing" && (
-                    <span className="flex items-center space-x-1 text-[11px] font-semibold text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40">
+                    <span className="flex items-center space-x-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-muted text-foreground">
                       <FaSpinner className="animate-spin text-[10px]" />
                       <span>Publishing...</span>
                     </span>
                   )}
                   {item.status === "completed" && (
-                    <span className="flex items-center space-x-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40">
+                    <span className="flex items-center space-x-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary text-primary-foreground">
                       <FaCheckCircle className="text-[10px]" />
                       <span>Completed</span>
                     </span>
                   )}
                   {item.status === "error" && (
-                    <span className="flex items-center space-x-1 text-[11px] font-bold text-rose-700 dark:text-rose-300 px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/40" title={item.error}>
+                    <span className="flex items-center space-x-1 text-[11px] font-bold text-destructive px-2 py-0.5 rounded-full bg-destructive/10" title={item.error}>
                       <FaExclamationCircle className="text-[10px]" />
                       <span className="truncate max-w-[120px]">Failed</span>
                     </span>
@@ -538,196 +549,160 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
 
                   {/* Delete Row Button */}
                   {!isRunning && items.length > 1 && (
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => removeRow(item.id)}
-                      className="p-1.5 text-gray-400 hover:text-rose-500 rounded-lg transition-colors"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                       title="Remove video row"
                     >
                       <FaTrashAlt size={13} />
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
 
               {/* Title & URL Inputs */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Video Title *"
-                    value={item.title}
-                    onChange={(e) => updateItem(item.id, { title: e.target.value })}
-                    disabled={isRunning}
-                    className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <input
-                    type="url"
-                    placeholder="Remote URL (http://...mp4) *"
-                    value={item.videoUrl}
-                    onChange={(e) => updateItem(item.id, { videoUrl: e.target.value })}
-                    onBlur={(e) => handleUrlBlur(item.id, e.target.value)}
-                    disabled={isRunning}
-                    className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-mono text-xs sm:text-sm"
-                  />
-                </div>
+                <Input
+                  type="text"
+                  placeholder="Video Title *"
+                  value={item.title}
+                  onChange={(e) => updateItem(item.id, { title: e.target.value })}
+                  disabled={isRunning}
+                />
+                <Input
+                  type="url"
+                  placeholder="Remote URL (http://...mp4) *"
+                  value={item.videoUrl}
+                  onChange={(e) => updateItem(item.id, { videoUrl: e.target.value })}
+                  onBlur={(e) => handleUrlBlur(item.id, e.target.value)}
+                  disabled={isRunning}
+                  className="font-mono text-xs sm:text-sm"
+                />
               </div>
 
               {/* Active Item Progress Bar */}
               {isCurrent && item.status === "downloading" && (
                 <div className="mt-3 space-y-1">
-                  <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-indigo-500 to-cyan-400 h-1.5 rounded-full transition-all duration-300"
-                      style={{ width: `${item.progress}%` }}
-                    />
-                  </div>
+                  <Progress value={item.progress} className="h-1.5" />
                 </div>
               )}
 
               {/* Error Message if any */}
               {item.error && (
-                <p className="mt-2 text-xs text-rose-500 dark:text-rose-400 flex items-center space-x-1">
+                <p className="mt-2 text-xs text-destructive flex items-center space-x-1">
                   <FaExclamationCircle size={11} className="flex-shrink-0" />
                   <span>{item.error}</span>
                 </p>
               )}
-            </div>
+            </Card>
           );
         })}
       </div>
 
       {/* Add Row Button */}
       {!isRunning && (
-        <button
-          type="button"
+        <Button
+          variant="outline"
           onClick={addRow}
-          className="w-full py-2.5 border-2 border-dashed border-gray-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-500 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-bold rounded-xl flex items-center justify-center space-x-2 text-sm transition-all duration-200"
+          className="w-full h-12 border-dashed border-2 font-bold"
         >
-          <FaPlus size={12} />
-          <span>Add Another Video</span>
-        </button>
+          <FaPlus size={12} className="mr-2" />
+          Add Another Video
+        </Button>
       )}
 
       {/* Overall Progress Bar during Execution */}
       {isRunning && (
-        <div className="p-4 rounded-xl bg-indigo-50 dark:bg-slate-900/90 border border-indigo-100 dark:border-slate-700 space-y-2 animate-in fade-in duration-300">
-          <div className="flex justify-between text-xs font-bold text-gray-700 dark:text-gray-300">
+        <Card className="p-4 bg-muted/50 space-y-2 animate-in fade-in duration-300">
+          <div className="flex justify-between text-xs font-bold text-foreground">
             <span>Overall Progress</span>
             <span>
               {completedCount} / {validCount} Completed ({overallPercent}%)
             </span>
           </div>
-          <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
-            <div
-              className="bg-indigo-600 dark:bg-indigo-500 h-2.5 rounded-full transition-all duration-500 relative"
-              style={{ width: `${overallPercent}%` }}
-            >
-              <div className="absolute inset-0 bg-white/20 animate-pulse" />
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 text-center animate-pulse">
+          <Progress value={overallPercent} className="h-2.5" />
+          <p className="text-xs text-muted-foreground text-center animate-pulse">
             Processing video {currentProcessingIndex + 1} of {validCount}... please keep this tab open.
           </p>
-        </div>
+        </Card>
       )}
 
       {/* Completion Banner with Playlist Link */}
       {!isRunning && createdPlaylist && completedCount > 0 && (
-        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in duration-300">
+        <Card className="p-4 bg-primary/10 border-primary text-foreground flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in duration-300">
           <div className="flex items-center space-x-2">
-            <MdCheck size={24} className="text-emerald-500" />
+            <MdCheck size={24} className="text-primary" />
             <span className="text-sm font-semibold">
               Playlist <strong>"{createdPlaylist.title}"</strong> is ready with your videos!
             </span>
           </div>
-          <Link
-            href={`/playlist/${createdPlaylist._id}`}
-            className="text-xs font-bold px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors shadow-sm"
-          >
-            View Playlist →
-          </Link>
-        </div>
+          <Button asChild>
+            <Link href={`/playlist/${createdPlaylist._id}`}>
+              View Playlist →
+            </Link>
+          </Button>
+        </Card>
       )}
 
       {/* Bottom Main Action Button */}
       <div className="flex gap-3 pt-2">
         {isRunning ? (
-          <button
-            type="button"
+          <Button
+            variant="destructive"
             onClick={handleStop}
-            className="w-full py-3.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-all shadow-md flex items-center justify-center space-x-2"
+            className="w-full h-14 text-base font-bold"
           >
-            <FaStop />
-            <span>Stop Uploads</span>
-          </button>
+            <FaStop className="mr-2" />
+            Stop Uploads
+          </Button>
         ) : (
-          <button
-            type="button"
+          <Button
             onClick={handleStartPlaylistUpload}
             disabled={validCount === 0}
-            className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-base"
+            className="w-full h-14 text-base font-bold"
           >
-            <FaPlay size={14} />
-            <span>
-              Start Playlist Upload {validCount > 0 ? `(${validCount} Videos)` : ""}
-            </span>
-          </button>
+            <FaPlay size={14} className="mr-2" />
+            Start Playlist Upload {validCount > 0 ? `(${validCount} Videos)` : ""}
+          </Button>
         )}
       </div>
 
       {/* Quick Paste Modal */}
-      {showPasteModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center space-x-2">
-                <FaClipboardList className="text-indigo-600" />
-                <span>Paste Multiple Video URLs</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowPasteModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+      <Dialog open={showPasteModal} onOpenChange={setShowPasteModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <FaClipboardList className="text-muted-foreground" />
+              <span>Paste Multiple Video URLs</span>
+            </DialogTitle>
+            <DialogDescription>
               Paste URLs one per line. You can paste just URLs, or formatted as <code>Title - URL</code> or <code>Title, URL</code>:
-            </p>
+            </DialogDescription>
+          </DialogHeader>
 
-            <textarea
-              rows={8}
-              value={rawPastedText}
-              onChange={(e) => setRawPastedText(e.target.value)}
-              placeholder={`Episode 1 - https://example.com/ep1.mp4\nEpisode 2 - https://example.com/ep2.mp4\nhttps://example.com/ep3.mp4`}
-              className="w-full p-3 text-xs sm:text-sm font-mono bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            />
+          <Textarea
+            rows={8}
+            value={rawPastedText}
+            onChange={(e) => setRawPastedText(e.target.value)}
+            placeholder={`Episode 1 - https://example.com/ep1.mp4\nEpisode 2 - https://example.com/ep2.mp4\nhttps://example.com/ep3.mp4`}
+            className="font-mono text-xs sm:text-sm resize-none"
+          />
 
-            <div className="flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={() => setShowPasteModal(false)}
-                className="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleBatchPaste}
-                disabled={!rawPastedText.trim()}
-                className="px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md disabled:opacity-50"
-              >
-                Populate Videos
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowPasteModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBatchPaste}
+              disabled={!rawPastedText.trim()}
+            >
+              Populate Videos
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -7,6 +7,8 @@ import { fetcher } from "@/lib/fetcher";
 import API from "@/lib/api";
 import { toast } from "react-toastify";
 import Comment from "@/components/Comment";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 const VideoComments = ({ videoId, isAuthenticated }) => {
   const [newComment, setNewComment] = useState("");
@@ -46,34 +48,34 @@ const VideoComments = ({ videoId, isAuthenticated }) => {
   };
 
   if (!comments) {
-    return <div className="mt-8 bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-800 animate-pulse h-64"></div>;
+    return <div className="mt-8 bg-card p-6 md:p-8 rounded-2xl shadow-xl border border-border animate-pulse h-64"></div>;
   }
 
   return (
-    <div className="mt-8 bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-800 transition-colors duration-300">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+    <div className="mt-8 bg-card p-6 md:p-8 rounded-2xl shadow-xl border border-border transition-colors duration-300">
+      <h2 className="text-2xl font-bold text-foreground mb-6">
         {comments.length} Comments
       </h2>
       {isAuthenticated ? (
         <form onSubmit={handleCommentSubmit} className="mb-8">
-          <textarea
+          <Textarea
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder="Add a comment..."
-            className="w-full p-4 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none"
+            className="w-full resize-none"
             rows={3}
           />
-          <button
+          <Button
             type="submit"
-            className="mt-3 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors shadow-sm"
+            className="mt-3 rounded-xl px-6 font-semibold shadow-sm"
           >
             Post Comment
-          </button>
+          </Button>
         </form>
       ) : (
-        <p className="mb-8 text-gray-600 dark:text-gray-400 font-medium">
+        <p className="mb-8 text-muted-foreground font-medium">
           Please{" "}
-          <Link href="/login" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+          <Link href="/login" className="text-primary hover:underline">
             log in
           </Link>{" "}
           to post a comment.

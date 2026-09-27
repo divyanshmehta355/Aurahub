@@ -4,7 +4,7 @@ import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 const Requirement = ({ met, text }) => (
   <div
     className={`flex items-center text-xs transition-colors font-medium ${
-      met ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-gray-500"
+      met ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
     }`}
   >
     {met ? (
@@ -26,7 +26,7 @@ const PasswordStrength = ({ password }) => {
   if (!password) return null;
 
   return (
-    <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700 rounded-xl mt-2 space-y-2">
+    <div className="p-4 bg-muted/50 border border-border rounded-xl mt-2 space-y-2">
       <Requirement met={isLongEnough} text="At least 8 characters" />
       <Requirement met={hasLowerCase} text="Contains a lowercase letter" />
       <Requirement met={hasUpperCase} text="Contains an uppercase letter" />

@@ -266,7 +266,7 @@ const MyProfilePage = () => {
   if (status === "loading") {
     return (
       <div className="flex h-screen items-center justify-center">
-        <FaSpinner className="animate-spin text-indigo-600" size={40} />
+        <FaSpinner className="animate-spin text-primary" size={40} />
       </div>
     );
   }
@@ -274,17 +274,17 @@ const MyProfilePage = () => {
   return (
     <>
       {showCropperModal && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl max-w-2xl w-full relative border border-gray-200 dark:border-slate-700">
+        <div className="fixed inset-0 bg-muted backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+          <div className="bg-card p-8 rounded-2xl shadow-xl max-w-2xl w-full relative border border-border">
             <button
               onClick={() => setShowCropperModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              className="absolute top-4 right-4 text-muted-foreground hover:text-muted-foreground transition-colors"
             >
               <FaTimes size={20} />
             </button>
-            <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white font-display tracking-tight">Crop your {cropType}</h2>
+            <h2 className="text-2xl font-bold mb-6 text-foreground font-display tracking-tight">Crop your {cropType}</h2>
             {upImg && (
-              <div className="max-h-[60vh] overflow-y-auto bg-gray-50 dark:bg-slate-900 rounded-xl p-2 flex justify-center">
+              <div className="max-h-[60vh] overflow-y-auto bg-muted/50 rounded-xl p-2 flex justify-center">
                 <ReactCrop
                   crop={crop}
                   onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -305,7 +305,7 @@ const MyProfilePage = () => {
             <button
               onClick={handleSaveCroppedImage}
               disabled={!completedCrop || isUploading}
-              className="mt-6 px-4 py-3 bg-indigo-600 text-white font-semibold rounded-xl disabled:bg-indigo-400 hover:bg-indigo-700 transition-all w-full shadow-md flex items-center justify-center gap-2"
+              className="mt-6 px-4 py-3 bg-primary text-primary-foreground font-semibold rounded-xl disabled:opacity-50 hover:bg-primary/90 transition-all w-full shadow-md flex items-center justify-center gap-2"
             >
               {isUploading ? <FaSpinner className="animate-spin" /> : null}
               {isUploading ? "Uploading..." : "Save Image"}
@@ -319,14 +319,14 @@ const MyProfilePage = () => {
           
           {/* Sidebar Navigation */}
           <div className="w-full md:w-64 flex-shrink-0">
-            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white font-display tracking-tight mb-6">Settings</h1>
+            <h1 className="text-3xl font-extrabold text-foreground font-display tracking-tight mb-6">Settings</h1>
             <nav className="flex flex-col space-y-2">
               <button
                 onClick={() => setActiveTab("profile")}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                   activeTab === "profile" 
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400" 
-                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-800"
+                    ? "bg-muted text-primary" 
+                    : "text-muted-foreground hover:bg-muted  "
                 }`}
               >
                 <MdPerson size={20} />
@@ -336,8 +336,8 @@ const MyProfilePage = () => {
                 onClick={() => setActiveTab("security")}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                   activeTab === "security" 
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400" 
-                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-800"
+                    ? "bg-muted text-primary" 
+                    : "text-muted-foreground hover:bg-muted  "
                 }`}
               >
                 <MdSecurity size={20} />
@@ -354,18 +354,18 @@ const MyProfilePage = () => {
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
                 
                 {/* Banner & Avatar Section */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden relative">
+                <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden relative">
                   {/* Banner */}
-                  <div className="h-32 sm:h-48 w-full relative bg-indigo-50 dark:bg-slate-800 group">
+                  <div className="h-32 sm:h-48 w-full relative bg-muted group">
                     {session?.user?.banner ? (
                       <Image src={session.user.banner} alt="Banner" layout="fill" objectFit="cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center opacity-50">
-                        <FaImage size={40} className="text-gray-400" />
+                        <FaImage size={40} className="text-muted-foreground" />
                       </div>
                     )}
-                    <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity duration-300">
-                      <span className="text-white font-medium bg-black/50 px-4 py-2 rounded-full backdrop-blur-sm flex items-center gap-2">
+                    <label className="absolute inset-0 bg-foreground/40 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity duration-300">
+                      <span className="text-primary-foreground font-medium bg-foreground/50 px-4 py-2 rounded-full backdrop-blur-sm flex items-center gap-2">
                         <FaImage /> Change Banner
                       </span>
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageSelect(e, 'banner')} />
@@ -381,10 +381,10 @@ const MyProfilePage = () => {
                         width={100}
                         height={100}
                         unoptimized
-                        className="rounded-full object-cover ring-4 ring-white dark:ring-slate-900 bg-white dark:bg-slate-900 w-24 h-24 sm:w-32 sm:h-32"
+                        className="rounded-full object-cover ring-4 ring-background bg-card w-24 h-24 sm:w-32 sm:h-32"
                       />
-                      <label className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity duration-300">
-                        <span className="text-white text-xs font-medium text-center">Change<br/>Avatar</span>
+                      <label className="absolute inset-0 bg-foreground/50 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity duration-300">
+                        <span className="text-primary-foreground text-xs font-medium text-center">Change<br/>Avatar</span>
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageSelect(e, 'avatar')} />
                       </label>
                     </div>
@@ -392,18 +392,18 @@ const MyProfilePage = () => {
                 </div>
 
                 {/* Form Section */}
-                <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 font-display tracking-tight">Profile Details</h2>
+                <div className="bg-card p-6 sm:p-8 rounded-2xl shadow-sm border border-border">
+                  <h2 className="text-xl font-bold text-foreground mb-6 font-display tracking-tight">Profile Details</h2>
                   <form onSubmit={handleProfileSubmit(onProfileSubmit)} className="space-y-5">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username</label>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">Username</label>
                       <div className="relative">
                         <input
                           {...registerProfile("username", { onBlur: (e) => checkUsername(e.target.value) })}
-                          className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
+                          className="w-full px-4 py-3 border border-border rounded-xl bg-muted/50 text-foreground focus:ring-2 focus:ring-ring focus:bg-card transition-all"
                         />
                         <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                          {usernameStatus.loading && <FaSpinner className="animate-spin text-gray-400" />}
+                          {usernameStatus.loading && <FaSpinner className="animate-spin text-muted-foreground" />}
                           {usernameStatus.message.includes("available") && <FaCheckCircle className="text-emerald-500" />}
                           {usernameStatus.message && !usernameStatus.message.includes("available") && <FaTimesCircle className="text-rose-500" />}
                         </div>
@@ -414,12 +414,12 @@ const MyProfilePage = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bio</label>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">Bio</label>
                       <textarea
                         {...registerProfile("bio")}
                         rows="4"
                         placeholder="Tell viewers about your channel..."
-                        className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-900 transition-all resize-none"
+                        className="w-full px-4 py-3 border border-border rounded-xl bg-muted/50 text-foreground focus:ring-2 focus:ring-ring focus:bg-card transition-all resize-none"
                       />
                       {profileErrors.bio && <p className="text-xs text-rose-500 mt-1">{profileErrors.bio.message}</p>}
                     </div>
@@ -428,7 +428,7 @@ const MyProfilePage = () => {
                       <button
                         type="submit"
                         disabled={isProfileSubmitting}
-                        className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl shadow-sm transition-all disabled:opacity-70 flex items-center gap-2"
+                        className="px-6 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 text-primary-foreground text-primary-foreground font-medium rounded-xl shadow-sm transition-all disabled:opacity-70 flex items-center gap-2"
                       >
                         {isProfileSubmitting && <FaSpinner className="animate-spin" />}
                         Save Profile
@@ -442,21 +442,21 @@ const MyProfilePage = () => {
             {/* SECURITY TAB */}
             {activeTab === "security" && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 font-display tracking-tight">Account Security</h2>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Manage your email and update your password.</p>
+                <div className="bg-card p-6 sm:p-8 rounded-2xl shadow-sm border border-border">
+                  <h2 className="text-xl font-bold text-foreground mb-2 font-display tracking-tight">Account Security</h2>
+                  <p className="text-muted-foreground text-sm mb-6">Manage your email and update your password.</p>
                   
                   <form onSubmit={handleSecuritySubmit(onSecuritySubmit)} className="space-y-5">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">Email Address</label>
                       <div className="relative">
                         <input
                           type="email"
                           {...registerSecurity("email", { onBlur: (e) => checkEmail(e.target.value) })}
-                          className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
+                          className="w-full px-4 py-3 border border-border rounded-xl bg-muted/50 text-foreground focus:ring-2 focus:ring-ring focus:bg-card transition-all"
                         />
                         <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                          {emailStatus.loading && <FaSpinner className="animate-spin text-gray-400" />}
+                          {emailStatus.loading && <FaSpinner className="animate-spin text-muted-foreground" />}
                           {emailStatus.message.includes("available") && <FaCheckCircle className="text-emerald-500" />}
                           {emailStatus.message && !emailStatus.message.includes("available") && <FaTimesCircle className="text-rose-500" />}
                         </div>
@@ -466,17 +466,17 @@ const MyProfilePage = () => {
                       </p>
                     </div>
 
-                    <hr className="border-gray-200 dark:border-slate-700 my-6" />
+                    <hr className="border-border my-6" />
                     
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">Change Password</h3>
+                    <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">Change Password</h3>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password (Optional)</label>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">New Password (Optional)</label>
                       <input
                         type="password"
                         placeholder="Leave blank to keep current password"
                         {...registerSecurity("password")}
-                        className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
+                        className="w-full px-4 py-3 border border-border rounded-xl bg-muted/50 text-foreground focus:ring-2 focus:ring-ring focus:bg-card transition-all"
                       />
                       {securityErrors.password && <p className="text-xs text-rose-500 mt-1">{securityErrors.password.message}</p>}
                       {passwordValue && <PasswordStrength password={passwordValue} />}
@@ -484,11 +484,11 @@ const MyProfilePage = () => {
 
                     {passwordValue && (
                       <div className="animate-in fade-in duration-300">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm New Password</label>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">Confirm New Password</label>
                         <input
                           type="password"
                           {...registerSecurity("confirmPassword")}
-                          className="w-full px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
+                          className="w-full px-4 py-3 border border-border rounded-xl bg-muted/50 text-foreground focus:ring-2 focus:ring-ring focus:bg-card transition-all"
                         />
                         {securityErrors.confirmPassword && (
                           <p className="text-xs text-rose-500 mt-1">{securityErrors.confirmPassword.message}</p>
@@ -500,7 +500,7 @@ const MyProfilePage = () => {
                       <button
                         type="submit"
                         disabled={isSecuritySubmitting}
-                        className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl shadow-sm transition-all disabled:opacity-70 flex items-center gap-2"
+                        className="px-6 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 text-primary-foreground text-primary-foreground font-medium rounded-xl shadow-sm transition-all disabled:opacity-70 flex items-center gap-2"
                       >
                         {isSecuritySubmitting && <FaSpinner className="animate-spin" />}
                         Save Security Settings

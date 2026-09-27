@@ -52,14 +52,14 @@ const WatchLaterPage = () => {
 
   return (
     <main className="container mx-auto px-6 py-8">
-      <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white font-display tracking-tight mb-8">Watch Later</h1>
+      <h1 className="text-3xl font-extrabold text-foreground font-display tracking-tight mb-8">Watch Later</h1>
       <div className="space-y-4">
         {videos.length > 0 ? (
           videos.map(({ videoId: video }) => (
             <Link
               key={video._id}
               href={`/video/${video._id}`}
-              className="flex items-center space-x-4 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800/50 border border-transparent hover:border-gray-100 dark:hover:border-slate-700 transition-all group"
+              className="flex items-center space-x-4 p-3 rounded-xl hover:bg-muted/50 border border-transparent hover:border-border transition-all group"
             >
               <div className="w-48 h-28 flex-shrink-0 shadow-sm group-hover:shadow-md transition-shadow rounded-xl overflow-hidden">
                 <VideoThumbnail
@@ -71,23 +71,23 @@ const WatchLaterPage = () => {
                 />
               </div>
               <div className="w-0 flex-grow">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white font-display tracking-tight truncate mb-1">{video.title}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 truncate font-medium">
+                <h3 className="text-lg font-bold text-foreground font-display tracking-tight truncate mb-1">{video.title}</h3>
+                <p className="text-sm text-muted-foreground truncate font-medium">
                   {video.uploader?.username}
                 </p>
               </div>
               <button
                 onClick={(e) => handleRemove(e, video._id)}
-                className="p-2 text-gray-400 dark:text-gray-500 transition-colors"
+                className="p-2 text-muted-foreground transition-colors"
               >
-                <MdOutlineAutoDelete className="h-5 w-5 hover:text-rose-600 dark:hover:text-rose-400" />
+                <MdOutlineAutoDelete className="h-5 w-5 hover:text-rose-600" />
               </button>
             </Link>
           ))
         ) : (
-          <div className="text-center p-12 border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl shadow-sm">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Empty List</h2>
-            <p className="text-gray-500 dark:text-gray-400 mt-2">
+          <div className="text-center p-12 border border-border bg-card rounded-2xl shadow-sm">
+            <h2 className="text-xl font-bold text-foreground">Empty List</h2>
+            <p className="text-muted-foreground mt-2">
               You have no videos in your Watch Later list.
             </p>
           </div>

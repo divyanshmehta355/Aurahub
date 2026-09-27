@@ -14,6 +14,8 @@ import EditVideoModal from "@/components/EditVideoModal";
 import SaveToPlaylistModal from "@/components/SaveToPlaylistModal";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const VideoInfoPanel = ({ initialVideo }) => {
   const { data: session, status } = useSession();
@@ -157,80 +159,76 @@ const VideoInfoPanel = ({ initialVideo }) => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="mt-6 bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-800 transition-colors duration-300"
+        className="mt-6 bg-card p-6 md:p-8 rounded-2xl shadow-xl border border-border transition-colors duration-300"
       >
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{video.title}</h1>
+        <h1 className="text-3xl font-bold text-foreground">{video.title}</h1>
         <div className="flex flex-col sm:flex-row justify-between sm:items-center mt-4 gap-4">
-          <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
+          <div className="text-sm font-medium text-muted-foreground">
             <span>{video.views} views</span>
             <span className="mx-2">•</span>
             <span>{new Date(video.createdAt).toLocaleDateString()}</span>
           </div>
           <div className="flex items-center space-x-2">
-            <button
+            <Button
+              variant={video.isLiked ? "default" : "secondary"}
               onClick={throttledLikeHandler}
-              className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl font-semibold transition-all shadow-sm ${
-                video.isLiked
-                  ? "bg-indigo-600 hover:bg-indigo-700 text-white"
-                  : "bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-slate-700"
-              }`}
+              className="rounded-xl px-5 h-10 font-semibold"
             >
-              <FcLike />
+              <FcLike className="mr-2" />
               <span>{video.likesCount}</span>
-            </button>
+            </Button>
             {isAuthenticated && (
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => setShowSaveModal(true)}
-                className="flex items-center space-x-2 px-5 py-2.5 rounded-xl font-semibold shadow-sm bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all"
+                className="rounded-xl px-5 h-10 font-semibold"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
+                  className="h-4 w-4 mr-2"
                   viewBox="0 0 20 20"
                   fill="currentColor"
                 >
                   <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
                 </svg>
                 <span>Save</span>
-              </button>
+              </Button>
             )}
             {isAuthenticated && (
-              <button
+              <Button
+                variant="secondary"
                 onClick={handleToggleWatchLater}
-                className="flex items-center space-x-2 px-5 py-2.5 rounded-xl font-semibold shadow-sm bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all"
+                className="rounded-xl px-5 h-10 font-semibold"
               >
                 {inWatchLater ? (
                   <>
-                    <FaCheck className="text-emerald-500" />{" "}
+                    <FaCheck className="text-emerald-500 mr-2" />
                     <span>Saved</span>
                   </>
                 ) : (
                   <>
-                    <FaClock className="text-gray-500 dark:text-gray-400" /> <span>Watch Later</span>
+                    <FaClock className="text-muted-foreground mr-2" />
+                    <span>Watch Later</span>
                   </>
                 )}
-              </button>
+              </Button>
             )}
           </div>
         </div>
-        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-800">
+        <div className="mt-6 pt-6 border-t border-border">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
               <Link href={`/profile/${video.uploader?.username}`}>
-                <Image
-                  src={getAvatarUrl(video.uploader?.username, video.uploader?.avatar)}
-                  alt={video.uploader?.username || "Uploader"}
-                  width={40}
-                  height={40}
-                  unoptimized
-                  className="rounded-full w-10 h-10 object-cover ring-2 ring-transparent hover:ring-indigo-500 transition-all duration-300"
-                />
+                <Avatar className="h-10 w-10 ring-2 ring-transparent hover:ring-primary transition-all duration-300">
+                  <AvatarImage src={getAvatarUrl(video.uploader?.username, video.uploader?.avatar)} alt={video.uploader?.username || "Uploader"} />
+                  <AvatarFallback>{video.uploader?.username?.charAt(0) || "U"}</AvatarFallback>
+                </Avatar>
               </Link>
-              <p className="text-gray-800 dark:text-gray-200 font-medium">
+              <p className="text-foreground font-medium">
                 Uploaded by{" "}
                 <Link
                   href={`/profile/${video.uploader?.username}`}
-                  className="font-bold hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline transition-colors"
+                  className="font-bold hover:text-primary hover:underline transition-colors"
                 >
                   {video.uploader?.username || "Unknown"}
                 </Link>
@@ -238,23 +236,25 @@ const VideoInfoPanel = ({ initialVideo }) => {
             </div>
             {user && user.id === video.uploader?._id && (
               <div className="flex space-x-3">
-                <button
+                <Button
+                  variant="secondary"
                   onClick={() => setShowEditModal(true)}
-                  className="text-sm px-4 py-2 font-semibold bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                  className="rounded-xl font-semibold shadow-sm"
                 >
                   Edit
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="destructive"
                   onClick={handleDelete}
-                  className="text-sm px-4 py-2 font-semibold bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors shadow-sm"
+                  className="rounded-xl font-semibold shadow-sm"
                 >
                   Delete
-                </button>
+                </Button>
               </div>
             )}
           </div>
           {video.description ? (
-            <p className="mt-4 text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+            <p className="mt-4 text-foreground whitespace-pre-wrap leading-relaxed">
               {video.description}
             </p>
           ) : null}
@@ -263,7 +263,7 @@ const VideoInfoPanel = ({ initialVideo }) => {
               {video.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="px-3 py-1.5 bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-200 text-xs font-semibold rounded-lg"
+                  className="px-3 py-1.5 bg-muted text-muted-foreground text-xs font-semibold rounded-lg"
                 >
                   #{tag}
                 </span>

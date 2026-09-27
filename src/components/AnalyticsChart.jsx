@@ -25,8 +25,9 @@ ChartJS.register(
 const AnalyticsChart = ({ videos }) => {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
-  const textColor = isDark ? '#e2e8f0' : '#334155'; // slate-200 or slate-700
-  const gridColor = isDark ? '#334155' : '#e2e8f0'; // slate-700 or slate-200
+  const textColor = isDark ? '#ffffff' : '#000000';
+  const gridColor = isDark ? '#333333' : '#e5e5e5';
+  const primaryColor = isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)';
 
   const labels = videos.map(video => video.title);
   const viewsData = videos.map(video => video.views);
@@ -39,24 +40,24 @@ const AnalyticsChart = ({ videos }) => {
       {
         label: 'Views',
         data: viewsData,
-        backgroundColor: 'rgba(99, 102, 241, 0.7)', // Indigo
-        borderColor: 'rgba(99, 102, 241, 1)',
+        backgroundColor: primaryColor,
+        borderColor: isDark ? '#ffffff' : '#000000',
         borderWidth: 1,
         borderRadius: 4,
       },
       {
         label: 'Likes',
         data: likesData,
-        backgroundColor: 'rgba(139, 92, 246, 0.7)', // Violet
-        borderColor: 'rgba(139, 92, 246, 1)',
+        backgroundColor: isDark ? 'rgba(161, 161, 170, 0.7)' : 'rgba(113, 113, 122, 0.7)', // Neutral secondary
+        borderColor: isDark ? '#a1a1aa' : '#71717a',
         borderWidth: 1,
         borderRadius: 4,
       },
       {
         label: 'Comments',
         data: commentsData,
-        backgroundColor: 'rgba(236, 72, 153, 0.7)', // Pink
-        borderColor: 'rgba(236, 72, 153, 1)',
+        backgroundColor: isDark ? 'rgba(82, 82, 91, 0.7)' : 'rgba(161, 161, 170, 0.7)', // Neutral tertiary
+        borderColor: isDark ? '#52525b' : '#a1a1aa',
         borderWidth: 1,
         borderRadius: 4,
       },

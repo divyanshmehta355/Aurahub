@@ -5,8 +5,11 @@ import Link from 'next/link';
 import API from '@/lib/api';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-toastify';
-import Image from 'next/image';
 import { getAvatarUrl } from '@/lib/identicon';
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 const Comment = ({ comment, videoId, onCommentDeleted, onCommentUpdated, onReplySubmitted }) => {
     const [showReplyForm, setShowReplyForm] = useState(false);
@@ -81,73 +84,67 @@ const Comment = ({ comment, videoId, onCommentDeleted, onCommentUpdated, onReply
 
     return (
         <div className="flex space-x-3">
-            <div className="flex-shrink-0">
-                <Link href={`/profile/${comment.author.username}`}>
-                    <Image
-                        src={getAvatarUrl(comment.author?.username, comment.author?.avatar)}
-                        alt={comment.author?.username || "User"}
-                        width={40}
-                        height={40}
-                        unoptimized
-                        className="rounded-full w-10 h-10 object-cover"
-                    />
-                </Link>
-            </div>
-            <div className="flex-1">
+            <Link href={`/profile/${comment.author.username}`} className="flex-shrink-0 mt-1">
+                <Avatar className="w-9 h-9">
+                    <AvatarImage src={getAvatarUrl(comment.author?.username, comment.author?.avatar)} alt={comment.author?.username} />
+                    <AvatarFallback>{comment.author?.username?.charAt(0) || "U"}</AvatarFallback>
+                </Avatar>
+            </Link>
+            <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-center">
-                    <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">
-                        <Link href={`/profile/${comment.author.username}`} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">{comment.author.username}</Link>{" "}
-                        <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">{new Date(comment.createdAt).toLocaleString()}</span>
+                    <p className="font-semibold text-sm text-foreground">
+                        <Link href={`/profile/${comment.author.username}`} className="hover:text-primary transition-colors">{comment.author.username}</Link>{" "}
+                        <span className="text-xs text-muted-foreground font-normal">{new Date(comment.createdAt).toLocaleString()}</span>
                     </p>
                     {isOwner && !isEditing && (
-                        <div className="flex space-x-3">
-                             <button onClick={() => setIsEditing(true)} className="text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Edit</button>
-                             <button onClick={handleDelete} className="text-xs text-rose-500 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 transition-colors">Delete</button>
+                        <div className="flex items-center space-x-2">
+                             <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground">Edit</Button>
+                             <Button variant="ghost" size="sm" onClick={handleDelete} className="h-6 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10">Delete</Button>
                         </div>
                     )}
                 </div>
 
                 {isEditing ? (
                     <form onSubmit={handleUpdateSubmit} className="mt-2">
-                        <textarea 
+                        <Textarea 
                             value={editText} 
                             onChange={(e) => setEditText(e.target.value)}
-                            className="w-full p-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none resize-none"
+                            className="w-full text-sm resize-none"
                             rows={2}
                         />
                         <div className="flex space-x-2 mt-2">
-                            <button type="submit" className="px-4 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-semibold hover:bg-indigo-700 transition-colors shadow-sm">Save</button>
-                            <button type="button" onClick={() => setIsEditing(false)} className="px-4 py-1.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-full text-xs font-semibold hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
+                            <Button size="sm" type="submit" className="rounded-full px-4 h-7 text-xs">Save</Button>
+                            <Button size="sm" variant="secondary" type="button" onClick={() => setIsEditing(false)} className="rounded-full px-4 h-7 text-xs">Cancel</Button>
                         </div>
                     </form>
                 ) : (
-                    <p className="text-gray-800 dark:text-gray-300 text-sm mt-1">{comment.text}</p>
+                    <p className="text-foreground text-sm mt-1">{comment.text}</p>
                 )}
                 
                 <div className="flex items-center space-x-4 text-xs mt-2">
-                    <button onClick={() => setShowReplyForm(!showReplyForm)} className="font-semibold text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Reply</button>
-                    <button onClick={handleLoadReplies} className="font-semibold text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                    <Button variant="link" onClick={() => setShowReplyForm(!showReplyForm)} className="h-auto p-0 font-semibold text-muted-foreground hover:text-foreground">Reply</Button>
+                    <Button variant="link" onClick={handleLoadReplies} className="h-auto p-0 font-semibold text-muted-foreground hover:text-foreground">
                         {loadingReplies ? 'Loading...' : replies.length > 0 ? 'Hide Replies' : 'View Replies'}
-                    </button>
+                    </Button>
                 </div>
                 
                 {showReplyForm && isAuthenticated && (
                     <form onSubmit={handleReplySubmit} className="mt-3">
-                        <textarea 
+                        <Textarea 
                             value={replyText} 
                             onChange={(e) => setReplyText(e.target.value)}
                             placeholder={`Replying to ${comment.author.username}...`}
-                            className="w-full p-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none resize-none"
+                            className="w-full text-sm resize-none"
                             rows={2}
                         />
                         <div className="flex space-x-2 mt-2">
-                             <button type="submit" className="px-4 py-1.5 bg-indigo-600 text-white rounded-full text-xs font-semibold hover:bg-indigo-700 transition-colors shadow-sm">Post Reply</button>
-                             <button type="button" onClick={() => setShowReplyForm(false)} className="px-4 py-1.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-full text-xs font-semibold hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
+                             <Button size="sm" type="submit" className="rounded-full px-4 h-7 text-xs">Post Reply</Button>
+                             <Button size="sm" variant="secondary" type="button" onClick={() => setShowReplyForm(false)} className="rounded-full px-4 h-7 text-xs">Cancel</Button>
                         </div>
                     </form>
                 )}
 
-                <div className="mt-4 space-y-4 pl-6 border-l-2 border-gray-200 dark:border-slate-700">
+                <div className="mt-4 space-y-4 pl-4 border-l-2 border-border ml-2">
                     {replies.map(reply => (
                         <Comment 
                             key={reply._id} 

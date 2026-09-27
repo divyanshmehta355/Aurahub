@@ -29,8 +29,10 @@ ChartJS.register(
 const TimeSeriesChart = ({ timeSeries }) => {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
-  const textColor = isDark ? '#e2e8f0' : '#334155';
-  const gridColor = isDark ? '#334155' : '#e2e8f0';
+  const textColor = isDark ? '#ffffff' : '#000000';
+  const gridColor = isDark ? '#333333' : '#e5e5e5';
+  const primaryColor = isDark ? '#ffffff' : '#000000';
+  const primaryBg = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
 
   if (!timeSeries || timeSeries.length === 0) return null;
 
@@ -44,24 +46,24 @@ const TimeSeriesChart = ({ timeSeries }) => {
       {
         label: 'Views',
         data: viewsData,
-        borderColor: 'rgba(99, 102, 241, 1)', // Indigo
-        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        borderColor: primaryColor,
+        backgroundColor: primaryBg,
         borderWidth: 2,
         tension: 0.4,
         fill: true,
-        pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+        pointBackgroundColor: primaryColor,
         pointRadius: 2,
         pointHoverRadius: 5,
       },
       {
         label: 'Likes',
         data: likesData,
-        borderColor: 'rgba(236, 72, 153, 1)', // Pink
-        backgroundColor: 'rgba(236, 72, 153, 0.1)',
+        borderColor: isDark ? '#a1a1aa' : '#71717a', // Neutral secondary
+        backgroundColor: isDark ? 'rgba(161, 161, 170, 0.1)' : 'rgba(113, 113, 122, 0.1)',
         borderWidth: 2,
         tension: 0.4,
         fill: true,
-        pointBackgroundColor: 'rgba(236, 72, 153, 1)',
+        pointBackgroundColor: isDark ? '#a1a1aa' : '#71717a',
         pointRadius: 2,
         pointHoverRadius: 5,
       },
@@ -88,10 +90,10 @@ const TimeSeriesChart = ({ timeSeries }) => {
         }
       },
       tooltip: {
-        backgroundColor: isDark ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-        titleColor: isDark ? '#f8fafc' : '#0f172a',
-        bodyColor: isDark ? '#cbd5e1' : '#334155',
-        borderColor: isDark ? '#334155' : '#e2e8f0',
+        backgroundColor: isDark ? 'rgba(0, 0, 0, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+        titleColor: isDark ? '#ffffff' : '#000000',
+        bodyColor: isDark ? '#e5e5e5' : '#333333',
+        borderColor: gridColor,
         borderWidth: 1,
         padding: 12,
         boxPadding: 6,

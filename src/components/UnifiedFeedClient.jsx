@@ -22,6 +22,17 @@ import {
   FaChevronRight,
 } from "react-icons/fa";
 
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+
 const SORT_OPTIONS = [
   { id: "trending", label: "Trending", icon: FaFire },
   { id: "date_desc", label: "Newest", icon: FaClock },
@@ -104,12 +115,11 @@ const UnifiedFeedContent = () => {
   const totalPages = data?.totalPages || 1;
   const totalVideos = data?.totalVideos || 0;
 
-  // Background preload for adjacent pages (next and previous) for 0ms instant page switching
+  // Background preload for adjacent pages
   useEffect(() => {
     if (!data) return;
     const totalP = data.totalPages || 1;
 
-    // Preload next page into SWR cache
     if (currentPage < totalP) {
       let nextUrl = `/videos?sort=${sortBy}&page=${currentPage + 1}&limit=${PAGE_LIMIT}&type=${videoType}`;
       if (activeCategory && activeCategory !== "All") {
@@ -118,7 +128,6 @@ const UnifiedFeedContent = () => {
       preload(nextUrl, fetcher);
     }
 
-    // Preload previous page into SWR cache
     if (currentPage > 1) {
       let prevUrl = `/videos?sort=${sortBy}&page=${currentPage - 1}&limit=${PAGE_LIMIT}&type=${videoType}`;
       if (activeCategory && activeCategory !== "All") {
@@ -128,37 +137,13 @@ const UnifiedFeedContent = () => {
     }
   }, [currentPage, sortBy, videoType, activeCategory, data]);
 
-  // Build pagination numbers array with ellipsis
   const paginationItems = useMemo(() => {
-    if (totalPages <= 7) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
-    }
-    if (currentPage <= 4) {
-      return [1, 2, 3, 4, 5, "...", totalPages];
-    }
-    if (currentPage >= totalPages - 3) {
-      return [
-        1,
-        "...",
-        totalPages - 4,
-        totalPages - 3,
-        totalPages - 2,
-        totalPages - 1,
-        totalPages,
-      ];
-    }
-    return [
-      1,
-      "...",
-      currentPage - 1,
-      currentPage,
-      currentPage + 1,
-      "...",
-      totalPages,
-    ];
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (currentPage <= 4) return [1, 2, 3, 4, 5, "...", totalPages];
+    if (currentPage >= totalPages - 3) return [1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
   }, [currentPage, totalPages]);
 
-  // URL updater
   const updateUrlParams = (cat, sort, type, page = 1) => {
     const params = new URLSearchParams();
     if (cat && cat !== "All") params.set("category", cat);
@@ -170,7 +155,6 @@ const UnifiedFeedContent = () => {
     router.push(targetUrl, { scroll: false });
   };
 
-  // Filter change handlers (always reset to page 1)
   const handleCategoryClick = (category) => {
     const nextCat = activeCategory === category ? "All" : category;
     setActiveCategory(nextCat);
@@ -195,7 +179,6 @@ const UnifiedFeedContent = () => {
     setCurrentPage(newPage);
     updateUrlParams(activeCategory, sortBy, videoType, newPage);
 
-    // Scroll smoothly to top of video grid with clearance for sticky navbar
     if (gridRef.current) {
       const topOffset = gridRef.current.getBoundingClientRect().top + window.scrollY - 90;
       window.scrollTo({ top: Math.max(0, topOffset), behavior: "smooth" });
@@ -229,118 +212,91 @@ const UnifiedFeedContent = () => {
     }
   };
 
-  const currentSortObj =
-    SORT_OPTIONS.find((s) => s.id === sortBy) || SORT_OPTIONS[0];
-
+  const currentSortObj = SORT_OPTIONS.find((s) => s.id === sortBy) || SORT_OPTIONS[0];
   const startIndex = totalVideos > 0 ? (currentPage - 1) * PAGE_LIMIT + 1 : 0;
   const endIndex = Math.min(currentPage * PAGE_LIMIT, totalVideos);
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {/* 1. Category Filter Pills Carousel */}
-      <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        <button
-          onClick={() => handleCategoryClick("All")}
-          className={`px-4 sm:px-5 py-2 rounded-full font-bold text-xs sm:text-sm whitespace-nowrap transition-all duration-300 shadow-sm ${
-            activeCategory === "All"
-              ? "bg-indigo-600 text-white shadow-md hover:bg-indigo-700"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-800 dark:text-gray-300 dark:hover:bg-slate-700"
-          }`}
-        >
-          All
-        </button>
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => handleCategoryClick(cat)}
-            className={`px-4 sm:px-5 py-2 rounded-full font-bold text-xs sm:text-sm whitespace-nowrap transition-all duration-300 shadow-sm ${
-              activeCategory === cat
-                ? "bg-indigo-600 text-white shadow-md hover:bg-indigo-700"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-800 dark:text-gray-300 dark:hover:bg-slate-700"
-            }`}
+      <ScrollArea className="w-full whitespace-nowrap mb-6">
+        <div className="flex w-max space-x-2 p-1">
+          <Button
+            variant={activeCategory === "All" ? "default" : "secondary"}
+            className="rounded-full px-5"
+            onClick={() => handleCategoryClick("All")}
           >
-            {cat}
-          </button>
-        ))}
-      </div>
+            All
+          </Button>
+          {CATEGORIES.map((cat) => (
+            <Button
+              key={cat}
+              variant={activeCategory === cat ? "default" : "secondary"}
+              className="rounded-full px-5"
+              onClick={() => handleCategoryClick(cat)}
+            >
+              {cat}
+            </Button>
+          ))}
+        </div>
+        <ScrollBar orientation="horizontal" className="invisible" />
+      </ScrollArea>
 
       {/* 2. Unified Header & Control Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-4 border-b border-gray-100 dark:border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-4 border-b border-border">
         <div>
           <div className="flex items-center space-x-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
               {activeCategory === "All"
                 ? `${currentSortObj.label} Videos`
                 : `${activeCategory} Videos`}
             </h1>
             {isValidating && !isLoading && (
-              <div className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" title="Refreshing..." />
+              <div className="w-2 h-2 rounded-full bg-primary animate-ping" title="Refreshing..." />
             )}
           </div>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Browse trending, popular, and latest uploads with traditional page navigation.
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            Browse trending, popular, and latest uploads.
           </p>
         </div>
 
         {/* Controls: Type Tabs & Sort Dropdown */}
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Format Type Selector */}
-          <div className="flex rounded-xl p-1 bg-gray-100 dark:bg-slate-800/80 text-xs font-semibold">
-            {[
-              { id: "all", label: "All" },
-              { id: "standard", label: "Videos" },
-              { id: "short", label: "Shorts" },
-            ].map((t) => (
-              <button
-                key={t.id}
-                onClick={() => handleTypeChange(t.id)}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  videoType === t.id
-                    ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-sm"
-                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+          <Tabs value={videoType} onValueChange={handleTypeChange} className="w-[200px]">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="standard">Videos</TabsTrigger>
+              <TabsTrigger value="short">Shorts</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-          {/* Quick Sort Dropdown */}
           <div className="flex items-center space-x-2">
-            <label
-              htmlFor="unified-sort"
-              className="text-xs font-bold text-gray-500 dark:text-gray-400"
-            >
-              Sort:
-            </label>
-            <select
-              id="unified-sort"
-              value={sortBy}
-              onChange={(e) => handleSortChange(e.target.value)}
-              className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shadow-sm"
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <label className="text-xs font-bold text-muted-foreground">Sort:</label>
+            <Select value={sortBy} onValueChange={handleSortChange}>
+              <SelectTrigger className="w-[140px] h-9 text-xs font-semibold">
+                <SelectValue placeholder="Sort By" />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
 
       {/* Error State */}
       {error && (
-        <div className="p-4 mb-6 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-center text-sm font-medium">
+        <div className="p-4 mb-6 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-center text-sm font-medium">
           {error?.message || "Failed to load videos. Please try again."}
         </div>
       )}
 
       {/* 3. Responsive Video Grid */}
-      <div
-        ref={gridRef}
-        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 min-h-[400px]"
-      >
+      <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 min-h-[400px]">
         {isPageLoading
           ? Array.from({ length: PAGE_LIMIT }).map((_, idx) => (
               <VideoCardSkeleton key={`skeleton-${idx}`} />
@@ -357,94 +313,72 @@ const UnifiedFeedContent = () => {
 
       {/* Empty State */}
       {!isPageLoading && videos.length === 0 && (
-        <div className="text-center py-16 px-4 bg-white dark:bg-slate-900/40 rounded-2xl border border-gray-100 dark:border-slate-800 my-6 shadow-sm">
-          <FaCompass size={40} className="mx-auto text-indigo-400 mb-3 opacity-80" />
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-            No videos found
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
+        <div className="text-center py-16 px-4 bg-muted/40 rounded-2xl border border-border my-6 shadow-sm">
+          <FaCompass size={40} className="mx-auto text-primary mb-3 opacity-80" />
+          <h3 className="text-lg font-bold text-foreground">No videos found</h3>
+          <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
             {activeCategory !== "All"
               ? `There are no videos in the "${activeCategory}" category yet.`
               : "No videos match your current filter."}
           </p>
           {activeCategory !== "All" && (
-            <button
-              onClick={() => handleCategoryClick("All")}
-              className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm"
-            >
+            <Button className="mt-4" onClick={() => handleCategoryClick("All")}>
               Show All Categories
-            </button>
+            </Button>
           )}
         </div>
       )}
 
       {/* 4. Traditional Pagination Navigation Bar */}
       {totalPages > 1 && (
-        <nav
-          aria-label="Pagination Navigation"
-          className="mt-10 pt-6 border-t border-gray-100 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4"
-        >
-          {/* Summary / Range text */}
-          <div className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 order-2 sm:order-1">
-            Showing <span className="font-bold text-gray-900 dark:text-white">{startIndex}</span>–
-            <span className="font-bold text-gray-900 dark:text-white">{endIndex}</span> of{" "}
-            <span className="font-bold text-gray-900 dark:text-white">{totalVideos}</span> videos
+        <nav aria-label="Pagination Navigation" className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-xs sm:text-sm font-medium text-muted-foreground order-2 sm:order-1">
+            Showing <span className="font-bold text-foreground">{startIndex}</span>–
+            <span className="font-bold text-foreground">{endIndex}</span> of{" "}
+            <span className="font-bold text-foreground">{totalVideos}</span> videos
           </div>
 
-          {/* Pagination Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2 order-1 sm:order-2">
-            {/* Previous Page Button */}
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage <= 1 || isPageLoading}
-              aria-label="Previous Page"
-              className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-gray-200 shadow-sm cursor-pointer"
             >
-              <FaChevronLeft className="w-3 h-3" />
-              <span>Prev</span>
-            </button>
+              <FaChevronLeft className="w-3 h-3 mr-1" /> Prev
+            </Button>
 
-            {/* Page Number Buttons */}
             {paginationItems.map((item, idx) => {
               if (item === "...") {
                 return (
-                  <span
-                    key={`ellipsis-${idx}`}
-                    className="w-8 h-9 sm:h-10 flex items-center justify-center text-xs sm:text-sm text-gray-400 dark:text-gray-500 select-none"
-                  >
+                  <span key={`ellipsis-${idx}`} className="w-8 flex justify-center text-muted-foreground text-sm">
                     …
                   </span>
                 );
               }
-
               const isCurrent = item === currentPage;
               return (
-                <button
+                <Button
                   key={item}
+                  variant={isCurrent ? "default" : "outline"}
+                  size="icon"
+                  className={`w-9 h-9 ${isCurrent ? 'scale-105 shadow-md shadow-primary/25' : ''}`}
                   onClick={() => handlePageChange(item)}
                   disabled={isPageLoading}
-                  aria-current={isCurrent ? "page" : undefined}
-                  className={`min-w-[36px] sm:min-w-[40px] h-9 sm:h-10 px-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${
-                    isCurrent
-                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/25 scale-105"
-                      : "bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-gray-300"
-                  }`}
                 >
                   {item}
-                </button>
+                </Button>
               );
             })}
 
-            {/* Next Page Button */}
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage >= totalPages || isPageLoading}
-              aria-label="Next Page"
-              className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-gray-200 shadow-sm cursor-pointer"
             >
-              <span>Next</span>
-              <FaChevronRight className="w-3 h-3" />
-            </button>
+              Next <FaChevronRight className="w-3 h-3 ml-1" />
+            </Button>
           </div>
         </nav>
       )}
@@ -457,7 +391,7 @@ const UnifiedFeedClient = () => {
     <Suspense
       fallback={
         <div className="container mx-auto px-4 sm:px-6 py-8">
-          <div className="h-10 bg-gray-100 dark:bg-slate-800 rounded-full w-2/3 mb-8 animate-pulse" />
+          <div className="h-10 bg-muted rounded-full w-2/3 mb-8 animate-pulse" />
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {Array.from({ length: PAGE_LIMIT }).map((_, i) => (
               <VideoCardSkeleton key={i} />

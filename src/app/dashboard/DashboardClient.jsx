@@ -36,14 +36,14 @@ const VisibilityDropdown = ({ video, onVisibilityChange }) => {
 
   const options = {
     public: {
-      icon: <IoIosGlobe className="text-emerald-600 dark:text-emerald-400" />,
+      icon: <IoIosGlobe className="text-emerald-600" />,
       label: "Public",
     },
     unlisted: {
-      icon: <IoMdLink className="text-amber-600 dark:text-amber-400" />,
+      icon: <IoMdLink className="text-amber-600" />,
       label: "Unlisted",
     },
-    private: { icon: <IoIosLock className="text-rose-600 dark:text-rose-400" />, label: "Private" },
+    private: { icon: <IoIosLock className="text-rose-600" />, label: "Private" },
   };
 
   const selectedOption = options[video.visibility] || options.public;
@@ -52,14 +52,14 @@ const VisibilityDropdown = ({ video, onVisibilityChange }) => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center text-sm rounded-xl border border-gray-200 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 text-gray-700 dark:text-gray-300 w-full justify-between transition-all shadow-sm"
+        className="flex items-center text-sm rounded-xl border border-border px-3 py-2 bg-card hover:bg-muted/50 text-muted-foreground w-full justify-between transition-all shadow-sm"
       >
         <div className="flex items-center font-medium">
           {selectedOption.icon}
           <span className="ml-2">{selectedOption.label}</span>
         </div>
         <svg
-          className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`}
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
@@ -72,7 +72,7 @@ const VisibilityDropdown = ({ video, onVisibilityChange }) => {
         </svg>
       </button>
       {isOpen && (
-        <div className="absolute left-0 mt-2 w-full bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-100 dark:border-slate-700 z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute left-0 mt-2 w-full bg-card rounded-xl shadow-xl border border-border z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
           {Object.entries(options).map(([key, { icon, label }]) => (
             <button
               key={key}
@@ -80,7 +80,7 @@ const VisibilityDropdown = ({ video, onVisibilityChange }) => {
                 onVisibilityChange(video._id, key);
                 setIsOpen(false);
               }}
-              className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 flex items-center transition-colors"
+              className="w-full text-left px-4 py-3 text-sm text-muted-foreground hover:bg-muted/50 flex items-center transition-colors"
             >
               {icon} <span className="ml-2 font-medium">{label}</span>
             </button>
@@ -230,14 +230,14 @@ const DashboardClient = () => {
       <main className="container mx-auto px-4 sm:px-6 py-10 max-w-7xl animate-pulse">
         <div className="flex gap-8">
           <div className="w-64 hidden md:block">
-             <div className="h-10 bg-gray-200 dark:bg-slate-800 rounded w-full mb-4"></div>
-             <div className="h-10 bg-gray-200 dark:bg-slate-800 rounded w-full"></div>
+             <div className="h-10 bg-muted rounded w-full mb-4"></div>
+             <div className="h-10 bg-muted rounded w-full"></div>
           </div>
           <div className="flex-1">
              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-               {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-gray-200 dark:bg-slate-800 rounded-2xl"></div>)}
+               {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-muted rounded-2xl"></div>)}
              </div>
-             <div className="h-80 bg-gray-200 dark:bg-slate-800 rounded-2xl mb-8"></div>
+             <div className="h-80 bg-muted rounded-2xl mb-8"></div>
           </div>
         </div>
       </main>
@@ -266,7 +266,7 @@ const DashboardClient = () => {
           
           {/* SIDEBAR NAVIGATION */}
           <div className="w-full md:w-64 flex-shrink-0">
-            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white font-display tracking-tight mb-8">
+            <h1 className="text-3xl font-extrabold text-foreground font-display tracking-tight mb-8">
               Creator Studio
             </h1>
             <nav className="flex flex-col space-y-2">
@@ -274,8 +274,8 @@ const DashboardClient = () => {
                 onClick={() => setActiveTab("analytics")}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                   activeTab === "analytics" 
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400" 
-                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-800"
+                    ? "bg-muted text-primary" 
+                    : "text-muted-foreground hover:bg-muted  "
                 }`}
               >
                 <MdInsights size={20} />
@@ -285,8 +285,8 @@ const DashboardClient = () => {
                 onClick={() => setActiveTab("content")}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                   activeTab === "content" 
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400" 
-                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-800"
+                    ? "bg-muted text-primary" 
+                    : "text-muted-foreground hover:bg-muted  "
                 }`}
               >
                 <MdVideoLibrary size={20} />
@@ -307,24 +307,24 @@ const DashboardClient = () => {
                 className="space-y-8"
               >
                 {analyticsError ? (
-                  <div className="text-center text-rose-500 dark:text-rose-400 p-8 font-medium bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm">
+                  <div className="text-center text-rose-500 p-8 font-medium bg-card rounded-2xl border border-border shadow-sm">
                     Failed to load analytics data.
                   </div>
                 ) : analytics ? (
                   <>
                     <div>
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-white font-display tracking-tight mb-6">Lifetime Statistics</h2>
+                      <h2 className="text-xl font-bold text-foreground font-display tracking-tight mb-6">Lifetime Statistics</h2>
                       <CreatorStatCards stats={analytics.lifetimeStats} />
                     </div>
                     
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 transition-colors">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-white font-display tracking-tight mb-6">30-Day Channel Growth</h3>
+                    <div className="bg-card p-6 rounded-2xl shadow-sm border border-border transition-colors">
+                      <h3 className="text-lg font-bold text-foreground font-display tracking-tight mb-6">30-Day Channel Growth</h3>
                       <TimeSeriesChart timeSeries={analytics.timeSeries} />
                     </div>
                     
                     {videos && videos.length > 0 && (
-                      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 transition-colors">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white font-display tracking-tight mb-6">Video Performance Comparison</h3>
+                      <div className="bg-card p-6 rounded-2xl shadow-sm border border-border transition-colors">
+                        <h3 className="text-lg font-bold text-foreground font-display tracking-tight mb-6">Video Performance Comparison</h3>
                         <AnalyticsChart videos={videos} />
                       </div>
                     )}
@@ -340,7 +340,7 @@ const DashboardClient = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col transition-colors relative">
+                <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden flex flex-col transition-colors relative">
                   
                   {/* Bulk Actions Bar */}
                   <AnimatePresence>
@@ -349,23 +349,23 @@ const DashboardClient = () => {
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        className="absolute top-0 left-0 right-0 z-10 bg-indigo-600 dark:bg-indigo-500 text-white p-4 flex items-center justify-between"
+                        className="absolute top-0 left-0 right-0 z-10 bg-primary text-primary-foreground text-primary-foreground text-primary-foreground p-4 flex items-center justify-between"
                       >
                         <div className="flex items-center gap-4">
-                          <button onClick={() => setSelectedVideos([])} className="p-1 hover:bg-white/20 rounded-full transition-colors">
+                          <button onClick={() => setSelectedVideos([])} className="p-1 hover:bg-card/20 rounded-full transition-colors">
                             <MdClose size={20} />
                           </button>
                           <span className="font-semibold">{selectedVideos.length} selected</span>
                         </div>
                         <div className="flex items-center gap-3">
                            <div className="relative group">
-                              <button className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-medium transition-colors">
+                              <button className="px-4 py-2 bg-card/20 hover:bg-card/30 rounded-xl text-sm font-medium transition-colors">
                                 Set Visibility
                               </button>
-                              <div className="absolute right-0 mt-2 w-36 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-100 dark:border-slate-700 hidden group-hover:block overflow-hidden z-30 text-gray-800 dark:text-gray-200">
-                                <button onClick={() => handleBulkVisibility('public')} className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">Public</button>
-                                <button onClick={() => handleBulkVisibility('unlisted')} className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">Unlisted</button>
-                                <button onClick={() => handleBulkVisibility('private')} className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">Private</button>
+                              <div className="absolute right-0 mt-2 w-36 bg-card rounded-xl shadow-xl border border-border hidden group-hover:block overflow-hidden z-30 text-foreground">
+                                <button onClick={() => handleBulkVisibility('public')} className="w-full text-left px-4 py-3 text-sm hover:bg-muted/50 transition-colors">Public</button>
+                                <button onClick={() => handleBulkVisibility('unlisted')} className="w-full text-left px-4 py-3 text-sm hover:bg-muted/50 transition-colors">Unlisted</button>
+                                <button onClick={() => handleBulkVisibility('private')} className="w-full text-left px-4 py-3 text-sm hover:bg-muted/50 transition-colors">Private</button>
                               </div>
                            </div>
                            <button onClick={handleBulkDelete} className="px-4 py-2 bg-rose-500 hover:bg-rose-400 rounded-xl text-sm font-medium transition-colors">
@@ -377,20 +377,20 @@ const DashboardClient = () => {
                   </AnimatePresence>
 
                   {/* Content Header & Search */}
-                  <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white font-display tracking-tight">Channel Content</h2>
+                  <div className="p-6 border-b border-border flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <h2 className="text-xl font-bold text-foreground font-display tracking-tight">Channel Content</h2>
                     <div className="relative w-full sm:w-72">
                       <input
                         type="text"
                         placeholder="Search your videos..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-4 pr-10 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-900 transition-all"
+                        className="w-full pl-4 pr-10 py-2.5 border border-border rounded-xl bg-muted/50 text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:bg-card transition-all"
                       />
                       {searchTerm && (
                         <button
                           onClick={handleClearSearch}
-                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-muted-foreground transition-colors"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -403,36 +403,36 @@ const DashboardClient = () => {
                   {/* Content Table */}
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-100 dark:divide-slate-800">
-                      <thead className="bg-gray-50/50 dark:bg-slate-800/30">
+                      <thead className="bg-muted/50">
                         <tr>
                           <th className="px-6 py-4 text-left w-12">
                              <input 
                                 type="checkbox" 
                                 onChange={handleSelectAll} 
                                 checked={videos?.length > 0 && selectedVideos.length === videos.length} 
-                                className="rounded border-gray-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 h-4 w-4 cursor-pointer" 
+                                className="rounded border-border text-primary focus:ring-ring bg-card h-4 w-4 cursor-pointer" 
                               />
                           </th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider font-display">Thumbnail</th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider font-display">Video</th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider font-display">Visibility</th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider font-display">Views</th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider font-display">Engagement</th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider font-display">Actions</th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider font-display">Thumbnail</th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider font-display">Video</th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider font-display">Visibility</th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider font-display">Views</th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider font-display">Engagement</th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider font-display">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-50 dark:divide-slate-800/50">
+                      <tbody className="bg-card divide-y divide-gray-50 dark:divide-slate-800/50">
                         {error ? (
                            <tr><td colSpan="7" className="p-8 text-center text-rose-500">Failed to load content.</td></tr>
                         ) : videos && videos.length > 0 ? (
                           videos.map((video) => (
-                            <tr key={video._id} className={`hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors group ${selectedVideos.includes(video._id) ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''}`}>
+                            <tr key={video._id} className={`hover:bg-muted/50  transition-colors group ${selectedVideos.includes(video._id) ? 'bg-muted ' : ''}`}>
                               <td className="px-6 py-4 whitespace-nowrap w-12">
                                 <input 
                                   type="checkbox" 
                                   checked={selectedVideos.includes(video._id)} 
                                   onChange={() => handleSelectVideo(video._id)} 
-                                  className="rounded border-gray-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 h-4 w-4 cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                                  className="rounded border-border text-primary focus:ring-ring bg-card h-4 w-4 cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                                   style={{ opacity: selectedVideos.includes(video._id) ? 1 : undefined }}
                                 />
                               </td>
@@ -447,7 +447,7 @@ const DashboardClient = () => {
                                   />
                                   <button
                                     onClick={() => setChangingThumbnailVideo(video)}
-                                    className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white font-medium opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[2px]"
+                                    className="absolute inset-0 bg-foreground/60 flex flex-col items-center justify-center text-primary-foreground font-medium opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[2px]"
                                   >
                                     <MdOutlineAddPhotoAlternate size={24} className="mb-1" />
                                     <span className="text-xs">Change</span>
@@ -456,10 +456,10 @@ const DashboardClient = () => {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="max-w-[200px] truncate">
-                                    <Link href={`/video/${video._id}`} className="font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-base font-display">
+                                    <Link href={`/video/${video._id}`} className="font-semibold text-foreground hover:text-primary transition-colors text-base font-display">
                                         {video.title}
                                     </Link>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Uploaded {new Date(video.createdAt).toLocaleDateString()}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Uploaded {new Date(video.createdAt).toLocaleDateString()}</p>
                                 </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
@@ -471,20 +471,20 @@ const DashboardClient = () => {
                                 </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className="text-gray-700 dark:text-gray-300 font-medium">{video.views.toLocaleString()}</span>
+                                  <span className="text-muted-foreground font-medium">{video.views.toLocaleString()}</span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="flex flex-col gap-1">
-                                      <span className="text-sm text-gray-600 dark:text-gray-400"><strong className="text-gray-900 dark:text-gray-200">{video.likesCount}</strong> likes</span>
-                                      <span className="text-sm text-gray-600 dark:text-gray-400"><strong className="text-gray-900 dark:text-gray-200">{video.commentCount}</strong> comments</span>
+                                      <span className="text-sm text-muted-foreground"><strong className="text-foreground">{video.likesCount}</strong> likes</span>
+                                      <span className="text-sm text-muted-foreground"><strong className="text-foreground">{video.commentCount}</strong> comments</span>
                                   </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <div className="flex flex-col space-y-2">
-                                  <button onClick={() => setEditingVideo(video)} className="text-left text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors font-semibold">
+                                  <button onClick={() => setEditingVideo(video)} className="text-left text-primary hover:text-primary transition-colors font-semibold">
                                     Edit Details
                                   </button>
-                                  <button onClick={() => handleDelete(video._id)} className="text-left text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-300 transition-colors font-semibold">
+                                  <button onClick={() => handleDelete(video._id)} className="text-left text-rose-600 hover:text-rose-800 transition-colors font-semibold">
                                     Delete Video
                                   </button>
                                 </div>
@@ -495,11 +495,11 @@ const DashboardClient = () => {
                           <tr>
                             <td
                               colSpan="7"
-                              className="px-6 py-16 text-center text-gray-500 dark:text-gray-400"
+                              className="px-6 py-16 text-center text-muted-foreground"
                             >
                               <div className="flex flex-col items-center justify-center">
-                                  <MdVideoLibrary size={48} className="text-gray-300 dark:text-slate-700 mb-4" />
-                                  <p className="text-lg font-medium text-gray-900 dark:text-gray-300">
+                                  <MdVideoLibrary size={48} className="text-muted-foreground mb-4" />
+                                  <p className="text-lg font-medium text-foreground">
                                     {searchTerm ? "No videos match your search." : "You haven't uploaded any videos yet."}
                                   </p>
                               </div>

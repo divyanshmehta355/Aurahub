@@ -94,7 +94,7 @@ const VideoRecommendations = ({ videoId, isAuthenticated }) => {
 
   return (
     <div className="sticky top-24">
-      <h3 className="font-bold text-xl text-gray-900 dark:text-white mb-6">
+      <h3 className="font-bold text-xl text-foreground mb-6">
         {isAuthenticated ? "Recommended For You" : "Up Next"}
       </h3>
       <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -105,10 +105,10 @@ const VideoRecommendations = ({ videoId, isAuthenticated }) => {
         {isLoadingMore && (
           Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="flex space-x-3 animate-pulse">
-              <div className="flex-shrink-0 w-40 h-24 bg-gray-200 dark:bg-slate-800 rounded-lg"></div>
+              <div className="flex-shrink-0 w-40 h-24 bg-muted rounded-lg"></div>
               <div className="flex-1 space-y-3 py-1">
-                <div className="h-4 bg-gray-200 dark:bg-slate-800 rounded w-full"></div>
-                <div className="h-4 bg-gray-200 dark:bg-slate-800 rounded w-2/3"></div>
+                <div className="h-4 bg-muted rounded w-full"></div>
+                <div className="h-4 bg-muted rounded w-2/3"></div>
               </div>
             </div>
           ))
@@ -116,7 +116,7 @@ const VideoRecommendations = ({ videoId, isAuthenticated }) => {
 
         <div ref={ref} className="h-10">
           {!isReachingEnd && !isLoadingMore && (
-             <p className="text-center text-sm font-medium text-gray-500 dark:text-gray-400 mt-4 cursor-pointer" onClick={handleLoadMore}>
+             <p className="text-center text-sm font-medium text-muted-foreground mt-4 cursor-pointer" onClick={handleLoadMore}>
                Loading more...
              </p>
           )}

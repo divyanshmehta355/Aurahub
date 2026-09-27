@@ -1,48 +1,63 @@
-# Aurahub 🎬
+<div align="center">
+  <h1>Aurahub 🎬</h1>
+  <p>A highly-optimized, premium video-sharing platform built with <strong>Next.js 15</strong>, <strong>React 19</strong>, and <strong>Tailwind CSS v4</strong>.</p>
+</div>
 
-Aurahub is a modern, premium video-sharing platform built with **Next.js 15**, **React 19**, and **Tailwind CSS v4**. Designed with a cinematic aesthetic and highly polished user experience, it features a comprehensive suite of tools for both viewers and creators.
+Aurahub is designed from the ground up for extreme performance and scalability. It features a custom-built, enterprise-grade L1/L2 tiered caching layer, typo-tolerant MongoDB Atlas fuzzy search, and a cinematic front-end UI. 
+
+Whether you are a creator managing uploads or a viewer bingeing content, Aurahub provides a flawless, lag-free experience.
+
+---
+
+## ⚡ Core Architecture & Performance
+Aurahub is built to handle heavy traffic and database loads smoothly.
+
+- **Tiered L1/L2 Redis Caching:** Combines a `Map`-based True LRU memory cache (L1) with a Redis cluster (L2). This hybrid approach eliminates network socket latency entirely for hot requests, resolving reads in `<0.1ms`.
+- **Thundering Herd Protection:** Concurrent requests for the same cache-missed video are coalesced in-flight, preventing database stampedes during sudden traffic spikes.
+- **O(1) Tag-Based Invalidation:** Grouped Redis Sets guarantee instant cache clearing across specific users, videos, and feeds without slow `SCAN` or `KEYS *` operations.
+- **Redis Circuit Breakers:** Automatically detects Redis connection failures or max-client exhaustion and bypasses the cache to keep the app online.
+- **Typo-Tolerant Atlas Search:** Powered by MongoDB Atlas `$search`, search queries feature native `fuzzy` matching (e.g. typing "mia kalifa" seamlessly finds "Mia Khalifa") using index-level optimizations.
 
 ## ✨ Key Features
 
 ### For Viewers
-* **Immersive Video Player**: Beautiful viewing experience with likes, comments, and related videos.
+* **Immersive Video Player**: Beautiful viewing experience with likes, comments, and instantaneous related-video suggestions.
+* **Typo-Tolerant Discovery**: Instant search autocomplete and categorical filtering powered by Atlas Search.
 * **Subscriptions Feed**: A dedicated feed to keep up with your favorite creators.
 * **Custom Playlists**: Create public or private playlists to curate your favorite content.
 * **Watch Later & History**: Automatically track what you watch and save videos for later.
-* **Search & Discovery**: Robust search autocomplete and categorical filtering to find what you want fast.
 
 ### For Creators
-* **Creator Studio / Dashboard**: A professional tabbed dashboard featuring:
-  * **Analytics Overview**: View lifetime stats, 30-day channel growth (interactive charts), and video performance comparisons.
-  * **Content Manager**: Edit video metadata, upload custom thumbnails, and toggle video visibility (Public/Unlisted/Private).
+* **Creator Studio / Dashboard**: A professional tabbed dashboard featuring interactive lifetime analytics, 30-day channel growth charts, and video performance comparisons.
+* **Content Manager**: Edit video metadata, upload custom thumbnails (via Freeimage API), and toggle video visibility (Public/Unlisted/Private).
 * **Public Profiles**: Highly customizable creator profiles featuring a 16:9 cinematic channel banner and custom bios.
-* **Video Uploads**: Secure and seamless video uploading.
 
 ### Premium UI/UX
 * **Dark Mode First**: Beautiful, class-based dark mode implementation with seamless theme toggling.
-* **Cinematic Typography**: Uses `Outfit` (geometric sans-serif) for striking headers and `Inter` for highly legible body copy.
-* **Micro-Animations**: Fluid transitions and hover effects powered by `framer-motion`.
-* **Responsive Design**: Flawless layout across mobile, tablet, and desktop devices.
+* **Cinematic Typography**: Uses `Outfit` for striking headers and `Inter` for highly legible body copy.
+* **Micro-Animations**: Fluid transitions, hover effects, and spring animations powered by `framer-motion`.
+
+---
 
 ## 🛠 Tech Stack
 
-* **Framework**: Next.js 15 (App Router)
-* **Library**: React 19
-* **Styling**: Tailwind CSS v4
-* **Database**: MongoDB (via Mongoose)
-* **Authentication**: NextAuth.js
-* **Data Fetching**: SWR (stale-while-revalidate)
-* **Caching**: Redis (via Upstash)
-* **Charts**: Chart.js (`react-chartjs-2`)
-* **Animations**: Framer Motion
-* **Forms**: React Hook Form + Yup
-* **State Management**: Zustand
-* **Icons**: React Icons
+- **Framework**: Next.js 15 (App Router)
+- **Library**: React 19
+- **Styling**: Tailwind CSS v4
+- **Database**: MongoDB + Mongoose + MongoDB Atlas Search
+- **Caching**: Custom L1/L2 LRU Cache via Redis (`redis` client)
+- **Authentication**: NextAuth.js (Google, GitHub, Credentials)
+- **Data Fetching**: SWR (stale-while-revalidate) + Background Preloading
+- **Charts**: Chart.js (`react-chartjs-2`)
+- **Animations**: Framer Motion
+- **State Management**: Zustand
+
+---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-Make sure you have Node.js installed on your machine. You will also need a MongoDB database and optionally a Redis database (for caching).
+You need **Node.js**, a **MongoDB Atlas Cluster** (with a Search index named `"default"` on the videos collection), and a **Redis Instance**.
 
 ### 1. Clone the repository
 ```bash
@@ -55,17 +70,31 @@ cd aurahub
 npm install
 ```
 
-### 3. Set up environment variables
-Create a `.env.local` file in the root directory and add the following variables:
+### 3. Environment Variables
+Create a `.env.local` file in the root directory:
+
 ```env
-MONGODB_URI=your_mongodb_connection_string
+# Core
+NODE_ENV=development
+MONGO_URI=your_mongodb_atlas_connection_string
+REDIS_URL=your_redis_connection_string
+
+# Authentication
 NEXTAUTH_SECRET=your_nextauth_secret
 NEXTAUTH_URL=http://localhost:3000
+JWT_SECRET=your_jwt_secret
 
-# Optional: For Redis Caching (Upstash)
-UPSTASH_REDIS_REST_URL=your_upstash_redis_url
-UPSTASH_REDIS_REST_TOKEN=your_upstash_redis_token
+# OAuth (Optional)
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# External APIs
+FREEIMAGE_API_KEY=your_freeimage_host_key
 ```
+
+*(Note: Environment variables are strictly validated and tamper-proofed at runtime via `src/env.mjs` and `zod`.)*
 
 ### 4. Run the development server
 ```bash
@@ -74,14 +103,15 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+---
+
 ## 📂 Project Structure
 
 * `/src/app`: Next.js App Router pages and API routes.
-* `/src/components`: Reusable UI components (Navbar, VideoCard, AnalyticsChart, etc.).
-* `/src/models`: Mongoose database schemas (User, Video, Playlist, etc.).
-* `/src/lib`: Utility functions (API client, fetcher, dbConnect).
-* `/src/hooks`: Custom React hooks.
-* `/src/store`: Zustand state stores.
+* `/src/components`: Reusable UI components.
+* `/src/models`: Mongoose database schemas.
+* `/src/lib`: Core infrastructure (Redis client, fetcher, dbConnect).
+* `/load-tests`: k6 performance testing suite (deprecated/removed in latest refactor).
 
 ## 🤝 Contributing
 Contributions, issues and feature requests are welcome! Feel free to check the issues page.

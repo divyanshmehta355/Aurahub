@@ -21,8 +21,10 @@ import { CSS } from '@dnd-kit/utilities';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
 import VideoThumbnail from './VideoThumbnail';
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// A Sortable Item component for the videos in the playlist
 const SortableVideoItem = ({ video, onRemove }) => {
     const {
         attributes,
@@ -41,10 +43,10 @@ const SortableVideoItem = ({ video, onRemove }) => {
         <li
             ref={setNodeRef}
             style={style}
-            className="flex items-center space-x-3 p-3 bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 hover:shadow-sm transition-shadow group"
+            className="flex items-center space-x-3 p-3 bg-card rounded-xl border border-border hover:shadow-sm transition-shadow group"
         >
-            <span {...attributes} {...listeners} className="text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 cursor-grab touch-none p-1 transition-colors">☰</span>
-            <div className="w-20 h-12 object-cover rounded flex-shrink-0">
+            <span {...attributes} {...listeners} className="text-muted-foreground hover:text-foreground cursor-grab touch-none p-1 transition-colors">☰</span>
+            <div className="w-24 h-14 object-cover rounded flex-shrink-0">
                 <VideoThumbnail
                     videoId={video._id}
                     thumbnailUrl={video.thumbnailUrl}
@@ -54,14 +56,19 @@ const SortableVideoItem = ({ video, onRemove }) => {
                 />
             </div>
             <div className="flex-grow w-0">
-                <Link href={`/video/${video._id}`} className="font-semibold text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400 truncate text-sm transition-colors">
+                <Link href={`/video/${video._id}`} className="font-semibold text-foreground hover:text-primary truncate text-sm transition-colors block">
                     {video.title}
                 </Link>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{video.uploader.username}</p>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">{video.uploader.username}</p>
             </div>
-            <button onClick={onRemove} className="text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 text-xs font-semibold flex-shrink-0 transition-colors opacity-0 group-hover:opacity-100 px-2 py-1 bg-rose-50 dark:bg-rose-400/10 rounded-lg">
+            <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={onRemove} 
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+            >
                 Remove
-            </button>
+            </Button>
         </li>
     );
 };
@@ -126,24 +133,24 @@ const PlaylistManager = ({ playlistId }) => {
 
     if (loading) {
         return (
-            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 sm:p-8 rounded-2xl shadow-sm animate-pulse">
-                <div className="h-7 bg-gray-200 dark:bg-slate-800 rounded-lg w-1/2 mb-2"></div>
-                <div className="h-4 bg-gray-200 dark:bg-slate-800 rounded-lg w-1/4 mb-6"></div>
+            <Card className="p-6 sm:p-8 rounded-2xl shadow-sm space-y-4">
+                <Skeleton className="h-8 w-1/2" />
+                <Skeleton className="h-4 w-1/4 mb-6" />
                 <div className="space-y-3">
-                    <div className="h-20 bg-gray-100 dark:bg-slate-800 rounded-xl"></div>
-                    <div className="h-20 bg-gray-100 dark:bg-slate-800 rounded-xl"></div>
-                    <div className="h-20 bg-gray-100 dark:bg-slate-800 rounded-xl"></div>
+                    <Skeleton className="h-20 w-full rounded-xl" />
+                    <Skeleton className="h-20 w-full rounded-xl" />
+                    <Skeleton className="h-20 w-full rounded-xl" />
                 </div>
-            </div>
+            </Card>
         );
     }
     
-    if (!playlist) return <div className="p-6 text-gray-500 dark:text-gray-400 text-center font-medium">Playlist not found.</div>;
+    if (!playlist) return <div className="p-6 text-muted-foreground text-center font-medium">Playlist not found.</div>;
 
     return (
-        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 sm:p-8 rounded-2xl shadow-sm transition-colors duration-300">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{playlist.title}</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-6 font-medium">{playlist.videos.length} videos</p>
+        <Card className="p-6 sm:p-8 rounded-2xl shadow-sm transition-colors duration-300">
+            <h2 className="text-2xl font-bold text-foreground">{playlist.title}</h2>
+            <p className="text-sm text-muted-foreground mt-1 mb-6 font-medium">{playlist.videos.length} videos</p>
 
             <DndContext
                 sensors={sensors}
@@ -165,8 +172,8 @@ const PlaylistManager = ({ playlistId }) => {
                     </ul>
                 </SortableContext>
             </DndContext>
-            {playlist.videos.length === 0 && <p className="mt-8 text-sm text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-slate-800/50 p-6 rounded-xl border border-dashed border-gray-200 dark:border-slate-700">This playlist is empty. Add videos by clicking the "Watch Later" button on a video card or using the Save modal.</p>}
-        </div>
+            {playlist.videos.length === 0 && <p className="mt-8 text-sm text-center text-muted-foreground bg-muted p-6 rounded-xl border border-dashed border-border">This playlist is empty. Add videos by clicking the "Watch Later" button on a video card or using the Save modal.</p>}
+        </Card>
     );
 };
 

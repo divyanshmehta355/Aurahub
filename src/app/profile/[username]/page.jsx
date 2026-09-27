@@ -55,11 +55,11 @@ const ProfilePage = () => {
     if (status === 'loading' || isLoading) {
         return (
              <main className="animate-pulse">
-                <div className="h-48 md:h-64 bg-gray-200 dark:bg-slate-800 w-full mb-8"></div>
+                <div className="h-48 md:h-64 bg-muted w-full mb-8"></div>
                 <div className="container mx-auto px-6">
                     <div className="flex gap-6 items-end -mt-20 mb-8">
-                        <div className="w-32 h-32 rounded-full bg-gray-300 dark:bg-slate-700 ring-4 ring-white dark:ring-slate-900"></div>
-                        <div className="h-10 bg-gray-300 dark:bg-slate-700 rounded w-48 mb-2"></div>
+                        <div className="w-32 h-32 rounded-full bg-muted ring-4 ring-background"></div>
+                        <div className="h-10 bg-gray-300 rounded w-48 mb-2"></div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {Array.from({ length: 4 }).map((_, index) => <VideoCardSkeleton key={index} />)}
@@ -70,7 +70,7 @@ const ProfilePage = () => {
     }
 
     if (error || !profile) {
-        return <div className="text-center p-12 text-rose-500 dark:text-rose-400 font-semibold">{error?.message || "User not found."}</div>;
+        return <div className="text-center p-12 text-rose-500 font-semibold">{error?.message || "User not found."}</div>;
     }
     
     const isOwnProfile = currentUser?.id === profile.user.id;
@@ -83,7 +83,7 @@ const ProfilePage = () => {
             className="pb-12"
         >
             {/* CHANNEL BANNER */}
-            <div className="w-full h-48 md:h-72 bg-indigo-50 dark:bg-slate-800 relative">
+            <div className="w-full h-48 md:h-72 bg-muted relative">
                 {profile.user.banner ? (
                     <Image 
                         src={profile.user.banner} 
@@ -94,8 +94,8 @@ const ProfilePage = () => {
                     />
                 ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center opacity-40">
-                        <FaImage size={64} className="text-gray-400 mb-4" />
-                        <span className="text-gray-500 font-medium">No banner provided</span>
+                        <FaImage size={64} className="text-muted-foreground mb-4" />
+                        <span className="text-muted-foreground font-medium">No banner provided</span>
                     </div>
                 )}
             </div>
@@ -103,7 +103,7 @@ const ProfilePage = () => {
             <div className="container mx-auto px-4 sm:px-6">
                 
                 {/* PROFILE HEADER INFO */}
-                <div className="relative -mt-12 sm:-mt-20 flex flex-col md:flex-row md:justify-between md:items-end gap-6 mb-10 bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-slate-800 z-10">
+                <div className="relative -mt-12 sm:-mt-20 flex flex-col md:flex-row md:justify-between md:items-end gap-6 mb-10 bg-card rounded-3xl p-6 shadow-sm border border-border z-10">
                     
                     <div className="flex flex-col md:flex-row gap-6 md:items-end w-full">
                         <div className="flex-shrink-0">
@@ -113,22 +113,22 @@ const ProfilePage = () => {
                                 width={144}
                                 height={144}
                                 unoptimized
-                                className="w-24 h-24 sm:w-36 sm:h-36 rounded-full ring-4 ring-white dark:ring-slate-900 object-cover bg-white dark:bg-slate-900"
+                                className="w-24 h-24 sm:w-36 sm:h-36 rounded-full ring-4 ring-background object-cover bg-card"
                             />
                         </div>
 
                         <div className="flex-grow pb-2">
-                            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white font-display tracking-tight">
+                            <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground font-display tracking-tight">
                                 {profile.user.username}
                             </h1>
-                            <p className="text-gray-600 dark:text-gray-400 mt-2 font-medium flex items-center gap-2">
-                                <span className="font-bold text-gray-900 dark:text-gray-200">{profile.user.subscriberCount}</span> subscribers 
+                            <p className="text-muted-foreground mt-2 font-medium flex items-center gap-2">
+                                <span className="font-bold text-foreground">{profile.user.subscriberCount}</span> subscribers 
                                 <span>•</span> 
-                                <span className="font-bold text-gray-900 dark:text-gray-200">{profile.videos.length}</span> videos
+                                <span className="font-bold text-foreground">{profile.videos.length}</span> videos
                             </p>
                             
                             {profile.user.bio && (
-                                <p className="mt-4 text-gray-700 dark:text-gray-300 max-w-2xl text-sm sm:text-base whitespace-pre-line">
+                                <p className="mt-4 text-muted-foreground max-w-2xl text-sm sm:text-base whitespace-pre-line">
                                     {profile.user.bio}
                                 </p>
                             )}
@@ -138,7 +138,7 @@ const ProfilePage = () => {
                             {isOwnProfile ? (
                                 <Link 
                                     href="/my-profile"
-                                    className="block px-8 py-3 bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-200 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors shadow-sm text-center"
+                                    className="block px-8 py-3 bg-muted text-foreground font-semibold rounded-xl hover:bg-muted transition-colors shadow-sm text-center"
                                 >
                                     Customize Channel
                                 </Link>
@@ -148,8 +148,8 @@ const ProfilePage = () => {
                                         onClick={handleSubscribe}
                                         className={`w-full md:w-auto px-8 py-3 font-semibold rounded-xl transition-all shadow-sm ${
                                             profile.user.isSubscribed
-                                                ? 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-slate-700'
-                                                : 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 hover:shadow-md transform hover:-translate-y-0.5'
+                                                ? 'bg-muted  text-foreground  hover:bg-muted '
+                                                : 'bg-background  text-primary-foreground  hover:bg-muted  hover:shadow-md transform hover:-translate-y-0.5'
                                         }`}
                                     >
                                         {profile.user.isSubscribed ? 'Subscribed' : 'Subscribe'}
@@ -161,7 +161,7 @@ const ProfilePage = () => {
                 </div>
                 
                 {/* UPLOADS SECTION */}
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 font-display tracking-tight">Uploads</h2>
+                <h2 className="text-2xl font-bold text-foreground mb-6 font-display tracking-tight">Uploads</h2>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {profile.videos.length > 0 ? (
@@ -176,9 +176,9 @@ const ProfilePage = () => {
                             </motion.div>
                         ))
                     ) : (
-                        <div className="col-span-full text-center p-16 border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 rounded-2xl shadow-sm">
-                            <p className="text-gray-500 dark:text-gray-400 font-medium text-lg">This creator hasn't uploaded any videos yet.</p>
-                            <p className="text-gray-400 dark:text-gray-500 mt-2 text-sm">Check back later for new content!</p>
+                        <div className="col-span-full text-center p-16 border border-border bg-card rounded-2xl shadow-sm">
+                            <p className="text-muted-foreground font-medium text-lg">This creator hasn't uploaded any videos yet.</p>
+                            <p className="text-muted-foreground mt-2 text-sm">Check back later for new content!</p>
                         </div>
                     )}
                 </div>

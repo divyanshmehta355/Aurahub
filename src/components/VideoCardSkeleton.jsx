@@ -1,13 +1,15 @@
 import React from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const VideoCardSkeleton = () => {
   return (
     <div className="flex flex-col gap-2">
-      <div className="bg-gray-200 dark:bg-slate-800 rounded-lg w-full h-48 animate-pulse"></div>
+      <Skeleton className="w-full h-48 rounded-lg" />
       <div className="flex gap-3 mt-1">
+        <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
         <div className="flex flex-col gap-2 w-full">
-          <div className="bg-gray-200 dark:bg-slate-800 rounded-md w-full h-5 animate-pulse"></div>
-          <div className="bg-gray-200 dark:bg-slate-800 rounded-md w-2/3 h-4 animate-pulse"></div>
+          <Skeleton className="w-full h-5" />
+          <Skeleton className="w-2/3 h-4" />
         </div>
       </div>
     </div>

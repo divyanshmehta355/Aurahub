@@ -163,14 +163,14 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300 px-4 py-12">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 animate-in fade-in duration-300">
-        <h1 className="text-3xl font-bold text-center text-gray-900 dark:text-white">Create an Account</h1>
+    <div className="flex items-center justify-center min-h-screen bg-muted/50 transition-colors duration-300 px-4 py-12">
+      <div className="w-full max-w-md p-8 space-y-6 bg-card rounded-2xl shadow-xl border border-border animate-in fade-in duration-300">
+        <h1 className="text-3xl font-bold text-center text-foreground">Create an Account</h1>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <label
               htmlFor="username"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              className="block text-sm font-medium text-muted-foreground"
             >
               Username
             </label>
@@ -178,13 +178,13 @@ const RegisterPage = () => {
               <input
                 id="username"
                 {...register("username")}
-                className={`w-full px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 pr-10 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-all ${
-                  errors.username ? "border-rose-500" : "border-gray-200 dark:border-slate-700"
+                className={`w-full px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-border pr-10 bg-card  text-foreground  transition-all ${
+                  errors.username ? "border-rose-500" : "border-border "
                 }`}
               />
               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                 {usernameStatus.loading && (
-                  <FaSpinner className="animate-spin text-gray-400" />
+                  <FaSpinner className="animate-spin text-muted-foreground" />
                 )}
                 {usernameStatus.message === "Username is available!" && (
                   <FaCheckCircle className="text-emerald-500" />
@@ -197,15 +197,15 @@ const RegisterPage = () => {
               </div>
             </div>
             {errors.username ? (
-              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
+              <p className="text-xs text-rose-600 mt-1">
                 {errors.username.message}
               </p>
             ) : (
               <p
                 className={`text-xs mt-1 h-4 ${
                   usernameStatus.message === "Username is available!"
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-rose-600 dark:text-rose-400"
+                    ? "text-emerald-600 "
+                    : "text-rose-600 "
                 }`}
               >
                 {usernameStatus.message}
@@ -215,7 +215,7 @@ const RegisterPage = () => {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              className="block text-sm font-medium text-muted-foreground"
             >
               Email
             </label>
@@ -224,13 +224,13 @@ const RegisterPage = () => {
                 id="email"
                 type="email"
                 {...register("email")}
-                className={`w-full px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 pr-10 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-all ${
-                  errors.email ? "border-rose-500" : "border-gray-200 dark:border-slate-700"
+                className={`w-full px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-border pr-10 bg-card  text-foreground  transition-all ${
+                  errors.email ? "border-rose-500" : "border-border "
                 }`}
               />
               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                 {emailStatus.loading && (
-                  <FaSpinner className="animate-spin text-gray-400" />
+                  <FaSpinner className="animate-spin text-muted-foreground" />
                 )}
                 {emailStatus.message === "Email is available!" && (
                   <FaCheckCircle className="text-emerald-500" />
@@ -241,15 +241,15 @@ const RegisterPage = () => {
               </div>
             </div>
             {errors.email ? (
-              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
+              <p className="text-xs text-rose-600 mt-1">
                 {errors.email.message}
               </p>
             ) : (
               <p
                 className={`text-xs mt-1 h-4 ${
                   emailStatus.message === "Email is available!"
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-rose-600 dark:text-rose-400"
+                    ? "text-emerald-600 "
+                    : "text-rose-600 "
                 }`}
               >
                 {emailStatus.message}
@@ -259,7 +259,7 @@ const RegisterPage = () => {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              className="block text-sm font-medium text-muted-foreground"
             >
               Password
             </label>
@@ -268,8 +268,8 @@ const RegisterPage = () => {
                 id="password"
                 type={showPassword ? "text" : "password"}
                 {...register("password")}
-                className={`w-full px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 pr-10 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-all ${
-                  errors.password ? "border-rose-500" : "border-gray-200 dark:border-slate-700"
+                className={`w-full px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-border pr-10 bg-card  text-foreground  transition-all ${
+                  errors.password ? "border-rose-500" : "border-border "
                 }`}
               />
               <button
@@ -282,7 +282,7 @@ const RegisterPage = () => {
             </div>
             <PasswordStrength password={passwordValue || ""} />
             {errors.password && (
-              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
+              <p className="text-xs text-rose-600 mt-1">
                 {errors.password.message}
               </p>
             )}
@@ -290,7 +290,7 @@ const RegisterPage = () => {
           <div>
             <label
               htmlFor="confirmPassword"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              className="block text-sm font-medium text-muted-foreground"
             >
               Confirm Password
             </label>
@@ -299,8 +299,8 @@ const RegisterPage = () => {
                 id="confirmPassword"
                 type={showPassword ? "text" : "password"}
                 {...register("confirmPassword")}
-                className={`w-full px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 pr-10 bg-white dark:bg-slate-900 text-gray-900 dark:text-white transition-all ${
-                  errors.confirmPassword ? "border-rose-500" : "border-gray-200 dark:border-slate-700"
+                className={`w-full px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-border pr-10 bg-card  text-foreground  transition-all ${
+                  errors.confirmPassword ? "border-rose-500" : "border-border "
                 }`}
               />
               <button
@@ -312,23 +312,23 @@ const RegisterPage = () => {
               </button>
             </div>
             {errors.confirmPassword && (
-              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
+              <p className="text-xs text-rose-600 mt-1">
                 {errors.confirmPassword.message}
               </p>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="block text-sm font-medium text-muted-foreground">
               Avatar (Optional)
             </label>
             <input
               type="file"
               accept="image/*"
               {...register("avatar")}
-              className="w-full mt-1 text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900/30 dark:file:text-indigo-400 dark:hover:file:bg-indigo-900/50 transition-all cursor-pointer"
+              className="w-full mt-1 text-sm text-muted-foreground file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-muted file:text-primary transition-all cursor-pointer"
             />
             {errors.avatar && (
-              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
+              <p className="text-xs text-rose-600 mt-1">
                 {errors.avatar.message}
               </p>
             )}
@@ -336,14 +336,14 @@ const RegisterPage = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 border border-transparent rounded-xl shadow-sm hover:bg-indigo-700 disabled:bg-indigo-400 transition-colors"
+            className="w-full px-4 py-2.5 text-sm font-semibold text-primary-foreground bg-primary border border-transparent rounded-xl shadow-sm hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
             {isSubmitting ? "Signing Up..." : "Sign Up"}
           </button>
         </form>
-        <p className="text-sm text-center text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-center text-muted-foreground">
           Already have an account?{" "}
-          <Link href="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors">
+          <Link href="/login" className="font-semibold text-primary hover:text-primary transition-colors">
             Sign In
           </Link>
         </p>

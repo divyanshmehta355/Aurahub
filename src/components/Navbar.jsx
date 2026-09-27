@@ -1,22 +1,30 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import Image from 'next/image';
 import { getAvatarUrl } from "@/lib/identicon";
 import NotificationsPanel from "./NotificationsPanel";
 import ThemeToggle from "./ThemeToggle";
 import SearchAutocomplete from "./SearchAutocomplete";
 import { useAppStore } from "@/store/useAppStore";
 import {
-  FaUserCircle,
   FaUserEdit,
   FaHistory,
   FaHourglassStart,
 } from "react-icons/fa";
-import { MdDashboard, MdSubscriptions, MdPlaylistPlay, MdLogout, MdAmpStories } from "react-icons/md";
+import { MdDashboard, MdSubscriptions, MdPlaylistPlay, MdLogout, MdAmpStories, MdMenu, MdClose } from "react-icons/md";
+
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
   const { data: session, status } = useSession();
@@ -28,33 +36,17 @@ const Navbar = () => {
   const setMobileMenuOpen = useAppStore((state) => state.setMobileMenuOpen);
   const toggleMobileMenu = useAppStore((state) => state.toggleMobileMenu);
 
-  const searchQuery = useAppStore((state) => state.searchQuery);
-  const setSearchQuery = useAppStore((state) => state.setSearchQuery);
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const profileRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (profileRef.current && !profileRef.current.contains(event.target)) {
-        setIsProfileMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   const handleLogout = () => {
-    setIsProfileMenuOpen(false);
     signOut({ callbackUrl: '/login' });
   };
 
   return (
-    <nav className="sticky top-0 z-50 backdrop-blur-md bg-white/75 dark:bg-slate-900/80 border-b border-gray-200 dark:border-slate-800 shadow-sm transition-all duration-300">
+    <nav className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border shadow-sm transition-all duration-300">
       <div className="container mx-auto px-4 sm:px-6 py-3">
         <div className="flex justify-between items-center">
           <Link
             href="/"
-            className="font-display text-3xl tracking-tighter font-extrabold bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent hover:from-indigo-400 hover:to-violet-400 transition-all duration-300"
+            className="font-display text-3xl tracking-tighter font-extrabold text-foreground hover:text-foreground/80 transition-all duration-300"
             onClick={() => setMobileMenuOpen(false)}
           >
             Aurahub
@@ -64,95 +56,68 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-4">
             <SearchAutocomplete 
               className="w-72 lg:w-96" 
-              inputClassName="w-full bg-gray-100 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 dark:focus:border-indigo-400 rounded-full py-2 pl-4 pr-12 focus:outline-none transition-all duration-300 text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400" 
+              inputClassName="w-full bg-muted border-2 border-transparent focus:border-ring rounded-full py-2 pl-4 pr-12 focus:outline-none transition-all duration-300 text-foreground placeholder-muted-foreground" 
             />
 
             <ThemeToggle />
 
             {isAuthenticated ? (
               <>
-                <Link
-                  href="/upload"
-                  className="bg-indigo-600 text-white px-5 py-2 rounded-full hover:bg-indigo-700 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 font-medium whitespace-nowrap"
-                >
-                  Upload
-                </Link>
+                <Button asChild className="rounded-full shadow-md hover:shadow-lg transition-all duration-300">
+                  <Link href="/upload">Upload</Link>
+                </Button>
+                
                 <NotificationsPanel />
-                <div className="relative" ref={profileRef}>
-                  <button
-                    onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                    className="flex items-center justify-center p-1 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors duration-300"
-                  >
-                    <Image
-                      src={getAvatarUrl(user?.name, user?.image)}
-                      alt={user?.name || "User avatar"}
-                      width={36}
-                      height={36}
-                      unoptimized
-                      className="rounded-full ring-2 ring-transparent hover:ring-indigo-500 transition-all duration-300 w-9 h-9 object-cover"
-                    />
-                  </button>
-                  {isProfileMenuOpen && (
-                    <div className="absolute right-0 mt-3 w-64 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-100 dark:border-slate-700 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                      <ul>
-                        <li className="px-4 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
-                          <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
-                            {user.name}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                            {user.email}
-                          </p>
-                        </li>
-                        <div className="py-2">
-                          {[
-                            { name: "Shorts", icon: MdAmpStories, href: "/shorts" },
-                            { name: "My Profile", icon: FaUserEdit, href: "/my-profile" },
-                            { name: "Dashboard", icon: MdDashboard, href: "/dashboard" },
-                            { name: "Watch Later", icon: FaHourglassStart, href: "/watch-later" },
-                            { name: "My Playlists", icon: MdPlaylistPlay, href: "/my-playlists" },
-                            { name: "History", icon: FaHistory, href: "/history" },
-                            { name: "Subscriptions", icon: MdSubscriptions, href: "/subscriptions" },
-                          ].map((item) => (
-                            <li key={item.name}>
-                              <Link
-                                href={item.href}
-                                onClick={() => setIsProfileMenuOpen(false)}
-                                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-slate-700/50 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                              >
-                                <item.icon className="mr-3 text-lg opacity-70" />
-                                <span>{item.name}</span>
-                              </Link>
-                            </li>
-                          ))}
-                          <li className="border-t border-gray-100 dark:border-slate-700 mt-2 pt-2">
-                            <button
-                              onClick={handleLogout}
-                              className="flex items-center w-full px-4 py-2 text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-400/10 transition-colors"
-                            >
-                              <MdLogout className="mr-3 text-lg opacity-80" />
-                              <span>Logout</span>
-                            </button>
-                          </li>
-                        </div>
-                      </ul>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center justify-center rounded-full hover:ring-2 hover:ring-ring transition-all duration-300 focus:outline-none">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={getAvatarUrl(user?.name, user?.image)} alt={user?.name || "User avatar"} />
+                        <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
+                      </Avatar>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64 rounded-xl p-2 animate-in fade-in slide-in-from-top-2">
+                    <div className="px-2 py-2.5">
+                      <p className="text-sm font-bold truncate">{user?.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                     </div>
-                  )}
-                </div>
+                    <DropdownMenuSeparator />
+                    {[
+                      { name: "Shorts", icon: MdAmpStories, href: "/shorts" },
+                      { name: "My Profile", icon: FaUserEdit, href: "/my-profile" },
+                      { name: "Dashboard", icon: MdDashboard, href: "/dashboard" },
+                      { name: "Watch Later", icon: FaHourglassStart, href: "/watch-later" },
+                      { name: "My Playlists", icon: MdPlaylistPlay, href: "/my-playlists" },
+                      { name: "History", icon: FaHistory, href: "/history" },
+                      { name: "Subscriptions", icon: MdSubscriptions, href: "/subscriptions" },
+                    ].map((item) => (
+                      <DropdownMenuItem key={item.name} asChild className="cursor-pointer rounded-lg">
+                        <Link href={item.href} className="flex items-center w-full">
+                          <item.icon className="mr-3 h-4 w-4 opacity-70" />
+                          <span>{item.name}</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-lg text-destructive focus:bg-destructive/10 focus:text-destructive">
+                      <button onClick={handleLogout} className="flex items-center w-full">
+                        <MdLogout className="mr-3 h-4 w-4 opacity-80" />
+                        <span>Logout</span>
+                      </button>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium px-2 py-2 transition-colors duration-300"
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/register"
-                  className="bg-indigo-600 text-white px-5 py-2 rounded-full hover:bg-indigo-700 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 font-medium whitespace-nowrap"
-                >
-                  Sign Up
-                </Link>
+                <Button variant="ghost" asChild className="font-medium transition-colors duration-300">
+                  <Link href="/login">Login</Link>
+                </Button>
+                <Button asChild className="rounded-full shadow-md hover:shadow-lg transition-all duration-300">
+                  <Link href="/register">Sign Up</Link>
+                </Button>
               </>
             )}
           </div>
@@ -160,38 +125,32 @@ const Navbar = () => {
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center gap-3">
             <ThemeToggle />
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={toggleMobileMenu}
-              className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"
               aria-label="Toggle menu"
+              className="rounded-full"
             >
-              {isMobileMenuOpen ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-                </svg>
-              )}
-            </button>
+              {isMobileMenuOpen ? <MdClose className="h-6 w-6" /> : <MdMenu className="h-6 w-6" />}
+            </Button>
           </div>
         </div>
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden mt-4 pt-4 border-t border-gray-100 dark:border-slate-800 animate-in slide-in-from-top-4 duration-300">
+          <div className="md:hidden mt-4 pt-4 border-t border-border animate-in slide-in-from-top-4 duration-300">
             <SearchAutocomplete 
               className="mb-6"
-              inputClassName="w-full bg-gray-100 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 rounded-full py-3 pl-4 pr-12 focus:outline-none transition-all text-gray-800 dark:text-gray-100 placeholder-gray-500" 
+              inputClassName="w-full bg-muted border-2 border-transparent focus:border-ring rounded-full py-3 pl-4 pr-12 focus:outline-none transition-all text-foreground placeholder-muted-foreground" 
             />
             
             <div className="flex flex-col space-y-1">
               {isAuthenticated ? (
                 <>
-                  <div className="flex justify-between items-center p-3 mb-2 bg-indigo-50 dark:bg-slate-800 rounded-xl">
-                    <span className="font-semibold text-indigo-900 dark:text-indigo-100">
-                      Welcome, {user.name}!
+                  <div className="flex justify-between items-center p-3 mb-2 bg-muted rounded-xl">
+                    <span className="font-semibold text-foreground">
+                      Welcome, {user?.name}!
                     </span>
                     <NotificationsPanel />
                   </div>
@@ -206,34 +165,26 @@ const Navbar = () => {
                       key={item.name}
                       href={item.href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+                      className="px-4 py-3 text-muted-foreground font-medium rounded-xl hover:bg-muted hover:text-foreground transition-colors"
                     >
                       {item.name}
                     </Link>
                   ))}
                   <button
                     onClick={handleLogout}
-                    className="text-left px-4 py-3 text-rose-600 dark:text-rose-400 font-bold rounded-xl hover:bg-rose-50 dark:hover:bg-rose-400/10 mt-4 transition-colors"
+                    className="text-left px-4 py-3 text-destructive font-bold rounded-xl hover:bg-destructive/10 mt-4 transition-colors"
                   >
                     Logout
                   </button>
                 </>
               ) : (
                 <div className="grid grid-cols-2 gap-3 mt-4">
-                  <Link
-                    href="/login"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex justify-center items-center py-3 text-gray-700 dark:text-gray-300 font-bold rounded-xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    href="/register"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex justify-center items-center py-3 text-white font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm"
-                  >
-                    Sign Up
-                  </Link>
+                  <Button variant="secondary" asChild className="rounded-xl h-12 text-md font-bold">
+                    <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Login</Link>
+                  </Button>
+                  <Button asChild className="rounded-xl h-12 text-md font-bold shadow-sm">
+                    <Link href="/register" onClick={() => setMobileMenuOpen(false)}>Sign Up</Link>
+                  </Button>
                 </div>
               )}
             </div>
