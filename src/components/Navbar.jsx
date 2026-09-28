@@ -70,13 +70,11 @@ const Navbar = () => {
                 <NotificationsPanel />
                 
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="flex items-center justify-center rounded-full hover:ring-2 hover:ring-ring transition-all duration-300 focus:outline-none">
+                  <DropdownMenuTrigger className="flex items-center justify-center rounded-full hover:ring-2 hover:ring-ring transition-all duration-300 focus:outline-none cursor-pointer border-none outline-none">
                       <Avatar className="h-9 w-9">
                         <AvatarImage src={getAvatarUrl(user?.name, user?.image)} alt={user?.name || "User avatar"} />
                         <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
                       </Avatar>
-                    </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-64 rounded-xl p-2 animate-in fade-in slide-in-from-top-2">
                     <div className="px-2 py-2.5">
@@ -101,11 +99,9 @@ const Navbar = () => {
                       </DropdownMenuItem>
                     ))}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-lg text-destructive focus:bg-destructive/10 focus:text-destructive">
-                      <button onClick={handleLogout} className="flex items-center w-full">
+                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer rounded-lg text-destructive focus:bg-destructive/10 focus:text-destructive flex items-center w-full">
                         <MdLogout className="mr-3 h-4 w-4 opacity-80" />
                         <span>Logout</span>
-                      </button>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

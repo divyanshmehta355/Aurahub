@@ -7,7 +7,7 @@ import redis from '@/lib/redis';
 export async function GET(request) {
     try {
         const { searchParams } = request.nextUrl;
-        const sortOption = searchParams.get('sort') || 'trending';
+        const sortOption = searchParams.get('sort') || 'newest';
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '8');
         const category = searchParams.get('category');
@@ -31,10 +31,10 @@ export async function GET(request) {
         const skip = (page - 1) * limit;
         const sortCriteria = {
             'trending': { trendingScore: -1, createdAt: -1, _id: -1 },
-            'date_desc': { createdAt: -1, _id: -1 },
-            'views_desc': { views: -1, createdAt: -1, _id: -1 },
-            'likes_desc': { likesCount: -1, createdAt: -1, _id: -1 },
-            'comments_desc': { commentCount: -1, createdAt: -1, _id: -1 }
+            'newest': { createdAt: -1, _id: -1 },
+            'views': { views: -1, createdAt: -1, _id: -1 },
+            'likes': { likesCount: -1, createdAt: -1, _id: -1 },
+            'comments': { commentCount: -1, createdAt: -1, _id: -1 }
         }[sortOption] || { trendingScore: -1, createdAt: -1, _id: -1 };
 
         const filter = { visibility: 'public', streamtapeStatus: { $ne: 'dead' } };

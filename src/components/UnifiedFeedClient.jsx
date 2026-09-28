@@ -34,11 +34,10 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 const SORT_OPTIONS = [
-  { id: "trending", label: "Trending", icon: FaFire },
-  { id: "date_desc", label: "Newest", icon: FaClock },
-  { id: "views_desc", label: "Most Views", icon: FaEye },
-  { id: "likes_desc", label: "Most Liked", icon: FaHeart },
-  { id: "comments_desc", label: "Comments", icon: FaComments },
+  { id: "newest", label: "Newest", icon: FaClock },
+  { id: "views", label: "Most Views", icon: FaEye },
+  { id: "likes", label: "Most Liked", icon: FaHeart },
+  { id: "comments", label: "Comments", icon: FaComments },
 ];
 
 const PAGE_LIMIT = 12;
@@ -57,7 +56,7 @@ const UnifiedFeedContent = () => {
     const p = parseInt(searchParams.get("page") || "1", 10);
     return isNaN(p) || p < 1 ? 1 : p;
   });
-  const [sortBy, setSortBy] = useState(() => searchParams.get("sort") || "trending");
+  const [sortBy, setSortBy] = useState(() => searchParams.get("sort") || "newest");
   const [activeCategory, setActiveCategory] = useState(
     () => searchParams.get("category") || "All"
   );
@@ -69,7 +68,7 @@ const UnifiedFeedContent = () => {
   useEffect(() => {
     const p = parseInt(searchParams.get("page") || "1", 10);
     const validPage = isNaN(p) || p < 1 ? 1 : p;
-    const sort = searchParams.get("sort") || "trending";
+    const sort = searchParams.get("sort") || "newest";
     const cat = searchParams.get("category") || "All";
     const type = searchParams.get("type") || "all";
 
@@ -115,27 +114,7 @@ const UnifiedFeedContent = () => {
   const totalPages = data?.totalPages || 1;
   const totalVideos = data?.totalVideos || 0;
 
-  // Background preload for adjacent pages
-  useEffect(() => {
-    if (!data) return;
-    const totalP = data.totalPages || 1;
-
-    if (currentPage < totalP) {
-      let nextUrl = `/videos?sort=${sortBy}&page=${currentPage + 1}&limit=${PAGE_LIMIT}&type=${videoType}`;
-      if (activeCategory && activeCategory !== "All") {
-        nextUrl += `&category=${encodeURIComponent(activeCategory)}`;
-      }
-      preload(nextUrl, fetcher);
-    }
-
-    if (currentPage > 1) {
-      let prevUrl = `/videos?sort=${sortBy}&page=${currentPage - 1}&limit=${PAGE_LIMIT}&type=${videoType}`;
-      if (activeCategory && activeCategory !== "All") {
-        prevUrl += `&category=${encodeURIComponent(activeCategory)}`;
-      }
-      preload(prevUrl, fetcher);
-    }
-  }, [currentPage, sortBy, videoType, activeCategory, data]);
+  // Background preload for adjacent pages removed to prevent serverless connection exhaustion (spawning too many lambdas).
 
   const paginationItems = useMemo(() => {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -147,7 +126,7 @@ const UnifiedFeedContent = () => {
   const updateUrlParams = (cat, sort, type, page = 1) => {
     const params = new URLSearchParams();
     if (cat && cat !== "All") params.set("category", cat);
-    if (sort && sort !== "trending") params.set("sort", sort);
+    if (sort && sort !== "newest") params.set("sort", sort);
     if (type && type !== "all") params.set("type", type);
     if (page && page > 1) params.set("page", page.toString());
     const queryString = params.toString();
@@ -279,7 +258,10 @@ const UnifiedFeedContent = () => {
               <SelectContent>
                 {SORT_OPTIONS.map((opt) => (
                   <SelectItem key={opt.id} value={opt.id}>
-                    {opt.label}
+                    <div className="flex items-center space-x-2">
+                      <opt.icon className="h-3.5 w-3.5 opacity-70" />
+                      <span>{opt.label}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
