@@ -26,6 +26,7 @@ userActivitySchema.index(
   { unique: true }
 );
 userActivitySchema.index({ userId: 1, createdAt: -1 });
+userActivitySchema.index({ videoId: 1, createdAt: 1, interactionType: 1 });
 
 const UserActivity =
   mongoose.models.UserActivity ||

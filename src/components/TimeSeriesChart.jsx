@@ -37,14 +37,14 @@ const TimeSeriesChart = ({ timeSeries }) => {
   if (!timeSeries || timeSeries.length === 0) return null;
 
   const labels = timeSeries.map(d => d.date);
-  const viewsData = timeSeries.map(d => d.views);
-  const likesData = timeSeries.map(d => d.likes);
+  const viewsData = timeSeries.map(d => d.viewInteractions);
+  const likesData = timeSeries.map(d => d.likeInteractions);
 
   const data = {
     labels,
     datasets: [
       {
-        label: 'Views',
+        label: 'Viewer-video interactions',
         data: viewsData,
         borderColor: primaryColor,
         backgroundColor: primaryBg,
@@ -56,7 +56,7 @@ const TimeSeriesChart = ({ timeSeries }) => {
         pointHoverRadius: 5,
       },
       {
-        label: 'Likes',
+        label: 'Like interactions',
         data: likesData,
         borderColor: isDark ? '#a1a1aa' : '#71717a', // Neutral secondary
         backgroundColor: isDark ? 'rgba(161, 161, 170, 0.1)' : 'rgba(113, 113, 122, 0.1)',

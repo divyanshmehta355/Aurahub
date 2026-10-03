@@ -29,10 +29,11 @@ const AnalyticsChart = ({ videos }) => {
   const gridColor = isDark ? '#333333' : '#e5e5e5';
   const primaryColor = isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)';
 
-  const labels = videos.map(video => video.title);
-  const viewsData = videos.map(video => video.views);
-  const likesData = videos.map(video => video.likesCount);
-  const commentsData = videos.map(video => video.commentCount);
+  const topVideos = (videos || []).slice(0, 10);
+  const labels = topVideos.map(video => video.title);
+  const viewsData = topVideos.map(video => video.views);
+  const likesData = topVideos.map(video => video.likesCount);
+  const commentsData = topVideos.map(video => video.commentCount);
 
   const data = {
     labels,
@@ -66,6 +67,8 @@ const AnalyticsChart = ({ videos }) => {
 
   const options = {
     responsive: true,
+    indexAxis: 'y',
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: 'top',
@@ -79,7 +82,7 @@ const AnalyticsChart = ({ videos }) => {
       },
       title: {
         display: true,
-        text: 'Video Performance Overview',
+        text: 'Top 10 Videos by Lifetime Views',
         color: textColor,
         font: {
           family: "'Inter', sans-serif",
@@ -89,7 +92,7 @@ const AnalyticsChart = ({ videos }) => {
       },
     },
     scales: {
-        y: {
+        x: {
             beginAtZero: true,
             grid: {
               color: gridColor,
@@ -98,7 +101,7 @@ const AnalyticsChart = ({ videos }) => {
               color: textColor,
             }
         },
-        x: {
+        y: {
             grid: {
               display: false,
             },
@@ -109,7 +112,7 @@ const AnalyticsChart = ({ videos }) => {
     }
   };
 
-  return <Bar options={options} data={data} />;
+  return <div className="h-[400px] w-full"><Bar options={options} data={data} /></div>;
 };
 
 export default AnalyticsChart;

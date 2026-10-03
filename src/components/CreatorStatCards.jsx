@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FaEye, FaThumbsUp, FaComment, FaUsers } from 'react-icons/fa';
+import { FaEye, FaThumbsUp, FaComment, FaUsers, FaVideo } from 'react-icons/fa';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const StatCard = ({ title, value, icon, index }) => (
@@ -33,10 +33,11 @@ const CreatorStatCards = ({ stats }) => {
     { title: 'Total Likes', value: stats.likes, icon: <FaThumbsUp size={20} /> },
     { title: 'Comments', value: stats.comments, icon: <FaComment size={20} /> },
     { title: 'Subscribers', value: stats.subscribers, icon: <FaUsers size={20} /> },
+    { title: 'Videos', value: stats.videos, icon: <FaVideo size={20} /> },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
       {statItems.map((item, idx) => (
         <StatCard key={idx} index={idx} title={item.title} value={item.value} icon={item.icon} />
       ))}

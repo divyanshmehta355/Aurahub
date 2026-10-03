@@ -102,6 +102,7 @@ const DashboardClient = () => {
   const [changingThumbnailVideo, setChangingThumbnailVideo] = useState(null);
   const [selectedVideos, setSelectedVideos] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState(30);
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
@@ -120,8 +121,9 @@ const DashboardClient = () => {
   );
 
   const { data: analytics, error: analyticsError, isLoading: analyticsLoading } = useSWR(
-    status === "authenticated" ? `/creator/analytics` : null,
-    fetcher
+    status === "authenticated" ? `/creator/analytics?days=${analyticsPeriod}` : null,
+    fetcher,
+    { keepPreviousData: true }
   );
 
   useEffect(() => {
@@ -132,13 +134,16 @@ const DashboardClient = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (searchTerm) {
-      params.set("q", searchTerm);
+    if (debouncedSearchTerm) {
+      params.set("q", debouncedSearchTerm);
     } else {
       params.delete("q");
     }
-    router.replace(`/dashboard?${params.toString()}`);
-  }, [searchTerm, router]);
+    const queryString = params.toString();
+    const nextUrl = queryString ? `/dashboard?${queryString}` : "/dashboard";
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+    if (nextUrl !== currentUrl) router.replace(nextUrl, { scroll: false });
+  }, [debouncedSearchTerm, router]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -247,7 +252,7 @@ const DashboardClient = () => {
     }
   };
 
-  if (status === "loading" || isLoading || analyticsLoading) {
+  if (status === "loading" || isLoading || (analyticsLoading && !analytics)) {
     return (
       <main className="container mx-auto px-4 sm:px-6 py-10 max-w-7xl animate-pulse">
         <div className="flex gap-8">
@@ -340,14 +345,52 @@ const DashboardClient = () => {
                     </div>
                     
                     <div className="bg-card p-6 rounded-2xl shadow-sm border border-border transition-colors">
-                      <h3 className="text-lg font-bold text-foreground font-display tracking-tight mb-6">30-Day Channel Growth</h3>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+                        <h3 className="text-lg font-bold text-foreground font-display tracking-tight">Audience Activity</h3>
+                        <select
+                          aria-label="Analytics date range"
+                          value={analyticsPeriod}
+                          onChange={(event) => setAnalyticsPeriod(Number(event.target.value))}
+                          className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <option value={7}>Last 7 days</option>
+                          <option value={30}>Last 30 days</option>
+                          <option value={90}>Last 90 days</option>
+                        </select>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-5">
+                        {analytics.periodActivity.viewInteractions.toLocaleString()} viewer-video interactions
+                        <span className="mx-2">·</span>
+                        {analytics.periodActivity.likeInteractions.toLocaleString()} like interactions
+                      </p>
                       <TimeSeriesChart timeSeries={analytics.timeSeries} />
                     </div>
                     
-                    {videos && videos.length > 0 && (
-                      <div className="bg-card p-6 rounded-2xl shadow-sm border border-border transition-colors">
-                        <h3 className="text-lg font-bold text-foreground font-display tracking-tight mb-6">Video Performance Comparison</h3>
-                        <AnalyticsChart videos={videos} />
+                    {(analytics.topVideos.length > 0 || analytics.categories.length > 0) && (
+                      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)] gap-6">
+                        {analytics.topVideos.length > 0 && (
+                          <div className="bg-card p-6 rounded-2xl shadow-sm border border-border transition-colors">
+                            <AnalyticsChart videos={analytics.topVideos} />
+                          </div>
+                        )}
+                        {analytics.categories.length > 0 && (
+                          <div className="bg-card p-6 rounded-2xl shadow-sm border border-border transition-colors">
+                            <h3 className="text-lg font-bold text-foreground font-display tracking-tight mb-5">Top Categories</h3>
+                            <div className="divide-y divide-border">
+                              {analytics.categories.map((category) => (
+                                <div key={category.category} className="flex items-center justify-between gap-3 py-3">
+                                  <div className="min-w-0">
+                                    <p className="truncate font-medium text-foreground">{category.category}</p>
+                                    <p className="text-xs text-muted-foreground">{category.videos.toLocaleString()} videos</p>
+                                  </div>
+                                  <p className="shrink-0 text-sm font-semibold text-foreground">
+                                    {category.views.toLocaleString()} views
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </>

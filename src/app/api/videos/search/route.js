@@ -7,7 +7,6 @@ import mongoose from "mongoose";
 export const dynamic = "force-dynamic";
 
 export async function GET(request) {
-  await dbConnect();
   try {
     const { searchParams } = request.nextUrl;
     const rawQuery = searchParams.get("q");
@@ -31,8 +30,10 @@ export async function GET(request) {
       // Non-blocking cache error
     }
 
+    await dbConnect();
+
     const candidateMap = new Map();
-    let usedAtlasSearch = false;
+    let atlasSearchFailed = false;
 
     // 1. Try MongoDB Atlas Search with fuzzy matching
     try {
@@ -92,7 +93,6 @@ export async function GET(request) {
       const atlasResults = await Video.aggregate(atlasPipeline);
 
       if (atlasResults && atlasResults.length > 0) {
-        usedAtlasSearch = true;
         atlasResults.forEach((v) => {
           candidateMap.set(v._id.toString(), {
             ...v,
@@ -104,56 +104,33 @@ export async function GET(request) {
       }
     } catch (atlasErr) {
       // Graceful fallback if Atlas Search is not available or index 'default' does not exist
+      atlasSearchFailed = true;
       console.warn("Atlas Search failed or index missing, falling back to regex:", atlasErr.message);
     }
 
-    // 2. Fallback to Regex Search if Atlas Search wasn't used or yielded no results
-    if (!usedAtlasSearch || candidateMap.size === 0) {
-      // Build flexible multi-field fuzzy regex conditions
-      const orConditions = [];
-      const words = searchQuery.split(/\s+/).filter(Boolean);
-      const flexiblePattern = words.join(".*");
-
-      // Phrase / flexible pattern match
-      orConditions.push(
-        { title: { $regex: flexiblePattern, $options: "i" } },
-        { description: { $regex: flexiblePattern, $options: "i" } },
-        { category: { $regex: searchQuery, $options: "i" } },
-        { tags: { $in: [new RegExp(searchQuery, "i")] } }
-      );
-
-      // Individual word token matches
-      words.forEach((w) => {
-        if (w.length >= 3) {
-          orConditions.push(
-            { title: { $regex: w, $options: "i" } },
-            { tags: { $in: [new RegExp(w, "i")] } }
-          );
-        }
-      });
-
+    // 2. Use the existing text index only when Atlas Search is unavailable.
+    if (atlasSearchFailed) {
       try {
         const keywordResults = await Video.find({
           visibility: "public",
           streamtapeStatus: { $ne: "dead" },
-          $or: orConditions,
+          $text: { $search: searchQuery },
         })
+          .select({ score: { $meta: "textScore" } })
+          .sort({ score: { $meta: "textScore" } })
           .populate("uploader", "username avatar")
           .limit(30)
           .lean();
 
         keywordResults.forEach((v) => {
           const idStr = v._id.toString();
-
-          // Calculate text match score boost
-          let textBoost = 40;
           const titleLower = (v.title || "").toLowerCase();
           const qLower = searchQuery.toLowerCase();
-
+          let textBoost = v.score || 40;
           if (titleLower === qLower) {
-            textBoost += 60; // Exact match
+            textBoost += 60;
           } else if (titleLower.includes(qLower)) {
-            textBoost += 30; // Direct substring
+            textBoost += 30;
           }
 
           candidateMap.set(idStr, {
@@ -164,7 +141,7 @@ export async function GET(request) {
           });
         });
       } catch (keywordErr) {
-        console.error("Keyword search error:", keywordErr);
+        console.error("Text-index fallback search error:", keywordErr);
       }
     }
 

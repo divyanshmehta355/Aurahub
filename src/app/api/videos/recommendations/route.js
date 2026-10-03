@@ -7,7 +7,6 @@ import mongoose from "mongoose";
 export const dynamic = "force-dynamic";
 
 export async function GET(request) {
-  await dbConnect();
   try {
     const { searchParams } = request.nextUrl;
     const page = parseInt(searchParams.get("page") || "1");
@@ -21,6 +20,8 @@ export async function GET(request) {
       const data = typeof cachedFeed === "string" ? JSON.parse(cachedFeed) : cachedFeed;
       return NextResponse.json(data);
     }
+
+    await dbConnect();
 
     const baseMatch = { visibility: "public" };
 

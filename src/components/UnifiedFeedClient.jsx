@@ -34,6 +34,7 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 const SORT_OPTIONS = [
+  { id: "random", label: "For You", icon: FaCompass },
   { id: "newest", label: "Newest", icon: FaClock },
   { id: "views", label: "Most Views", icon: FaEye },
   { id: "likes", label: "Most Liked", icon: FaHeart },
@@ -56,7 +57,7 @@ const UnifiedFeedContent = () => {
     const p = parseInt(searchParams.get("page") || "1", 10);
     return isNaN(p) || p < 1 ? 1 : p;
   });
-  const [sortBy, setSortBy] = useState(() => searchParams.get("sort") || "newest");
+  const [sortBy, setSortBy] = useState(() => searchParams.get("sort") || "random");
   const [activeCategory, setActiveCategory] = useState(
     () => searchParams.get("category") || "All"
   );
@@ -68,7 +69,7 @@ const UnifiedFeedContent = () => {
   useEffect(() => {
     const p = parseInt(searchParams.get("page") || "1", 10);
     const validPage = isNaN(p) || p < 1 ? 1 : p;
-    const sort = searchParams.get("sort") || "newest";
+    const sort = searchParams.get("sort") || "random";
     const cat = searchParams.get("category") || "All";
     const type = searchParams.get("type") || "all";
 
@@ -126,7 +127,7 @@ const UnifiedFeedContent = () => {
   const updateUrlParams = (cat, sort, type, page = 1) => {
     const params = new URLSearchParams();
     if (cat && cat !== "All") params.set("category", cat);
-    if (sort && sort !== "newest") params.set("sort", sort);
+    if (sort && sort !== "random") params.set("sort", sort);
     if (type && type !== "all") params.set("type", type);
     if (page && page > 1) params.set("page", page.toString());
     const queryString = params.toString();

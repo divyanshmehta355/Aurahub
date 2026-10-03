@@ -12,7 +12,6 @@ import redis from '@/lib/redis';
 const AURA_API_BASE_URL = "https://aurahub-api-hono.ashwathama249.workers.dev";
 
 export async function GET(request, { params }) {
-  await dbConnect();
   try {
     const { id } = await params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -37,7 +36,6 @@ export async function GET(request, { params }) {
     }
 
     await dbConnect();
-
     const video = await Video.findById(id)
       .populate('uploader', 'username avatar')
       .lean();
