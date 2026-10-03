@@ -34,11 +34,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// Utility to convert file URL to a clean default title
 function extractTitleFromUrl(url) {
   try {
-    const cleanUrl = url.split("?")[0];
-    const filename = cleanUrl.substring(cleanUrl.lastIndexOf("/") + 1);
+    const filename = new URL(url).pathname.split("/").filter(Boolean).pop() || "";
     const withoutExt = filename.replace(/\.[a-zA-Z0-9]+$/, "");
     return decodeURIComponent(withoutExt)
       .replace(/[-_]+/g, " ")
@@ -50,21 +48,16 @@ function extractTitleFromUrl(url) {
 }
 
 const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
-  // Shared Configuration
-  const [playlistOption, setPlaylistOption] = useState("create_new"); // "create_new", "existing", "none"
+  const [playlistOption, setPlaylistOption] = useState("create_new");
   const [selectedPlaylistId, setSelectedPlaylistId] = useState("");
   const [newPlaylistTitle, setNewPlaylistTitle] = useState("");
   const [category, setCategory] = useState("Other");
   const [visibility, setVisibility] = useState("public");
   const [isShort, setIsShort] = useState(false);
-
-  // Dynamic Video Rows
   const [items, setItems] = useState([
     { id: "1", title: "", videoUrl: "", status: "idle", progress: 0, error: "" },
     { id: "2", title: "", videoUrl: "", status: "idle", progress: 0, error: "" },
   ]);
-
-  // Playlist Upload Queue Execution State
   const [isRunning, setIsRunning] = useState(false);
   const [currentProcessingIndex, setCurrentProcessingIndex] = useState(-1);
   const [completedCount, setCompletedCount] = useState(0);
@@ -84,7 +77,6 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
     };
   }, []);
 
-  // Helpers to update individual rows
   const updateItem = (id, updates) => {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
@@ -92,12 +84,10 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
   };
 
   const handleUrlBlur = (id, url) => {
-    const item = items.find((i) => i.id === id);
+    const item = items.find((currentItem) => currentItem.id === id);
     if (item && !item.title.trim() && url.trim()) {
       const autoTitle = extractTitleFromUrl(url);
-      if (autoTitle) {
-        updateItem(id, { title: autoTitle });
-      }
+      if (autoTitle) updateItem(id, { title: autoTitle });
     }
   };
 
@@ -121,56 +111,48 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
     if (!rawPastedText.trim()) return;
 
     const lines = rawPastedText
-      .split("\n")
-      .map((l) => l.trim())
+      .split(/\r?\n/)
+      .map((line) => line.trim())
       .filter(Boolean);
-
     const newRows = [];
 
     lines.forEach((line) => {
-      let parsedTitle = "";
-      let parsedUrl = "";
+      const urlMatches = [...line.matchAll(/https?:\/\/[^\s,;<>"']+/gi)];
 
-      const splitDash = line.split(/\s+-\s+/);
-      const splitPipe = line.split(/\s+\|\s+/);
-      const splitComma = line.split(/\s*,\s*(?=https?:\/\/)/i);
+      urlMatches.forEach((match, index) => {
+        const parsedUrl = match[0].replace(/[)\]}]+$/, "");
+        try {
+          new URL(parsedUrl);
+        } catch {
+          return;
+        }
 
-      if (splitDash.length === 2 && splitDash[1].startsWith("http")) {
-        parsedTitle = splitDash[0].trim();
-        parsedUrl = splitDash[1].trim();
-      } else if (splitPipe.length === 2 && splitPipe[1].startsWith("http")) {
-        parsedTitle = splitPipe[0].trim();
-        parsedUrl = splitPipe[1].trim();
-      } else if (splitComma.length === 2 && splitComma[1].startsWith("http")) {
-        parsedTitle = splitComma[0].trim();
-        parsedUrl = splitComma[1].trim();
-      } else if (line.startsWith("http")) {
-        parsedUrl = line;
-        parsedTitle = extractTitleFromUrl(line);
-      } else {
-        parsedTitle = line;
-      }
-
-      if (parsedUrl || parsedTitle) {
+        const titlePrefix = index === 0
+          ? line.slice(0, match.index).replace(/\s*(?:-|,|\|)\s*$/, "").trim()
+          : "";
+        const parsedTitle = titlePrefix || extractTitleFromUrl(parsedUrl) || "Untitled Video";
         newRows.push({
           id: Date.now().toString() + Math.random().toString(36).substring(5),
-          title: parsedTitle || "Untitled Video",
-          videoUrl: parsedUrl || "",
+          title: parsedTitle,
+          videoUrl: parsedUrl,
           status: "idle",
           progress: 0,
           error: "",
         });
-      }
+      });
     });
 
-    if (newRows.length > 0) {
-      const isEmpty = items.length === 2 && !items[0].videoUrl && !items[1].videoUrl;
-      setItems((prev) => (isEmpty ? newRows : [...prev, ...newRows]));
-      toast.success(`Imported ${newRows.length} videos from text!`);
+    if (newRows.length === 0) {
+      toast.error("No valid video URLs found.");
+      return;
     }
 
+    const isEmpty = items.length === 2 && items.every((item) => !item.videoUrl);
+    setItems((prev) => (isEmpty ? newRows : [...prev, ...newRows]));
+    toast.success(`Imported ${newRows.length} videos from text!`);
     setRawPastedText("");
     setShowPasteModal(false);
+
   };
 
   // Poll Remote Upload until finished
@@ -199,9 +181,7 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
             return resolve(statusData.linkid);
           } else if (statusData && statusData.status === "error") {
             clearInterval(pollingIntervalRef.current);
-            return reject(
-              new Error(statusData.error_message || "Remote download error")
-            );
+            return reject(new Error(statusData.error_message || "Remote download error"));
           } else if (statusData) {
             const loaded = statusData.bytes_loaded || 0;
             const total = statusData.bytes_total || 0;
@@ -212,27 +192,19 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
           failedCount++;
           if (failedCount >= maxFailed) {
             clearInterval(pollingIntervalRef.current);
-            return reject(
-              new Error("Lost connection to remote downloader status.")
-            );
+            return reject(new Error("Lost connection to remote downloader status."));
           }
         }
       }, 4000);
     });
   };
 
-  // Main Playlist Sequential Queue Runner
   const handleStartPlaylistUpload = async () => {
-    // 1. Validation
-    const validItems = items.filter(
-      (item) => item.title.trim() && item.videoUrl.trim()
-    );
-
+    const validItems = items.filter((item) => item.title.trim() && item.videoUrl.trim());
     if (validItems.length === 0) {
       toast.error("Please enter a Title and Remote URL for at least one video.");
       return;
     }
-
     if (playlistOption === "create_new" && !newPlaylistTitle.trim()) {
       toast.error("Please enter a name for the new playlist.");
       return;
@@ -242,7 +214,6 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
     abortRef.current = false;
     let targetPlaylistId = null;
 
-    // 2. Create playlist if requested
     if (playlistOption === "create_new" && newPlaylistTitle.trim()) {
       try {
         toast.info(`Creating playlist "${newPlaylistTitle.trim()}"...`);
@@ -252,11 +223,9 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
         });
         targetPlaylistId = plRes.data?._id;
         setCreatedPlaylist(plRes.data);
-        if (onPlaylistCreated) {
-          onPlaylistCreated(plRes.data);
-        }
-        toast.success(`Playlist created!`);
-      } catch (plErr) {
+        if (onPlaylistCreated) onPlaylistCreated(plRes.data);
+        toast.success("Playlist created!");
+      } catch {
         toast.error("Failed to create playlist. Continuing upload without playlist.");
       }
     } else if (playlistOption === "existing" && selectedPlaylistId) {
@@ -264,14 +233,9 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
     }
 
     let successfulUploads = 0;
-
-    // 3. Process videos sequentially one by one
     for (let i = 0; i < items.length; i++) {
       if (abortRef.current) break;
-
       const item = items[i];
-
-      // Skip blank rows or already completed items
       if (!item.title.trim() || !item.videoUrl.trim()) continue;
       if (item.status === "completed") {
         successfulUploads++;
@@ -282,41 +246,29 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
       updateItem(item.id, { status: "queuing", progress: 0, error: "" });
 
       try {
-        // Step A: Trigger remote upload start
         const startRes = await API.post("/videos/remote-upload/start", {
           videoUrl: item.videoUrl.trim(),
         });
         const remoteId = startRes.data?.id;
+        if (!remoteId) throw new Error("Did not receive a remote upload ID from server.");
 
-        if (!remoteId) {
-          throw new Error("Did not receive a remote upload ID from server.");
-        }
-
-        // Step B: Poll until finished
         updateItem(item.id, { status: "downloading", progress: 5 });
-
         const videoId = await pollRemoteUpload(remoteId, (percent) => {
           updateItem(item.id, { progress: percent });
         });
-
         if (abortRef.current) break;
 
-        // Step C: Create Video Record in MongoDB
         updateItem(item.id, { status: "publishing", progress: 99 });
-
         const finalFormData = new FormData();
         finalFormData.append("title", item.title.trim());
-        finalFormData.append("description", ""); // optional
+        finalFormData.append("description", "");
         finalFormData.append("videoId", videoId);
         finalFormData.append("category", category);
         finalFormData.append("visibility", visibility);
         finalFormData.append("isShort", Boolean(isShort));
-        if (targetPlaylistId) {
-          finalFormData.append("playlistId", targetPlaylistId);
-        }
+        if (targetPlaylistId) finalFormData.append("playlistId", targetPlaylistId);
 
         await API.post("/videos/create-record", finalFormData);
-
         updateItem(item.id, { status: "completed", progress: 100 });
         successfulUploads++;
         setCompletedCount(successfulUploads);
@@ -333,7 +285,6 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
 
     setIsRunning(false);
     setCurrentProcessingIndex(-1);
-
     if (abortRef.current) {
       toast.warn("Playlist upload stopped.");
     } else {
@@ -343,9 +294,7 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
 
   const handleStop = () => {
     abortRef.current = true;
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-    }
+    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
     setIsRunning(false);
     setCurrentProcessingIndex(-1);
     toast.info("Stopping remaining uploads...");
@@ -678,7 +627,7 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
               <span>Paste Multiple Video URLs</span>
             </DialogTitle>
             <DialogDescription>
-              Paste URLs one per line. You can paste just URLs, or formatted as <code>Title - URL</code> or <code>Title, URL</code>:
+              Paste URLs separated by spaces, commas, or new lines. Titles are taken from each URL filename, or use <code>Title - URL</code> to set one:
             </DialogDescription>
           </DialogHeader>
 
@@ -686,8 +635,8 @@ const PlaylistUploadForm = ({ playlists = [], onPlaylistCreated }) => {
             rows={8}
             value={rawPastedText}
             onChange={(e) => setRawPastedText(e.target.value)}
-            placeholder={`Episode 1 - https://example.com/ep1.mp4\nEpisode 2 - https://example.com/ep2.mp4\nhttps://example.com/ep3.mp4`}
-            className="font-mono text-xs sm:text-sm resize-none"
+            placeholder={`https://example.com/episode-1.mp4, https://example.com/episode-2.mp4\nEpisode 3 - https://example.com/episode-3.mp4`}
+            className="font-mono text-xs sm:text-sm resize-none max-h-[40vh] overflow-y-auto"
           />
 
           <DialogFooter>

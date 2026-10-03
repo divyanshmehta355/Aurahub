@@ -20,6 +20,8 @@ import { IoMdLink, IoIosLock, IoIosGlobe } from "react-icons/io";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaSpinner } from "react-icons/fa";
 
+const VIDEOS_PER_PAGE = 10;
+
 const VisibilityDropdown = ({ video, onVisibilityChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -99,6 +101,7 @@ const DashboardClient = () => {
   const [editingVideo, setEditingVideo] = useState(null);
   const [changingThumbnailVideo, setChangingThumbnailVideo] = useState(null);
   const [selectedVideos, setSelectedVideos] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
@@ -109,6 +112,11 @@ const DashboardClient = () => {
       ? `/creator/dashboard${debouncedSearchTerm ? `?q=${encodeURIComponent(debouncedSearchTerm)}` : ""}` 
       : null,
     fetcher
+  );
+  const totalPages = Math.max(1, Math.ceil((videos?.length || 0) / VIDEOS_PER_PAGE));
+  const visibleVideos = (videos || []).slice(
+    (currentPage - 1) * VIDEOS_PER_PAGE,
+    currentPage * VIDEOS_PER_PAGE
   );
 
   const { data: analytics, error: analyticsError, isLoading: analyticsLoading } = useSWR(
@@ -131,6 +139,14 @@ const DashboardClient = () => {
     }
     router.replace(`/dashboard?${params.toString()}`);
   }, [searchTerm, router]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
 
   const handleClearSearch = () => setSearchTerm("");
 
@@ -183,10 +199,11 @@ const DashboardClient = () => {
   };
 
   const handleSelectAll = (e) => {
-    if (e.target.checked && videos) {
-      setSelectedVideos(videos.map((v) => v._id));
+    const visibleVideoIds = visibleVideos.map((video) => video._id);
+    if (e.target.checked) {
+      setSelectedVideos((previous) => [...new Set([...previous, ...visibleVideoIds])]);
     } else {
-      setSelectedVideos([]);
+      setSelectedVideos((previous) => previous.filter((id) => !visibleVideoIds.includes(id)));
     }
   };
 
@@ -199,13 +216,18 @@ const DashboardClient = () => {
   const handleBulkDelete = async () => {
     if (!window.confirm(`Are you sure you want to delete ${selectedVideos.length} videos?`)) return;
     try {
-      await API.delete('/videos/bulk', { data: { videoIds: selectedVideos } });
+      const response = await API.delete('/videos/bulk', { data: { videoIds: selectedVideos } });
+      const { deletedIds = [], failedIds = [] } = response.data;
       mutate(
-        videos.filter((v) => !selectedVideos.includes(v._id)),
+        videos.filter((v) => !deletedIds.includes(v._id)),
         false
       );
-      setSelectedVideos([]);
-      toast.success("Videos deleted successfully!");
+      setSelectedVideos(failedIds);
+      if (failedIds.length > 0) {
+        toast.error(`${deletedIds.length} videos deleted; ${failedIds.length} could not be deleted.`);
+      } else {
+        toast.success("Videos deleted successfully!");
+      }
     } catch (err) {
       toast.error("Failed to delete videos.");
     }
@@ -409,7 +431,7 @@ const DashboardClient = () => {
                              <input 
                                 type="checkbox" 
                                 onChange={handleSelectAll} 
-                                checked={videos?.length > 0 && selectedVideos.length === videos.length} 
+                                checked={visibleVideos.length > 0 && visibleVideos.every((video) => selectedVideos.includes(video._id))}
                                 className="rounded border-border text-primary focus:ring-ring bg-card h-4 w-4 cursor-pointer" 
                               />
                           </th>
@@ -425,7 +447,7 @@ const DashboardClient = () => {
                         {error ? (
                            <tr><td colSpan="7" className="p-8 text-center text-rose-500">Failed to load content.</td></tr>
                         ) : videos && videos.length > 0 ? (
-                          videos.map((video) => (
+                          visibleVideos.map((video) => (
                             <tr key={video._id} className={`hover:bg-muted/50  transition-colors group ${selectedVideos.includes(video._id) ? 'bg-muted ' : ''}`}>
                               <td className="px-6 py-4 whitespace-nowrap w-12">
                                 <input 
@@ -509,6 +531,36 @@ const DashboardClient = () => {
                       </tbody>
                     </table>
                   </div>
+                  {videos?.length > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border px-6 py-4">
+                      <p className="text-sm text-muted-foreground" aria-live="polite">
+                        Showing {(currentPage - 1) * VIDEOS_PER_PAGE + 1}
+                        {' '}-{' '}
+                        {Math.min(currentPage * VIDEOS_PER_PAGE, videos.length)} of {videos.length} videos
+                      </p>
+                      <nav className="flex items-center gap-2" aria-label="Video list pagination">
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                          disabled={currentPage === 1}
+                          className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/50 disabled:pointer-events-none disabled:opacity-50"
+                        >
+                          Previous
+                        </button>
+                        <span className="min-w-20 text-center text-sm text-muted-foreground" aria-current="page">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                          disabled={currentPage === totalPages}
+                          className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted/50 disabled:pointer-events-none disabled:opacity-50"
+                        >
+                          Next
+                        </button>
+                      </nav>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}

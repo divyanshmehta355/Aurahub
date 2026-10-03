@@ -111,6 +111,8 @@ const VideoInfoPanel = ({ initialVideo }) => {
               ...prev,
               title: response.data.title,
               description: response.data.description,
+              tags: response.data.tags,
+              category: response.data.category,
             }
           : null
       );

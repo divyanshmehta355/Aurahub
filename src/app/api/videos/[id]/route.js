@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Video from '@/models/Video';
 import Comment from '@/models/Comment';
+import CATEGORIES from '@/constants/categories';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import redis from '@/lib/redis';
@@ -94,10 +95,22 @@ export async function PUT(request, { params }) {
     }
 
     const body = await request.json();
-    const { title, description, visibility } = body;
+    const { title, description, visibility, tags, category } = body;
     if (title) video.title = title;
     if (description !== undefined) video.description = description;
     if (visibility) video.visibility = visibility;
+    if (category !== undefined) {
+      if (!CATEGORIES.includes(category)) {
+        return NextResponse.json({ message: 'Invalid video category' }, { status: 400 });
+      }
+      video.category = category;
+    }
+    if (tags !== undefined) {
+      if (!Array.isArray(tags) || tags.some((tag) => typeof tag !== 'string')) {
+        return NextResponse.json({ message: 'Tags must be an array of strings' }, { status: 400 });
+      }
+      video.tags = [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))];
+    }
 
     const updatedVideo = await video.save();
     await redis.invalidateVideo({
@@ -133,10 +146,19 @@ export async function DELETE(request, { params }) {
     }
 
     try {
-      await axios.delete(`${AURA_API_BASE_URL}/fs/files/delete/${video.fileId}`);
-      console.log(`Successfully deleted file ${video.fileId} from AuraHub.`);
+      const response = await axios.delete(`${AURA_API_BASE_URL}/fs/files/delete/${video.fileId}`, {
+        headers: { accept: '*/*' },
+      });
+      if (response.data?.success !== true) {
+        throw new Error('AuraHub API did not confirm the file deletion');
+      }
+      console.log(`Successfully deleted file ${video.fileId} from Streamtape.`);
     } catch (auraError) {
-      console.error(`Failed to delete file ${video.fileId} from AuraHub:`, auraError.message);
+      console.error(`Failed to delete file ${video.fileId} from Streamtape:`, auraError.message);
+      return NextResponse.json(
+        { message: 'Failed to delete video from Streamtape. The video was not removed.' },
+        { status: 502 }
+      );
     }
 
     await Video.deleteOne({ _id: id });

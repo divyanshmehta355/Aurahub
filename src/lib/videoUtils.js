@@ -114,6 +114,7 @@ export const buildVideoAggregation = (
         fileId: 1,
         thumbnailUrl: 1,
         category: 1,
+        tags: 1,
         visibility: 1,
         views: 1,
         createdAt: 1,
