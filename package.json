@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:redis": "node --env-file-if-exists=.env.local --test tests/redis.integration.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
