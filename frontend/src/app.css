@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@theme {
+  --color-mono-50: #f9f9f9;
+  --color-mono-100: #f0f0f0;
+  --color-mono-200: #e4e4e4;
+  --color-mono-300: #d1d1d1;
+  --color-mono-400: #b0b0b0;
+  --color-mono-500: #8c8c8c;
+  --color-mono-600: #6d6d6d;
+  --color-mono-700: #525252;
+  --color-mono-800: #393939;
+  --color-mono-900: #262626;
+  --color-mono-950: #171717;
+  --color-mono-975: #0a0a0a;
+
+  --color-background: var(--color-mono-50);
+  --color-foreground: var(--color-mono-950);
+  --color-card: #ffffff;
+  --color-card-foreground: var(--color-mono-950);
+  --color-border: var(--color-mono-200);
+  --color-input: var(--color-mono-200);
+  --color-primary: var(--color-mono-950);
+  --color-primary-foreground: var(--color-mono-50);
+  --color-secondary: var(--color-mono-100);
+  --color-secondary-foreground: var(--color-mono-900);
+  --color-muted: var(--color-mono-100);
+  --color-muted-foreground: var(--color-mono-500);
+  --color-accent: var(--color-mono-100);
+  --color-accent-foreground: var(--color-mono-900);
+  
+  --radius: 0.5rem;
+}
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  :root {
+    --background: var(--color-mono-50);
+    --foreground: var(--color-mono-950);
+  }
+  
+  .dark {
+    --color-background: var(--color-mono-975);
+    --color-foreground: var(--color-mono-50);
+    --color-card: var(--color-mono-950);
+    --color-card-foreground: var(--color-mono-50);
+    --color-border: var(--color-mono-800);
+    --color-input: var(--color-mono-800);
+    --color-primary: var(--color-mono-50);
+    --color-primary-foreground: var(--color-mono-950);
+    --color-secondary: var(--color-mono-900);
+    --color-secondary-foreground: var(--color-mono-50);
+    --color-muted: var(--color-mono-900);
+    --color-muted-foreground: var(--color-mono-400);
+    --color-accent: var(--color-mono-800);
+    --color-accent-foreground: var(--color-mono-50);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground transition-colors duration-300 min-h-screen font-sans;
+  }
+}
