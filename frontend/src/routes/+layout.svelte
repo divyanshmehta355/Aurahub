@@ -126,7 +126,7 @@
 	<div class="flex flex-1 overflow-hidden relative">
 		<!-- Mobile Sidebar Backdrop -->
 		{#if isSidebarOpen}
-			<div class="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden" onclick={toggleSidebar}></div>
+			<button class="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden w-full h-full cursor-default border-none" aria-label="Close sidebar" onclick={toggleSidebar}></button>
 		{/if}
 
 		<!-- Sidebar -->

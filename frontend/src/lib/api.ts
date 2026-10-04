@@ -1,11 +1,11 @@
-import { env } from '$app/env/public';
+import { env } from '$env/dynamic/public';
 
-export const API_URL = env.PUBLIC_API_URL || 'http://localhost:8080/api';
+export const API_URL = env.PUBLIC_API_URL || '/api';
 
 export async function fetchApi(endpoint: string, options: RequestInit = {}) {
 	const isFormData = options.body instanceof FormData;
 	const headers: HeadersInit = { ...options.headers };
-	
+
 	if (!isFormData) {
 		(headers as Record<string, string>)['Content-Type'] = 'application/json';
 	}
