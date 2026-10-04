@@ -1,6 +1,6 @@
-import { env } from '$env/dynamic/public';
+import { PUBLIC_API_URL } from '$env/static/public';
 
-export const API_URL = env.PUBLIC_API_URL || 'http://localhost:8080/api';
+export const API_URL = PUBLIC_API_URL || 'http://localhost:8080/api';
 
 export async function fetchApi(endpoint: string, options: RequestInit = {}) {
 	const isFormData = options.body instanceof FormData;
