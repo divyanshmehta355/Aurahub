@@ -1,45 +1,55 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { fetchApi } from '#lib/api';
 	import VideoThumbnail from '#lib/components/VideoThumbnail.svelte';
+	import WatchLaterButton from '#lib/components/WatchLaterButton.svelte';
 	import { Clock, Trash2 } from 'lucide-svelte';
+	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
+	import { Skeleton } from '#lib/components/ui/skeleton';
+	import { Button } from '#lib/components/ui/button';
 
-	let videos: any[] = $state([]);
-	let isLoading = $state(true);
-	let error = $state('');
+	const queryClient = useQueryClient();
 
-	async function loadHistory() {
-		isLoading = true;
-		error = '';
-		try {
+	const historyQuery = createQuery(() => ({
+		queryKey: ['history'],
+		queryFn: async () => {
 			const res = await fetchApi('/user/history');
-			// Backend may return history objects with nested video or just flat videos array
-			videos = res.history || res.videos || [];
-		} catch (err: any) {
-			error = err.message || 'Failed to load watch history.';
-		} finally {
-			isLoading = false;
+			return res.history || res.videos || res.items || res || [];
 		}
+	}), () => queryClient);
+
+	const deleteHistoryMutation = createMutation(() => ({
+		mutationFn: async (videoId: string) => {
+			await fetchApi(`/user/history/${videoId}`, { method: 'DELETE' });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['history'] });
+		}
+	}), () => queryClient);
+
+	const clearHistoryMutation = createMutation(() => ({
+		mutationFn: async () => {
+			await fetchApi('/user/history', { method: 'DELETE' });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['history'] });
+		}
+	}), () => queryClient);
+
+	function handleDelete(e: Event, videoId: string) {
+		e.preventDefault();
+		e.stopPropagation();
+		deleteHistoryMutation.mutate(videoId);
 	}
 
-	onMount(() => {
-		loadHistory();
-	});
-
-	async function clearHistory() {
-		if (!confirm('Are you sure you want to clear all your watch history?')) return;
-		try {
-			await fetchApi('/user/history', { method: 'DELETE' });
-			videos = [];
-		} catch (err: any) {
-			alert('Failed to clear history');
+	function handleClearAll() {
+		if (confirm('Are you sure you want to clear your entire watch history?')) {
+			clearHistoryMutation.mutate();
 		}
 	}
 
 	function formatTimeAgo(dateString: string) {
 		const date = new Date(dateString);
 		const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-
 		let interval = seconds / 31536000;
 		if (interval > 1) return Math.floor(interval) + ' years ago';
 		interval = seconds / 2592000;
@@ -52,100 +62,115 @@
 		if (interval > 1) return Math.floor(interval) + ' minutes ago';
 		return Math.floor(seconds) + ' seconds ago';
 	}
-
-	function formatDuration(seconds: number) {
-		if (!seconds) return '0:00';
-		const m = Math.floor(seconds / 60);
-		const s = Math.floor(seconds % 60);
-		return `${m}:${s.toString().padStart(2, '0')}`;
-	}
 </script>
 
 <svelte:head>
 	<title>Watch History - Aurahub</title>
 </svelte:head>
 
-<div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<h1 class="text-2xl font-bold tracking-tight">Watch History</h1>
-		{#if videos.length > 0}
-			<button 
-				onclick={clearHistory}
-				class="flex items-center gap-2 text-sm font-medium text-red-500 hover:text-red-600 transition-colors bg-red-50 dark:bg-red-950/30 px-4 py-2 rounded-lg"
+<div class="space-y-4 md:space-y-6 px-4 md:px-0">
+	<div class="flex items-center justify-between border-b pb-4 pt-2 md:pt-0">
+		<div class="flex items-center gap-3">
+			<Clock class="h-6 w-6 text-primary" />
+			<h1 class="text-xl md:text-2xl font-bold tracking-tight">Watch History</h1>
+		</div>
+		
+		{#if historyQuery.data && historyQuery.data.length > 0}
+			<Button 
+				variant="outline" 
+				size="sm" 
+				class="text-destructive hover:bg-destructive/10 hover:text-destructive"
+				onclick={handleClearAll}
+				disabled={clearHistoryMutation.isPending}
 			>
-				<Trash2 class="w-4 h-4" />
-				Clear all watch history
-			</button>
+				Clear All
+			</Button>
 		{/if}
 	</div>
 
-	{#if isLoading}
-		<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-			{#each Array(4) as _}
-				<div class="flex animate-pulse flex-col space-y-3">
-					<div class="bg-muted aspect-video w-full rounded-xl"></div>
-					<div class="flex gap-3">
-						<div class="bg-muted h-10 w-10 shrink-0 rounded-full"></div>
-						<div class="w-full space-y-2">
-							<div class="bg-muted h-4 w-3/4 rounded"></div>
-							<div class="bg-muted h-3 w-1/2 rounded"></div>
-						</div>
+	{#if historyQuery.isPending}
+		<div class="flex max-w-4xl flex-col gap-4">
+			{#each Array(5) as _}
+				<div class="flex animate-pulse flex-col gap-4 sm:flex-row">
+					<Skeleton class="aspect-video w-full shrink-0 rounded-xl sm:w-64" />
+					<div class="flex-1 space-y-3 py-2">
+						<Skeleton class="h-5 w-3/4 rounded" />
+						<Skeleton class="h-4 w-1/4 rounded" />
 					</div>
 				</div>
 			{/each}
 		</div>
-	{:else if error}
+	{:else if historyQuery.isError}
 		<div class="flex flex-col items-center justify-center py-12 text-center">
-			<div class="rounded-xl bg-red-100 p-4 text-red-600 dark:bg-red-900/30 dark:text-red-400">
-				<p>{error}</p>
+			<div class="rounded-xl bg-destructive/10 p-4 text-destructive">
+				<p>{historyQuery.error.message || 'Failed to load history.'}</p>
+				<Button variant="outline" class="mt-4" onclick={() => historyQuery.refetch()}>Try again</Button>
 			</div>
 		</div>
-	{:else if videos.length === 0}
-		<div class="border-muted-foreground/20 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-24 text-center">
+	{:else if !historyQuery.data || historyQuery.data.length === 0}
+		<div
+			class="border-muted-foreground/20 mx-4 md:mx-0 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-16 md:py-24 text-center"
+		>
 			<Clock class="text-muted-foreground mb-4 h-12 w-12 opacity-50" />
-			<h2 class="mb-2 text-xl font-semibold">No watch history</h2>
-			<p class="text-muted-foreground max-w-sm">
-				Videos you watch will appear here.
+			<h2 class="mb-2 text-lg md:text-xl font-semibold">No watch history</h2>
+			<p class="text-muted-foreground max-w-sm text-sm md:text-base px-4">
+				Videos you watch will show up here.
 			</p>
+			<Button variant="default" class="mt-6 rounded-full" href="/">Watch Videos</Button>
 		</div>
 	{:else}
-		<div class="flex flex-col gap-4 max-w-4xl">
-			{#each videos as item}
-				<!-- Handle both flat video and nested video structures -->
+		<div class="flex max-w-4xl flex-col gap-6 md:gap-4">
+			{#each historyQuery.data as item}
 				{@const video = item.video || item}
-				<a href={`/watch/${video.fileId || video.id}`} class="group flex flex-col sm:flex-row gap-4 hover:bg-muted/50 p-2 rounded-xl transition-colors">
+				<a
+					href={`/watch/${video.fileId || video.id}`}
+					class="group hover:bg-muted/50 flex flex-col gap-3 md:gap-4 rounded-xl transition-colors sm:flex-row sm:p-2"
+				>
 					<!-- Thumbnail -->
-					<div class="w-full sm:w-64 shrink-0">
-						<VideoThumbnail 
-							{video} 
-							class="aspect-video rounded-xl"
+					<div class="w-full shrink-0 sm:w-64">
+						<VideoThumbnail
+							{video}
+							class="aspect-video rounded-xl sm:rounded-lg"
 							imgClass="transition-transform duration-300 group-hover:scale-105"
 						>
-							<div class="absolute right-2 bottom-2 rounded bg-black/80 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
-								{formatDuration(video.duration)}
-							</div>
+							<WatchLaterButton videoId={video.id} />
 						</VideoThumbnail>
 					</div>
 					<!-- Metadata -->
-					<div class="flex flex-col flex-1 py-1">
-						<h3 class="line-clamp-2 text-lg leading-tight font-semibold transition-colors group-hover:text-primary mb-1">
-							{video.title}
-						</h3>
-						<div class="text-muted-foreground space-y-1 text-sm">
-							<p class="transition-colors hover:text-primary">{video.uploader_username || 'Unknown User'}</p>
-							<div class="flex items-center gap-1">
-								<span>{video.views || 0} views</span>
-								{#if item.watchedAt}
-									<span class="text-[10px]">•</span>
-									<span>Watched {formatTimeAgo(item.watchedAt)}</span>
-								{/if}
+					<div class="flex flex-1 flex-col py-1 px-1 sm:px-0 relative">
+						<div class="pr-8">
+							<h3 class="mb-1 line-clamp-2 text-base md:text-lg leading-tight font-semibold transition-colors group-hover:text-primary">
+								{video.title}
+							</h3>
+							
+							<div class="mb-1 flex items-center gap-2">
+								<p class="text-[13px] md:text-sm font-medium transition-colors hover:text-primary">
+									{video.uploader_username || video.uploader?.username}
+								</p>
 							</div>
+							
+							<div class="text-muted-foreground mb-3 text-[11px] md:text-xs">
+								<span>{video.views || 0} views</span>
+								<span class="mx-1">•</span>
+								<span>Watched {formatTimeAgo(item.watchedAt || item.watched_at || new Date().toISOString())}</span>
+							</div>
+							
+							{#if video.description}
+								<p class="text-muted-foreground line-clamp-1 md:line-clamp-2 text-[11px] md:text-xs">
+									{video.description}
+								</p>
+							{/if}
 						</div>
-						{#if video.description}
-							<p class="mt-2 text-sm text-muted-foreground line-clamp-2 hidden sm:block">
-								{video.description}
-							</p>
-						{/if}
+						
+						<Button
+							variant="ghost"
+							size="icon"
+							class="absolute top-0 right-0 h-8 w-8 text-muted-foreground opacity-100 md:opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10"
+							onclick={(e) => handleDelete(e, video.id || video.fileId)}
+							title="Remove from Watch History"
+						>
+							<Trash2 class="h-4 w-4" />
+						</Button>
 					</div>
 				</a>
 			{/each}

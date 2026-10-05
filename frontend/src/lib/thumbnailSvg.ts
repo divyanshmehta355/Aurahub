@@ -4,66 +4,74 @@
  */
 
 function fnv1a(str: string) {
-  let hash = 2166136261;
-  const s = String(str || "aurahub");
-  for (let i = 0; i < s.length; i++) {
-    hash ^= s.charCodeAt(i);
-    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
-  }
-  return hash >>> 0;
+	let hash = 2166136261;
+	const s = String(str || 'aurahub');
+	for (let i = 0; i < s.length; i++) {
+		hash ^= s.charCodeAt(i);
+		hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+	}
+	return hash >>> 0;
 }
 
 const PALETTES = [
-  { from: "#4338ca", to: "#6d28d9", accent: "#a78bfa", name: "Indigo Purple" },
-  { from: "#0f172a", to: "#1e1b4b", accent: "#818cf8", name: "Midnight Nebula" },
-  { from: "#065f46", to: "#0f766e", accent: "#34d399", name: "Emerald Teal" },
-  { from: "#be123c", to: "#7e22ce", accent: "#fb7185", name: "Crimson Violet" },
-  { from: "#0369a1", to: "#1d4ed8", accent: "#38bdf8", name: "Oceanic Blue" },
-  { from: "#b45309", to: "#b91c1c", accent: "#fbbf24", name: "Sunset Amber" },
-  { from: "#18181b", to: "#27272a", accent: "#a5b4fc", name: "Carbon Slate" },
-  { from: "#581c87", to: "#831843", accent: "#f472b6", name: "Neon Cyber" },
+	{ from: '#4338ca', to: '#6d28d9', accent: '#a78bfa', name: 'Indigo Purple' },
+	{ from: '#0f172a', to: '#1e1b4b', accent: '#818cf8', name: 'Midnight Nebula' },
+	{ from: '#065f46', to: '#0f766e', accent: '#34d399', name: 'Emerald Teal' },
+	{ from: '#be123c', to: '#7e22ce', accent: '#fb7185', name: 'Crimson Violet' },
+	{ from: '#0369a1', to: '#1d4ed8', accent: '#38bdf8', name: 'Oceanic Blue' },
+	{ from: '#b45309', to: '#b91c1c', accent: '#fbbf24', name: 'Sunset Amber' },
+	{ from: '#18181b', to: '#27272a', accent: '#a5b4fc', name: 'Carbon Slate' },
+	{ from: '#581c87', to: '#831843', accent: '#f472b6', name: 'Neon Cyber' }
 ];
 
 function escapeXml(unsafe: string) {
-  return String(unsafe || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
+	return String(unsafe || '')
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&apos;');
 }
 
-export function generateThumbnailSvg({ seed, title, category }: { seed?: string, title?: string, category?: string }) {
-  const cleanSeed = seed || title || "aurahub";
-  const hash = fnv1a(cleanSeed);
-  const palette = PALETTES[hash % PALETTES.length];
+export function generateThumbnailSvg({
+	seed,
+	title,
+	category
+}: {
+	seed?: string;
+	title?: string;
+	category?: string;
+}) {
+	const cleanSeed = seed || title || 'aurahub';
+	const hash = fnv1a(cleanSeed);
+	const palette = PALETTES[hash % PALETTES.length];
 
-  const rawTitle = title || "Aurahub Video";
-  const cleanCat = escapeXml(category || "Video").toUpperCase();
+	const rawTitle = title || 'Aurahub Video';
+	const cleanCat = escapeXml(category || 'Video').toUpperCase();
 
-  // Split title into at most 2 display lines
-  const words = rawTitle.split(/\s+/).filter(Boolean);
-  let line1 = "";
-  let line2 = "";
+	// Split title into at most 2 display lines
+	const words = rawTitle.split(/\s+/).filter(Boolean);
+	let line1 = '';
+	let line2 = '';
 
-  for (const w of words) {
-    if ((line1 + " " + w).length <= 26 && !line2) {
-      line1 += (line1 ? " " : "") + w;
-    } else if ((line2 + " " + w).length <= 28) {
-      line2 += (line2 ? " " : "") + w;
-    }
-  }
+	for (const w of words) {
+		if ((line1 + ' ' + w).length <= 26 && !line2) {
+			line1 += (line1 ? ' ' : '') + w;
+		} else if ((line2 + ' ' + w).length <= 28) {
+			line2 += (line2 ? ' ' : '') + w;
+		}
+	}
 
-  if (words.length > 0 && line2.length > 25) {
-    line2 = line2.slice(0, 24) + "...";
-  }
+	if (words.length > 0 && line2.length > 25) {
+		line2 = line2.slice(0, 24) + '...';
+	}
 
-  const escapedLine1 = escapeXml(line1 || rawTitle.slice(0, 26));
-  const escapedLine2 = escapeXml(line2);
+	const escapedLine1 = escapeXml(line1 || rawTitle.slice(0, 26));
+	const escapedLine2 = escapeXml(line2);
 
-  const catBadgeWidth = Math.max(80, cleanCat.length * 11 + 28);
+	const catBadgeWidth = Math.max(80, cleanCat.length * 11 + 28);
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="100%" height="100%">
+	return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="100%" height="100%">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="${palette.from}"/>
@@ -112,19 +120,19 @@ export function generateThumbnailSvg({ seed, title, category }: { seed?: string,
     ${escapedLine1}
   </text>
   ${
-    escapedLine2
-      ? `<text x="80" y="618" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="44" font-weight="700" fill="rgba(255,255,255,0.88)" filter="url(#shadow)">${escapedLine2}</text>`
-      : ""
-  }
+		escapedLine2
+			? `<text x="80" y="618" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="44" font-weight="700" fill="rgba(255,255,255,0.88)" filter="url(#shadow)">${escapedLine2}</text>`
+			: ''
+	}
 </svg>`;
 }
 
 export function getFallbackThumbnailUrl(videoId: string, title?: string, category?: string) {
-  const seed = encodeURIComponent(videoId || "default");
-  const params = new URLSearchParams();
-  if (title) params.set("title", title.slice(0, 80));
-  if (category) params.set("category", category);
+	const seed = encodeURIComponent(videoId || 'default');
+	const params = new URLSearchParams();
+	if (title) params.set('title', title.slice(0, 80));
+	if (category) params.set('category', category);
 
-  const query = params.toString();
-  return `/api/thumbnail/${seed}${query ? `?${query}` : ""}`;
+	const query = params.toString();
+	return `/api/thumbnail/${seed}${query ? `?${query}` : ''}`;
 }

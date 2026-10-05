@@ -5,7 +5,7 @@
 	import { onMount } from 'svelte';
 	import { fade, scale } from 'svelte/transition';
 
-	let { videoId, isOpen = $bindable(false) } = $props<{ videoId: string, isOpen: boolean }>();
+	let { videoId, isOpen = $bindable(false) } = $props<{ videoId: string; isOpen: boolean }>();
 
 	let playlists: any[] = $state([]);
 	let isLoading = $state(true);
@@ -35,7 +35,7 @@
 		try {
 			const res = await fetchApi('/playlists');
 			playlists = res.playlists || res.data || [];
-			
+
 			// Check which playlists contain this video
 			playlists.forEach(async (p) => {
 				savingStatus[p.id] = 'idle';
@@ -43,7 +43,7 @@
 				// but if not, we can query the playlist details or just assume false
 				// and let the toggle handle it. For a quick implementation, we will
 				// assume false initially.
-				containsVideo[p.id] = false; 
+				containsVideo[p.id] = false;
 			});
 		} catch (err: any) {
 			error = err.message || 'Failed to load playlists.';
@@ -80,20 +80,20 @@
 
 	async function handleCreate() {
 		if (!newPlaylistTitle.trim()) return;
-		
+
 		isCreating = true;
 		try {
 			const res = await fetchApi('/playlists', {
 				method: 'POST',
 				body: JSON.stringify({ title: newPlaylistTitle.trim(), isPublic: true })
 			});
-			
+
 			const created = res.playlist;
 			if (created) {
 				playlists = [created, ...playlists];
 				savingStatus[created.id] = 'idle';
 				containsVideo[created.id] = false;
-				
+
 				// Automatically add to the new playlist
 				await handleToggle(created);
 			}
@@ -107,58 +107,62 @@
 </script>
 
 {#if isOpen}
-	<div 
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
 		transition:fade={{ duration: 200 }}
 		role="dialog"
 		aria-modal="true"
 	>
-		<div 
-			class="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+		<div
+			class="bg-card flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border shadow-2xl"
 			transition:scale={{ duration: 200, start: 0.95 }}
 		>
-			<div class="px-6 py-4 border-b flex items-center justify-between sticky top-0 bg-card z-10">
+			<div class="bg-card sticky top-0 z-10 flex items-center justify-between border-b px-6 py-4">
 				<h2 class="text-xl font-semibold tracking-tight">Save to playlist</h2>
-				<button 
-					onclick={() => isOpen = false}
-					class="p-2 -mr-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+				<button
+					onclick={() => (isOpen = false)}
+					class="hover:bg-muted text-muted-foreground hover:text-foreground -mr-2 rounded-full p-2 transition-colors"
 				>
-					<X class="w-5 h-5" />
+					<X class="h-5 w-5" />
 				</button>
 			</div>
-			
-			<div class="p-6 overflow-y-auto flex-1 custom-scrollbar">
+
+			<div class="custom-scrollbar flex-1 overflow-y-auto p-6">
 				{#if isLoading}
 					<div class="flex items-center justify-center py-8">
-						<Loader2 class="w-8 h-8 animate-spin text-primary" />
+						<Loader2 class="h-8 w-8 animate-spin text-primary" />
 					</div>
 				{:else if error}
-					<div class="text-center py-8 text-rose-500 font-medium">{error}</div>
+					<div class="py-8 text-center font-medium text-rose-500">{error}</div>
 				{:else}
-					<div class="space-y-2 mb-6">
+					<div class="mb-6 space-y-2">
 						{#each playlists as playlist}
-							<button 
+							<button
 								onclick={() => handleToggle(playlist)}
-								class="w-full flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors text-left group"
+								class="hover:bg-muted/50 group flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors"
 							>
 								<div class="flex items-center gap-3">
-									<div class={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${containsVideo[playlist.id] ? 'bg-primary border-primary' : 'border-muted-foreground/40 group-hover:border-foreground/60'}`}>
+									<div
+										class={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${containsVideo[playlist.id] ? 'border-primary bg-primary' : 'border-muted-foreground/40 group-hover:border-foreground/60'}`}
+									>
 										{#if containsVideo[playlist.id]}
-											<Check class="w-3.5 h-3.5 text-primary-foreground" />
+											<Check class="text-primary-foreground h-3.5 w-3.5" />
 										{/if}
 									</div>
-									<span class="font-medium truncate max-w-[200px] sm:max-w-[260px]">{playlist.title}</span>
+									<span class="max-w-[200px] truncate font-medium sm:max-w-[260px]"
+										>{playlist.title}</span
+									>
 								</div>
-								
+
 								{#if savingStatus[playlist.id] === 'saving'}
-									<Loader2 class="w-4 h-4 animate-spin text-muted-foreground" />
+									<Loader2 class="text-muted-foreground h-4 w-4 animate-spin" />
 								{:else if savingStatus[playlist.id] === 'error'}
-									<span class="text-xs text-rose-500 font-medium">Failed</span>
+									<span class="text-xs font-medium text-rose-500">Failed</span>
 								{/if}
 							</button>
 						{:else}
-							<div class="text-center py-6 text-muted-foreground flex flex-col items-center">
-								<ListVideo class="w-8 h-8 mb-2 opacity-50" />
+							<div class="text-muted-foreground flex flex-col items-center py-6 text-center">
+								<ListVideo class="mb-2 h-8 w-8 opacity-50" />
 								<p>You don't have any playlists yet.</p>
 							</div>
 						{/each}
@@ -166,24 +170,30 @@
 				{/if}
 			</div>
 
-			<div class="p-6 border-t bg-muted/20">
-				<form onsubmit={(e) => { e.preventDefault(); handleCreate(); }} class="flex gap-2">
-					<input 
-						type="text" 
-						bind:value={newPlaylistTitle} 
+			<div class="bg-muted/20 border-t p-6">
+				<form
+					onsubmit={(e) => {
+						e.preventDefault();
+						handleCreate();
+					}}
+					class="flex gap-2"
+				>
+					<input
+						type="text"
+						bind:value={newPlaylistTitle}
 						placeholder="New playlist name..."
-						class="flex-1 bg-background border border-border rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-primary focus:outline-none transition-shadow"
+						class="flex-1 rounded-xl border border-border bg-background px-4 py-2 text-sm transition-shadow focus:ring-2 focus:ring-primary focus:outline-none"
 						required
 					/>
-					<button 
-						type="submit" 
+					<button
+						type="submit"
 						disabled={isCreating || !newPlaylistTitle.trim()}
-						class="flex items-center gap-2 bg-foreground text-background px-4 py-2 rounded-xl text-sm font-semibold hover:bg-foreground/90 disabled:opacity-50 transition-colors shrink-0"
+						class="bg-foreground hover:bg-foreground/90 flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-background transition-colors disabled:opacity-50"
 					>
 						{#if isCreating}
-							<Loader2 class="w-4 h-4 animate-spin" />
+							<Loader2 class="h-4 w-4 animate-spin" />
 						{:else}
-							<Plus class="w-4 h-4" /> Create
+							<Plus class="h-4 w-4" /> Create
 						{/if}
 					</button>
 				</form>

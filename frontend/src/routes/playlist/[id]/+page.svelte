@@ -1,84 +1,80 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { onMount } from 'svelte';
 	import { fetchApi } from '#lib/api';
 	import VideoThumbnail from '#lib/components/VideoThumbnail.svelte';
 	import { Trash2, Edit2, Check, X, Play, Share2, Globe, Lock } from 'lucide-svelte';
 	import { userState } from '#lib/user.svelte';
+	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
+	import { Skeleton } from '#lib/components/ui/skeleton';
+	import { Button } from '#lib/components/ui/button';
+	import { Input } from '#lib/components/ui/input';
+
+	const queryClient = useQueryClient();
 
 	let id = $derived(page.params.id);
-	let playlist: any = $state(null);
-	let isLoading = $state(true);
-	let error = $state('');
-
 	let isEditing = $state(false);
 	let editName = $state('');
 
-	async function loadPlaylist() {
-		isLoading = true;
-		error = '';
-		try {
+	const playlistQuery = createQuery(() => ({
+		queryKey: ['playlist', id],
+		queryFn: async () => {
 			const res = await fetchApi(`/playlists/${id}`);
-			playlist = res.playlist || res;
-			if (res.videos) {
-				playlist.videos = res.videos;
-			}
+			const playlist = res.playlist || res;
+			if (res.videos) playlist.videos = res.videos;
 			editName = playlist.title;
-		} catch (err: any) {
-			error = err.message || 'Failed to load playlist.';
-		} finally {
-			isLoading = false;
+			return playlist;
 		}
-	}
+	}), () => queryClient);
 
-	$effect(() => {
-		if (id) {
-			loadPlaylist();
+	const updateTitleMutation = createMutation(() => ({
+		mutationFn: async (title: string) => {
+			return await fetchApi(`/playlists/${id}`, {
+				method: 'PUT',
+				body: JSON.stringify({ title })
+			});
+		},
+		onSuccess: (_, newTitle) => {
+			isEditing = false;
+			queryClient.setQueryData(['playlist', id], (old: any) => ({ ...old, title: newTitle }));
 		}
-	});
+	}), () => queryClient);
+
+	const togglePrivacyMutation = createMutation(() => ({
+		mutationFn: async () => {
+			const current = queryClient.getQueryData(['playlist', id]) as any;
+			return await fetchApi(`/playlists/${id}`, {
+				method: 'PUT',
+				body: JSON.stringify({ isPublic: !current.isPublic, title: current.title })
+			});
+		},
+		onSuccess: () => {
+			queryClient.setQueryData(['playlist', id], (old: any) => ({ ...old, isPublic: !old.isPublic }));
+		}
+	}), () => queryClient);
+
+	const removeVideoMutation = createMutation(() => ({
+		mutationFn: async (videoId: string | number) => {
+			return await fetchApi(`/playlists/${id}/videos`, {
+				method: 'POST',
+				body: JSON.stringify({ videoId, action: 'remove' })
+			});
+		},
+		onSuccess: (_, videoId) => {
+			queryClient.setQueryData(['playlist', id], (old: any) => ({
+				...old,
+				videos: old.videos.filter((v: any) => v.id !== videoId && v.fileId !== videoId)
+			}));
+		}
+	}), () => queryClient);
 
 	async function saveEdit() {
 		if (!editName.trim()) return;
-		try {
-			await fetchApi(`/playlists/${id}`, {
-				method: 'PUT',
-				body: JSON.stringify({ title: editName.trim() })
-			});
-			playlist.title = editName.trim();
-			isEditing = false;
-		} catch (err: any) {
-			alert('Failed to rename playlist');
-		}
-	}
-
-	async function togglePrivacy() {
-		try {
-			await fetchApi(`/playlists/${id}`, {
-				method: 'PUT',
-				body: JSON.stringify({ isPublic: !playlist.isPublic, title: playlist.title })
-			});
-			playlist.isPublic = !playlist.isPublic;
-		} catch (err: any) {
-			alert('Failed to update privacy');
-		}
+		updateTitleMutation.mutate(editName.trim());
 	}
 
 	function handleShare() {
 		navigator.clipboard.writeText(window.location.href);
 		alert('Link copied to clipboard!');
-	}
-
-	async function removeVideo(videoId: string | number) {
-		try {
-			await fetchApi(`/playlists/${id}/videos`, {
-				method: 'POST',
-				body: JSON.stringify({ videoId, action: 'remove' })
-			});
-			// Toggle implies removal if it was already in
-			playlist.videos = playlist.videos.filter((v: any) => v.id !== videoId && v.fileId !== videoId);
-		} catch (err) {
-			alert('Failed to remove video');
-		}
 	}
 
 	function formatDuration(seconds: number) {
@@ -90,115 +86,143 @@
 </script>
 
 <svelte:head>
-	<title>{playlist ? playlist.name : 'Playlist'} - Aurahub</title>
+	<title>{playlistQuery.data ? playlistQuery.data.title : 'Playlist'} - Aurahub</title>
 </svelte:head>
 
-<div class="max-w-[1200px] mx-auto py-6">
-	{#if isLoading}
-		<div class="flex gap-8 animate-pulse">
-			<div class="w-1/3 bg-muted h-[400px] rounded-xl"></div>
-			<div class="w-2/3 space-y-4">
-				<div class="h-24 bg-muted rounded"></div>
-				<div class="h-24 bg-muted rounded"></div>
-				<div class="h-24 bg-muted rounded"></div>
+<div class="mx-auto max-w-[1200px] px-4 md:px-6 py-4 md:py-6">
+	{#if playlistQuery.isPending}
+		<div class="flex flex-col md:flex-row gap-6 md:gap-8">
+			<Skeleton class="h-[250px] md:h-[400px] w-full md:w-1/3 rounded-xl" />
+			<div class="w-full md:w-2/3 space-y-4">
+				<Skeleton class="h-20 md:h-24 rounded-xl" />
+				<Skeleton class="h-20 md:h-24 rounded-xl" />
+				<Skeleton class="h-20 md:h-24 rounded-xl" />
 			</div>
 		</div>
-	{:else if error || !playlist}
+	{:else if playlistQuery.isError || !playlistQuery.data}
 		<div class="flex flex-col items-center justify-center py-12 text-center">
-			<div class="rounded-xl bg-red-100 p-4 text-red-600 dark:bg-red-900/30 dark:text-red-400">
-				<p>{error || 'Playlist not found.'}</p>
+			<div class="rounded-xl bg-destructive/10 p-4 text-destructive">
+				<p>{playlistQuery.error?.message || 'Playlist not found.'}</p>
+				<Button variant="outline" class="mt-4" onclick={() => playlistQuery.refetch()}>Try again</Button>
 			</div>
 		</div>
 	{:else}
-		<div class="flex flex-col md:flex-row gap-8">
+		<div class="flex flex-col gap-6 md:gap-8 md:flex-row">
 			<!-- Playlist Info Sidebar -->
-			<div class="w-full md:w-[350px] shrink-0">
-				<div class="bg-card border rounded-2xl p-6 sticky top-24 shadow-sm">
+			<div class="w-full shrink-0 md:w-[350px]">
+				<div class="bg-card sticky top-20 md:top-24 rounded-2xl border p-4 md:p-6 shadow-sm">
 					<!-- Thumbnail Stack effect -->
-					<div class="aspect-video bg-muted rounded-xl mb-6 relative overflow-hidden flex items-center justify-center group shadow-md">
-						{#if playlist.videos && playlist.videos.length > 0}
-							<img 
-								src={playlist.videos[0].thumbnailUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${playlist.videos[0].title}`} 
-								alt="Cover" 
-								class="w-full h-full object-cover opacity-50 blur-sm scale-110" 
+					<div
+						class="bg-muted group relative mb-4 md:mb-6 flex aspect-video items-center justify-center overflow-hidden rounded-xl shadow-md"
+					>
+						{#if playlistQuery.data.videos && playlistQuery.data.videos.length > 0}
+							<img
+								src={playlistQuery.data.videos[0].thumbnailUrl ||
+									`https://api.dicebear.com/7.x/identicon/svg?seed=${playlistQuery.data.videos[0].title}`}
+								alt="Cover"
+								class="h-full w-full scale-110 object-cover opacity-50 blur-sm"
 							/>
-							<img 
-								src={playlist.videos[0].thumbnailUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${playlist.videos[0].title}`} 
-								alt="Cover" 
-								class="w-4/5 h-full object-cover absolute shadow-lg group-hover:scale-105 transition-transform duration-300" 
+							<img
+								src={playlistQuery.data.videos[0].thumbnailUrl ||
+									`https://api.dicebear.com/7.x/identicon/svg?seed=${playlistQuery.data.videos[0].title}`}
+								alt="Cover"
+								class="absolute h-full w-4/5 object-cover shadow-lg transition-transform duration-300 group-hover:scale-105"
 							/>
 						{:else}
-							<div class="text-muted-foreground opacity-50 flex flex-col items-center">
-								<Play class="w-12 h-12 mb-2" />
-								<span>Empty</span>
+							<div class="text-muted-foreground flex flex-col items-center opacity-50">
+								<Play class="mb-2 h-10 w-10 md:h-12 md:w-12" />
+								<span class="text-sm">Empty</span>
 							</div>
 						{/if}
-						<div class="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors pointer-events-none"></div>
+						<div
+							class="pointer-events-none absolute inset-0 bg-black/20 transition-colors group-hover:bg-black/10"
+						></div>
 					</div>
 
 					{#if isEditing}
-						<div class="space-y-3 mb-4">
-							<input 
-								type="text" 
-								bind:value={editName} 
-								class="w-full bg-background border rounded-lg px-3 py-2 font-bold text-xl"
+						<div class="mb-4 space-y-3">
+							<Input
+								type="text"
+								bind:value={editName}
+								class="text-lg md:text-xl font-bold h-12"
 								autofocus
+								disabled={updateTitleMutation.isPending}
 							/>
 							<div class="flex justify-end gap-2">
-								<button onclick={() => {isEditing = false; editName = playlist.title}} class="p-2 text-muted-foreground hover:bg-muted rounded-lg">
-									<X class="w-4 h-4" />
-								</button>
-								<button onclick={saveEdit} class="p-2 text-primary hover:bg-primary/10 rounded-lg">
-									<Check class="w-4 h-4" />
-								</button>
+								<Button
+									variant="ghost"
+									size="icon"
+									onclick={() => {
+										isEditing = false;
+										editName = playlistQuery.data.title;
+									}}
+									disabled={updateTitleMutation.isPending}
+								>
+									<X class="h-4 w-4" />
+								</Button>
+								<Button 
+									size="icon"
+									variant="secondary"
+									onclick={saveEdit} 
+									disabled={updateTitleMutation.isPending}
+								>
+									<Check class="h-4 w-4" />
+								</Button>
 							</div>
 						</div>
 					{:else}
-						<div class="flex items-start justify-between gap-4 mb-2">
-							<h1 class="text-2xl font-bold tracking-tight break-words">{playlist.title}</h1>
-							{#if userState.user?.id === playlist.ownerId}
-								<button onclick={() => isEditing = true} class="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground rounded-md transition-colors">
-									<Edit2 class="w-4 h-4" />
-								</button>
+						<div class="mb-2 flex items-start justify-between gap-4">
+							<h1 class="text-xl md:text-2xl font-bold tracking-tight break-words">{playlistQuery.data.title}</h1>
+							{#if userState.user?.id === playlistQuery.data.ownerId || userState.user?.id === playlistQuery.data.userId}
+								<Button
+									variant="ghost"
+									size="icon"
+									onclick={() => (isEditing = true)}
+									class="h-8 w-8 text-muted-foreground"
+								>
+									<Edit2 class="h-4 w-4" />
+								</Button>
 							{/if}
 						</div>
 					{/if}
 
-					<div class="text-sm text-muted-foreground space-y-1 mb-6 font-medium">
-						<p>{playlist.user?.username || 'Unknown User'}</p>
-						<p>{playlist.videos?.length || 0} videos</p>
+					<div class="text-muted-foreground mb-4 md:mb-6 space-y-1 text-xs md:text-sm font-medium">
+						<p>{playlistQuery.data.user?.username || 'Unknown User'}</p>
+						<p>{playlistQuery.data.videos?.length || 0} videos</p>
 					</div>
 
-					{#if playlist.videos && playlist.videos.length > 0}
-						<a 
-							href={`/watch/${playlist.videos[0].fileId || playlist.videos[0].id}?list=${playlist.id}`}
-							class="w-full inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 px-8 font-semibold transition-colors shadow-sm"
+					{#if playlistQuery.data.videos && playlistQuery.data.videos.length > 0}
+						<Button
+							href={`/watch/${playlistQuery.data.videos[0].fileId || playlistQuery.data.videos[0].id}?list=${playlistQuery.data.id}`}
+							class="w-full h-10 md:h-12 rounded-full font-semibold shadow-sm text-sm md:text-base"
 						>
-							<Play class="w-5 h-5 mr-2 fill-current" />
+							<Play class="mr-2 h-4 w-4 md:h-5 md:w-5 fill-current" />
 							Play all
-						</a>
+						</Button>
 					{/if}
 
-					<div class="flex gap-2 mt-4 w-full">
-						<button 
+					<div class="mt-4 flex w-full gap-2">
+						<Button
+							variant="secondary"
+							class="flex-1 h-9 md:h-10 rounded-full font-semibold text-xs md:text-sm shadow-sm"
 							onclick={handleShare}
-							class="flex-1 inline-flex items-center justify-center rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 font-semibold transition-colors shadow-sm"
 						>
-							<Share2 class="w-4 h-4 mr-2" />
-							Share
-						</button>
-						
-						{#if userState.user?.id === playlist.ownerId}
-							<button 
-								onclick={togglePrivacy}
-								class="flex-1 inline-flex items-center justify-center rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 font-semibold transition-colors shadow-sm"
+							<Share2 class="mr-1.5 h-3.5 w-3.5 md:h-4 md:w-4" /> Share
+						</Button>
+
+						{#if userState.user?.id === playlistQuery.data.ownerId || userState.user?.id === playlistQuery.data.userId}
+							<Button
+								variant="secondary"
+								class="flex-1 h-9 md:h-10 rounded-full font-semibold text-xs md:text-sm shadow-sm"
+								onclick={() => togglePrivacyMutation.mutate()}
+								disabled={togglePrivacyMutation.isPending}
 							>
-								{#if playlist.isPublic}
-									<Globe class="w-4 h-4 mr-2" /> Public
+								{#if playlistQuery.data.isPublic}
+									<Globe class="mr-1.5 h-3.5 w-3.5 md:h-4 md:w-4" /> Public
 								{:else}
-									<Lock class="w-4 h-4 mr-2" /> Private
+									<Lock class="mr-1.5 h-3.5 w-3.5 md:h-4 md:w-4" /> Private
 								{/if}
-							</button>
+							</Button>
 						{/if}
 					</div>
 				</div>
@@ -206,45 +230,53 @@
 
 			<!-- Videos List -->
 			<div class="flex-1">
-				{#if !playlist.videos || playlist.videos.length === 0}
-					<div class="bg-card border rounded-2xl p-12 text-center shadow-sm">
-						<p class="text-lg font-medium text-muted-foreground">No videos in this playlist yet.</p>
+				{#if !playlistQuery.data.videos || playlistQuery.data.videos.length === 0}
+					<div class="bg-card rounded-2xl border p-8 md:p-12 text-center shadow-sm">
+						<p class="text-muted-foreground text-base md:text-lg font-medium">No videos in this playlist yet.</p>
 					</div>
 				{:else}
-					<div class="flex flex-col gap-3">
-						{#each playlist.videos as video, i}
-							<div class="group relative flex items-center gap-4 hover:bg-muted/50 p-3 rounded-xl transition-colors border border-transparent hover:border-border">
-								<span class="text-muted-foreground font-medium w-6 text-center">{i + 1}</span>
-								
-								<a href={`/watch/${video.fileId || video.id}?list=${playlist.id}`} class="flex-1 flex flex-col sm:flex-row gap-4">
-									<div class="w-full sm:w-40 shrink-0">
-										<VideoThumbnail 
-											{video} 
-											class="aspect-video rounded-lg"
-										>
-											<div class="absolute right-1.5 bottom-1.5 rounded bg-black/80 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+					<div class="flex flex-col gap-2 md:gap-3">
+						{#each playlistQuery.data.videos as video, i}
+							<div
+								class="group hover:bg-muted/50 relative flex items-center gap-2 md:gap-4 rounded-xl border border-transparent p-2 md:p-3 transition-colors hover:border-border"
+							>
+								<span class="text-muted-foreground w-4 md:w-6 text-center text-xs md:text-sm font-medium">{i + 1}</span>
+
+								<a
+									href={`/watch/${video.fileId || video.id}?list=${playlistQuery.data.id}`}
+									class="flex flex-1 flex-row gap-3 md:gap-4 overflow-hidden"
+								>
+									<div class="w-32 md:w-40 shrink-0">
+										<VideoThumbnail {video} class="aspect-video rounded-md md:rounded-lg">
+											<div
+												class="absolute right-1 bottom-1 md:right-1.5 md:bottom-1.5 rounded bg-black/80 px-1 py-0.5 text-[9px] md:text-[10px] font-medium text-white backdrop-blur-sm"
+											>
 												{formatDuration(video.duration)}
 											</div>
 										</VideoThumbnail>
 									</div>
-									<div class="flex flex-col justify-center py-1">
-										<h3 class="text-base font-semibold leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+									<div class="flex flex-col justify-center py-1 overflow-hidden pr-6 md:pr-0">
+										<h3
+											class="line-clamp-2 text-sm md:text-base leading-tight font-semibold transition-colors group-hover:text-primary"
+										>
 											{video.title}
 										</h3>
-										<p class="text-sm text-muted-foreground mt-1">
+										<p class="text-muted-foreground mt-1 text-[11px] md:text-sm">
 											{video.uploader_username || 'Unknown'} • {video.views || 0} views
 										</p>
 									</div>
 								</a>
 
-								{#if userState.user?.id === playlist.userId}
-									<button 
-										onclick={() => removeVideo(video.id || video.fileId)}
-										class="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-full opacity-0 group-hover:opacity-100 transition-all shrink-0"
+								{#if userState.user?.id === playlistQuery.data.userId || userState.user?.id === playlistQuery.data.ownerId}
+									<Button
+										variant="ghost"
+										size="icon"
+										onclick={() => removeVideoMutation.mutate(video.id || video.fileId)}
+										class="absolute right-2 md:relative md:right-0 text-muted-foreground shrink-0 rounded-full h-8 w-8 opacity-100 md:opacity-0 transition-all group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
 										title="Remove from playlist"
 									>
-										<Trash2 class="w-5 h-5" />
-									</button>
+										<Trash2 class="h-4 w-4 md:h-5 md:w-5" />
+									</Button>
 								{/if}
 							</div>
 						{/each}

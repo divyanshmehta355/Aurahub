@@ -4,7 +4,9 @@
 
 	let { video, class: className = '', imgClass = '', children } = $props();
 
-	let fallbackUrl = $derived(getFallbackThumbnailUrl(video.fileId || video.id, video.title, video.category));
+	let fallbackUrl = $derived(
+		getFallbackThumbnailUrl(video.fileId || video.id, video.title, video.category)
+	);
 	let fetchedUrl = $state('');
 	let isFetching = $state(false);
 
@@ -23,7 +25,7 @@
 		fetchedUrl = '';
 
 		fetchApi(`/videos/${videoId}/thumbnail`)
-			.then(res => {
+			.then((res) => {
 				if (isActive && res && res.thumbnailUrl) {
 					fetchedUrl = res.thumbnailUrl;
 				}
@@ -32,23 +34,19 @@
 			.finally(() => {
 				if (isActive) isFetching = false;
 			});
-		
+
 		return () => {
 			isActive = false;
 		};
 	});
 </script>
 
-<div class="relative overflow-hidden bg-muted {className}">
+<div class="bg-muted relative overflow-hidden {className}">
 	{#if isFetching}
-		<div class="animate-pulse bg-muted h-full w-full"></div>
+		<div class="bg-muted h-full w-full animate-pulse"></div>
 	{:else}
-		<img 
-			src={imageUrl} 
-			alt={video.title}
-			class="h-full w-full object-cover {imgClass}"
-		/>
+		<img src={imageUrl} alt={video.title} class="h-full w-full object-cover {imgClass}" />
 	{/if}
-	
+
 	{@render children?.()}
 </div>

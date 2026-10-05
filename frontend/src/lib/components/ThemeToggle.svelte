@@ -20,14 +20,14 @@
 	}
 </script>
 
-<button 
-	onclick={toggleTheme} 
-	class="p-2 text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors relative flex items-center justify-center"
+<button
+	onclick={toggleTheme}
+	class="relative flex items-center justify-center rounded-full p-2 text-text-muted transition-colors hover:bg-black/5 hover:text-text-main dark:hover:bg-white/5"
 	aria-label="Toggle theme"
 >
 	{#if isDark}
-		<Moon class="w-5 h-5" />
+		<Moon class="h-5 w-5" />
 	{:else}
-		<Sun class="w-5 h-5" />
+		<Sun class="h-5 w-5" />
 	{/if}
 </button>

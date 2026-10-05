@@ -15,6 +15,8 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
+		"@internationalized/date": "^3.12.4",
+		"@lucide/svelte": "^1.52.0",
 		"@sveltejs/adapter-auto": "^8.0.0",
 		"@sveltejs/adapter-cloudflare": "^8.0.0",
 		"@sveltejs/kit": "^3.0.0",
@@ -31,6 +33,7 @@
 		"prettier-plugin-tailwindcss": "^0.8.0",
 		"svelte": "^5.57.1",
 		"svelte-check": "^4.6.0",
+		"tailwind-variants": "^3.3.1",
 		"tailwindcss": "^4.3.0",
 		"typescript": "^6.0.3",
 		"typescript-eslint": "^8.60.1",
@@ -41,7 +44,12 @@
 		"#lib/*": "./src/lib/*"
 	},
 	"dependencies": {
+		"@tanstack/svelte-query": "^6.3.1",
+		"bits-ui": "^2.19.5",
 		"canvas-confetti": "^1.9.4",
-		"lucide-svelte": "^1.0.1"
+		"clsx": "^2.1.1",
+		"lucide-svelte": "^1.0.1",
+		"tailwind-merge": "^3.7.0",
+		"zod": "^4.6.5"
 	}
 }

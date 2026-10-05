@@ -6,37 +6,25 @@
 	import VideoThumbnail from '#lib/components/VideoThumbnail.svelte';
 	import WatchLaterButton from '#lib/components/WatchLaterButton.svelte';
 	import { Clock, Play } from 'lucide-svelte';
+	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
+	import { Skeleton } from '#lib/components/ui/skeleton';
+	import { Button } from '#lib/components/ui/button';
 
-	let videos: any[] = $state([]);
-	let isLoading = $state(true);
-	let error = $state('');
-	
+	const queryClient = useQueryClient();
+
 	let currentPage = $derived(Number(page.url.searchParams.get('page')) || 1);
-	let totalPages = $state(1);
 	const limit = 12;
 
-	$effect(() => {
-		if (currentPage) {
-			loadVideos();
-		}
-	});
-
-	async function loadVideos() {
-		isLoading = true;
-		error = '';
-
-		try {
+	let query = createQuery(() => ({
+		queryKey: ['videos', currentPage, limit],
+		queryFn: async () => {
 			const res = await fetchApi(`/videos?page=${currentPage}&limit=${limit}`);
-			videos = res.videos || [];
-			totalPages = res.totalPages || 1;
-		} catch (err: any) {
-			error = err.message || 'Failed to load videos';
-		} finally {
-			isLoading = false;
+			return res;
 		}
-	}
+	}), () => queryClient);
 
 	function goToPage(p: number) {
+		const totalPages = query.data?.totalPages || 1;
 		if (p < 1 || p > totalPages) return;
 		const url = new URL(page.url);
 		url.searchParams.set('page', p.toString());
@@ -46,7 +34,7 @@
 	function getVisiblePages(current: number, total: number) {
 		let start = Math.max(1, current - 2);
 		let end = Math.min(total, current + 2);
-		
+
 		if (current <= 3) {
 			end = Math.min(total, 5);
 		}
@@ -95,28 +83,29 @@
 		<h1 class="text-2xl font-bold tracking-tight">Recommended for you</h1>
 	</div>
 
-	{#if isLoading}
+	{#if query.isPending}
 		<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 			{#each Array(8) as _}
 				<div class="flex animate-pulse flex-col space-y-3">
-					<div class="bg-muted aspect-video w-full rounded-xl"></div>
+					<Skeleton class="aspect-video w-full rounded-xl" />
 					<div class="flex gap-3">
-						<div class="bg-muted h-10 w-10 shrink-0 rounded-full"></div>
+						<Skeleton class="h-10 w-10 shrink-0 rounded-full" />
 						<div class="w-full space-y-2">
-							<div class="bg-muted h-4 w-3/4 rounded"></div>
-							<div class="bg-muted h-3 w-1/2 rounded"></div>
+							<Skeleton class="h-4 w-3/4 rounded" />
+							<Skeleton class="h-3 w-1/2 rounded" />
 						</div>
 					</div>
 				</div>
 			{/each}
 		</div>
-	{:else if error}
+	{:else if query.isError}
 		<div class="flex flex-col items-center justify-center py-12 text-center">
-			<div class="rounded-xl bg-red-100 p-4 text-red-600 dark:bg-red-900/30 dark:text-red-400">
-				<p>{error}</p>
+			<div class="bg-destructive/10 text-destructive rounded-xl p-4">
+				<p>{query.error.message}</p>
+				<Button variant="outline" class="mt-4" onclick={() => query.refetch()}>Try again</Button>
 			</div>
 		</div>
-	{:else if videos.length === 0}
+	{:else if !query.data?.videos || query.data.videos.length === 0}
 		<div
 			class="border-muted-foreground/20 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-24 text-center"
 		>
@@ -128,11 +117,11 @@
 		</div>
 	{:else}
 		<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-			{#each videos as video}
+			{#each query.data.videos as video}
 				<a href={`/watch/${video.fileId}`} class="group flex flex-col space-y-3">
 					<!-- Thumbnail -->
-					<VideoThumbnail 
-						{video} 
+					<VideoThumbnail
+						{video}
 						class="aspect-video rounded-xl"
 						imgClass="transition-transform duration-300 group-hover:scale-105"
 					>
@@ -166,51 +155,54 @@
 			{/each}
 		</div>
 
-		{#if totalPages > 1}
+		{#if query.data?.totalPages > 1}
 			<div class="mt-12 flex justify-center pb-8">
-				<nav class="flex items-center gap-1 sm:gap-2">
-					<button 
-						onclick={() => goToPage(1)} 
+				<nav class="flex items-center gap-2">
+					<Button
+						variant="outline"
+						size="icon"
 						disabled={currentPage === 1}
-						class="hidden sm:inline-flex items-center justify-center h-10 w-10 rounded-lg hover:bg-muted transition-colors disabled:opacity-50 disabled:pointer-events-none text-muted-foreground hover:text-foreground"
-						aria-label="First page"
+						onclick={() => goToPage(1)}
+						class="hidden sm:flex"
 					>
 						«
-					</button>
-					<button 
-						onclick={() => goToPage(currentPage - 1)} 
+					</Button>
+					<Button
+						variant="secondary"
 						disabled={currentPage === 1}
-						class="inline-flex items-center justify-center h-10 px-3 sm:px-4 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none"
+						onclick={() => goToPage(currentPage - 1)}
 					>
 						Previous
-					</button>
+					</Button>
 
-					<div class="flex items-center gap-1 mx-2">
-						{#each getVisiblePages(currentPage, totalPages) as p}
-							<button 
+					<div class="mx-2 flex items-center gap-1">
+						{#each getVisiblePages(currentPage, query.data.totalPages) as p}
+							<Button
+								variant={currentPage === p ? 'default' : 'ghost'}
+								size="icon"
 								onclick={() => goToPage(p)}
-								class="inline-flex items-center justify-center h-10 w-10 rounded-lg font-medium transition-colors {currentPage === p ? 'bg-primary text-primary-foreground shadow-sm' : 'hover:bg-muted text-muted-foreground hover:text-foreground'}"
 							>
 								{p}
-							</button>
+							</Button>
 						{/each}
 					</div>
 
-					<button 
-						onclick={() => goToPage(currentPage + 1)} 
-						disabled={currentPage === totalPages}
-						class="inline-flex items-center justify-center h-10 px-3 sm:px-4 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none"
+					<Button
+						variant="secondary"
+						disabled={currentPage === query.data.totalPages}
+						onclick={() => goToPage(currentPage + 1)}
 					>
 						Next
-					</button>
-					<button 
-						onclick={() => goToPage(totalPages)} 
-						disabled={currentPage === totalPages}
-						class="hidden sm:inline-flex items-center justify-center h-10 w-10 rounded-lg hover:bg-muted transition-colors disabled:opacity-50 disabled:pointer-events-none text-muted-foreground hover:text-foreground"
-						aria-label="Last page"
+					</Button>
+					<Button
+						variant="outline"
+						size="icon"
+						disabled={currentPage === query.data.totalPages}
+						onclick={() => goToPage(query.data.totalPages)}
+						class="hidden sm:flex"
 					>
 						»
-					</button>
+					</Button>
 				</nav>
 			</div>
 		{/if}
