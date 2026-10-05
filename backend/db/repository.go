@@ -475,12 +475,19 @@ type SearchVideosParams struct {
 
 func (q *Repository) SearchVideos(ctx context.Context, arg SearchVideosParams) ([]Video, error) {
 	query := q.orm.WithContext(ctx).Where("visibility = ?", VideoVisibilityPublic)
-	if arg.Column1.Valid {
-		term := "%" + strings.TrimSpace(arg.Column1.String) + "%"
-		query = query.Where("title ILIKE ? OR description ILIKE ?", term, term)
+	if arg.Column1.Valid && strings.TrimSpace(arg.Column1.String) != "" {
+		term := strings.TrimSpace(arg.Column1.String)
+		likeTerm := "%" + term + "%"
+		query = query.Where("title % ? OR description % ? OR title ILIKE ? OR description ILIKE ?", term, term, likeTerm, likeTerm)
+		query = query.Order(clause.Expr{
+			SQL:  "GREATEST(SIMILARITY(title, ?), SIMILARITY(description, ?)) DESC",
+			Vars: []interface{}{term, term},
+		}).Order("created_at DESC")
+	} else {
+		query = query.Order("created_at DESC")
 	}
 	var videos []Video
-	err := query.Order("created_at DESC").Limit(int(arg.Limit)).Offset(int(arg.Offset)).Find(&videos).Error
+	err := query.Limit(int(arg.Limit)).Offset(int(arg.Offset)).Find(&videos).Error
 	return videos, err
 }
 

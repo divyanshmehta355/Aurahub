@@ -102,3 +102,21 @@ CREATE TABLE IF NOT EXISTS watch_later (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, video_id)
 );
+
+-- Performance Improvements
+-- Enable pg_trgm for fast text search on ILIKE queries
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Full-text search indexes for videos
+CREATE INDEX IF NOT EXISTS idx_videos_title_trgm ON videos USING GIN (title gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_videos_description_trgm ON videos USING GIN (description gin_trgm_ops);
+
+-- B-Tree indexes for common lookups and foreign keys
+CREATE INDEX IF NOT EXISTS idx_videos_uploader_id ON videos(uploader_id);
+CREATE INDEX IF NOT EXISTS idx_videos_created_at ON videos(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_videos_visibility ON videos(visibility);
+CREATE INDEX IF NOT EXISTS idx_comments_video_id ON comments(video_id);
+CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON comments(parent_comment_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient_id ON notifications(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_watch_history_updated_at ON watch_history(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_watch_later_created_at ON watch_later(created_at DESC);
