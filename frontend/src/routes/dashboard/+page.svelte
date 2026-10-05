@@ -6,10 +6,7 @@
 	import VideoThumbnail from '#lib/components/VideoThumbnail.svelte';
 	import { BarChart, Video, Upload, Edit, Trash2, CheckSquare } from 'lucide-svelte';
 
-	let activeTab = $state('videos');
-
 	let dashboardVideos: any[] = $state([]);
-	let analytics: any = $state(null);
 	let isLoading = $state(true);
 
 	// Bulk selection state
@@ -28,13 +25,8 @@
 	async function loadDashboardData() {
 		isLoading = true;
 		try {
-			const [dashRes, analyticsRes] = await Promise.all([
-				fetchApi('/creator/dashboard?limit=50').catch(() => ({ videos: [] })),
-				fetchApi('/creator/analytics').catch(() => null)
-			]);
-
+			const dashRes = await fetchApi('/creator/dashboard?limit=50').catch(() => ({ videos: [] }));
 			dashboardVideos = dashRes?.videos || [];
-			analytics = analyticsRes;
 		} catch (err) {
 			console.error('Failed to load dashboard data', err);
 		} finally {
@@ -111,52 +103,33 @@
 		<div>
 			<h1 class="text-3xl font-bold tracking-tight">Creator Studio</h1>
 			<p class="text-muted-foreground mt-1">
-				Manage your videos, view analytics, and upload content.
+				Manage your videos and upload content.
 			</p>
 		</div>
-		<a
-			href="/upload"
-			class="text-primary-foreground inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium transition-colors hover:bg-primary/90"
-		>
-			<Upload class="mr-2 h-4 w-4" />
-			Upload Video
-		</a>
-	</div>
-
-	<!-- Custom Tabs (No Sidebar) -->
-	<div class="flex border-b">
-		<button
-			class="border-b-2 px-4 py-3 text-sm font-medium transition-colors {activeTab === 'videos'
-				? 'border-primary text-primary'
-				: 'text-muted-foreground border-transparent hover:border-border hover:text-primary'}"
-			onclick={() => (activeTab = 'videos')}
-		>
-			<div class="flex items-center gap-2">
-				<Video class="h-4 w-4" />
-				Content
-			</div>
-		</button>
-		<button
-			class="border-b-2 px-4 py-3 text-sm font-medium transition-colors {activeTab === 'analytics'
-				? 'border-primary text-primary'
-				: 'text-muted-foreground border-transparent hover:border-border hover:text-primary'}"
-			onclick={() => (activeTab = 'analytics')}
-		>
-			<div class="flex items-center gap-2">
-				<BarChart class="h-4 w-4" />
+		<div class="flex items-center gap-3">
+			<a
+				href="/analytics"
+				class="text-foreground border inline-flex h-10 items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+			>
+				<BarChart class="mr-2 h-4 w-4" />
 				Analytics
-			</div>
-		</button>
+			</a>
+			<a
+				href="/upload"
+				class="text-primary-foreground inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium transition-colors hover:bg-primary/90"
+			>
+				<Upload class="mr-2 h-4 w-4" />
+				Upload Video
+			</a>
+		</div>
 	</div>
 
-	<!-- Tab Content -->
 	<div class="min-h-[400px]">
 		{#if isLoading}
 			<div class="flex h-48 items-center justify-center">
 				<div class="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
 			</div>
-		{:else if activeTab === 'videos'}
-			<!-- Videos Tab -->
+		{:else}
 			<div class="space-y-4">
 				{#if selectedVideos.size > 0}
 					<div class="bg-muted/50 flex items-center gap-4 rounded-lg border p-3">
@@ -248,34 +221,6 @@
 					</table>
 				</div>
 			</div>
-		{:else if activeTab === 'analytics'}
-			<!-- Analytics Tab -->
-			{#if analytics}
-				<div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
-					<div class="bg-card rounded-xl border p-6">
-						<h3 class="text-muted-foreground mb-2 text-sm font-medium">Total Views</h3>
-						<p class="text-3xl font-bold">{analytics.total_views || 0}</p>
-					</div>
-					<div class="bg-card rounded-xl border p-6">
-						<h3 class="text-muted-foreground mb-2 text-sm font-medium">Total Likes</h3>
-						<p class="text-3xl font-bold">{analytics.total_likes || 0}</p>
-					</div>
-					<div class="bg-card rounded-xl border p-6">
-						<h3 class="text-muted-foreground mb-2 text-sm font-medium">Total Comments</h3>
-						<p class="text-3xl font-bold">{analytics.total_comments || 0}</p>
-					</div>
-				</div>
-
-				<div class="bg-card flex min-h-[200px] items-center justify-center rounded-xl border p-6">
-					<p class="text-muted-foreground text-sm">
-						More detailed analytics charts will appear here as your channel grows.
-					</p>
-				</div>
-			{:else}
-				<div class="text-muted-foreground bg-card rounded-xl border p-8 text-center">
-					No analytics data available yet. Upload videos to get started!
-				</div>
-			{/if}
 		{/if}
 	</div>
 </div>

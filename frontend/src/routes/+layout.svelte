@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount } from 'svelte';
-	import { Sun, Moon, Search, User, LogOut, Home, PlaySquare, Clock, ListVideo, Menu, PlusCircle, Bird, Smartphone } from 'lucide-svelte';
+	import { Sun, Moon, Search, User, LogOut, Home, PlaySquare, Clock, ListVideo, Menu, PlusCircle, Bird, Smartphone, Video, BarChart } from 'lucide-svelte';
 	import { fetchApi } from '#lib/api';
 	import { userState, setUser, clearUser } from '#lib/user.svelte';
 
@@ -103,6 +103,9 @@
 				{#if userState.isLoaded}
 					{#if userState.user}
 						<div class="flex items-center gap-4 ml-2">
+							<a href="/dashboard" class="text-xs font-semibold bg-primary/10 text-primary px-2 py-1 rounded hover:bg-primary/20 transition-colors">
+								Studio
+							</a>
 							<a href="/profile/{userState.user.username}" class="font-medium text-sm hover:underline">
 								@{userState.user.username}
 							</a>
@@ -141,6 +144,11 @@
 				<a href="/history" onclick={() => isSidebarOpen = false} class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"><Clock class="w-5 h-5"/> History</a>
 				<a href="/watch-later" onclick={() => isSidebarOpen = false} class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"><Clock class="w-5 h-5"/> Watch Later</a>
 				<a href="/my-playlists" onclick={() => isSidebarOpen = false} class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"><ListVideo class="w-5 h-5"/> Playlists</a>
+
+				<div class="my-4 border-t"></div>
+				<h3 class="px-3 text-sm font-semibold text-muted-foreground mb-2">Creator Studio</h3>
+				<a href="/dashboard" onclick={() => isSidebarOpen = false} class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"><Video class="w-5 h-5"/> Content</a>
+				<a href="/analytics" onclick={() => isSidebarOpen = false} class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"><BarChart class="w-5 h-5"/> Analytics</a>
 			</nav>
 		</aside>
 
