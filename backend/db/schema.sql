@@ -108,6 +108,12 @@ CREATE TABLE IF NOT EXISTS watch_later (
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- Full-text search indexes for videos
+ALTER TABLE videos ADD COLUMN IF NOT EXISTS search_vector tsvector GENERATED ALWAYS AS (
+    setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(description, '')), 'B')
+) STORED;
+
+CREATE INDEX IF NOT EXISTS idx_videos_search_vector ON videos USING GIN (search_vector);
 CREATE INDEX IF NOT EXISTS idx_videos_title_trgm ON videos USING GIN (title gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_videos_description_trgm ON videos USING GIN (description gin_trgm_ops);
 

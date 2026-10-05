@@ -477,11 +477,10 @@ func (q *Repository) SearchVideos(ctx context.Context, arg SearchVideosParams) (
 	query := q.orm.WithContext(ctx).Where("visibility = ?", VideoVisibilityPublic)
 	if arg.Column1.Valid && strings.TrimSpace(arg.Column1.String) != "" {
 		term := strings.TrimSpace(arg.Column1.String)
-		likeTerm := "%" + term + "%"
-		query = query.Where("title % ? OR description % ? OR title ILIKE ? OR description ILIKE ?", term, term, likeTerm, likeTerm)
+		query = query.Where("search_vector @@ websearch_to_tsquery('english', ?) OR title % ? OR description % ?", term, term, term)
 		query = query.Order(clause.Expr{
-			SQL:  "GREATEST(SIMILARITY(title, ?), SIMILARITY(description, ?)) DESC",
-			Vars: []interface{}{term, term},
+			SQL:  "ts_rank(search_vector, websearch_to_tsquery('english', ?)) + GREATEST(SIMILARITY(title, ?), SIMILARITY(description, ?)) DESC",
+			Vars: []interface{}{term, term, term},
 		}).Order("created_at DESC")
 	} else {
 		query = query.Order("created_at DESC")

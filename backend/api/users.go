@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/divyanshmehta355/aurahub/backend/db"
@@ -154,24 +155,29 @@ func (s *Server) GetProfileHandler(c *fiber.Ctx) error {
 		}
 	}
 
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	limit, _ := strconv.Atoi(c.Query("limit", "10"))
+	
+	if limit <= 0 || limit > 100 {
+		limit = 10
+	}
+	if page <= 0 {
+		page = 1
+	}
+	offset := (page - 1) * limit
+
 	videos, err := s.Repository.ListUserVideos(context.Background(), db.ListUserVideosParams{
 		UploaderID: user.ID,
-		Limit:      50,
-		Offset:     0,
+		Limit:      int32(limit),
+		Offset:     int32(offset),
 	})
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch user videos"})
 	}
 	videoResults := make([]fiber.Map, 0, len(videos))
 	for _, video := range videos {
-		likesCount, err := s.Repository.CountVideoLikes(context.Background(), video.ID)
-		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch video likes"})
-		}
-		commentCount, err := s.Repository.CountVideoComments(context.Background(), video.ID)
-		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch video comments"})
-		}
+		likesCount, _ := s.Repository.CountVideoLikes(context.Background(), video.ID)
+		commentCount, _ := s.Repository.CountVideoComments(context.Background(), video.ID)
 		videoResults = append(videoResults, fiber.Map{
 			"_id": formatUUID(video.ID), "id": formatUUID(video.ID), "fileId": video.FileID,
 			"title": video.Title, "description": video.Description.String,
@@ -194,6 +200,8 @@ func (s *Server) GetProfileHandler(c *fiber.Ctx) error {
 			"isSubscribed":    isSubscribed,
 		},
 		"videos": videoResults,
+		"currentPage": page,
+		"hasMore": len(videos) == limit,
 	})
 }
 
