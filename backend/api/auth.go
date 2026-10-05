@@ -140,8 +140,8 @@ func (s *Server) LoginHandler(c *fiber.Ctx) error {
 		Path:     "/",
 		Expires:  time.Now().Add(time.Hour * 24 * 7),
 		HTTPOnly: true,
-		Secure:   c.Protocol() == "https",
-		SameSite: "Lax",
+		Secure:   true,
+		SameSite: "None",
 	})
 
 	return c.JSON(fiber.Map{
@@ -162,8 +162,8 @@ func (s *Server) LogoutHandler(c *fiber.Ctx) error {
 		Path:     "/",
 		Expires:  time.Now().Add(-time.Hour),
 		HTTPOnly: true,
-		Secure:   c.Protocol() == "https",
-		SameSite: "Lax",
+		Secure:   true,
+		SameSite: "None",
 	})
 	return c.JSON(fiber.Map{"message": "Logged out successfully"})
 }
