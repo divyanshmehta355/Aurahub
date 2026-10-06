@@ -18,6 +18,7 @@
 	let newPlaylistTitle = $state('');
 	let category = $state('Other');
 	let isShort = $state(false);
+	let isAdult = $state(false);
 
 	let items = $state([
 		{ id: Date.now() + '1', title: '', videoUrl: '', status: 'idle', progress: 0, error: '' },
@@ -151,6 +152,7 @@
 				finalData.append('category', category);
 				finalData.append('visibility', 'public');
 				finalData.append('isShort', isShort.toString());
+				finalData.append('isAdult', isAdult.toString());
 				if (targetPlaylistId) {
 					finalData.append('playlistId', targetPlaylistId);
 				}
@@ -278,6 +280,18 @@
 					<option value="Music">Music</option>
 				</select>
 			</div>
+
+			<div class="flex flex-col justify-end space-y-1.5 pb-1.5">
+				<label class="flex cursor-pointer items-center gap-2 text-sm font-medium">
+					<input
+						type="checkbox"
+						bind:checked={isAdult}
+						disabled={isRunning}
+						class="border-input h-4 w-4 rounded text-primary focus:ring-primary"
+					/>
+					Contains Adult Content
+				</label>
+			</div>
 		</div>
 
 		{#if playlistOption === 'create_new'}
@@ -332,7 +346,7 @@
 							{:else if item.status === 'queuing'}
 								<span class="text-muted-foreground flex items-center gap-1 text-[11px] font-medium"
 									><div class="h-2 w-2 animate-spin rounded-full border border-current"></div>
-									 Queuing...</span
+									Queuing...</span
 								>
 							{:else if item.status === 'downloading'}
 								<span class="flex items-center gap-1 text-[11px] font-semibold text-primary"
@@ -342,7 +356,7 @@
 							{:else if item.status === 'publishing'}
 								<span class="flex items-center gap-1 text-[11px] font-semibold text-primary"
 									><div class="h-2 w-2 animate-spin rounded-full border border-current"></div>
-									 Publishing...</span
+									Publishing...</span
 								>
 							{:else if item.status === 'completed'}
 								<span class="flex items-center gap-1 text-[11px] font-bold text-green-600"

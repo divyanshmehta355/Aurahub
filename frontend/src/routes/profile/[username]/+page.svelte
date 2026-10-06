@@ -22,7 +22,7 @@
 
 	let isOwnProfile = $derived(userState.user?.id === profileQuery.data?.user?.id);
 
-	const subscribeMutation = createMutation({
+	const subscribeMutation = createMutation(() => ({
 		mutationFn: async (userId: string) => {
 			return await fetchApi(`/interactions/subscribe/${userId}`, {
 				method: 'POST'
@@ -31,7 +31,7 @@
 		onSuccess: () => {
 			profileQuery.refetch();
 		}
-	});
+	}));
 
 	async function changePage(newPage: number) {
 		if (newPage < 1 || (!profileQuery.data?.hasMore && newPage > currentPage)) return;
@@ -99,10 +99,10 @@
 	<main class="fade-in pb-12">
 		<!-- CHANNEL BANNER -->
 		<div class="bg-muted relative h-48 w-full md:h-72">
-			{#if profile.user.banner}
+			{#if profileQuery.data.user.banner}
 				<img
-					src={profile.user.banner}
-					alt={`${profile.user.username}'s banner`}
+					src={profileQuery.data.user.banner}
+					alt={`${profileQuery.data.user.username}'s banner`}
 					class="h-full w-full object-cover"
 				/>
 			{:else}
@@ -140,8 +140,7 @@
 							>
 							subscribers
 							<span>•</span>
-							<span class="text-foreground font-bold">{profileQuery.data.videos?.length || 0}</span
-							> videos
+							<span class="text-foreground font-bold">{profileQuery.data.videos?.length || 0}</span> videos
 						</p>
 
 						{#if profileQuery.data.user.bio}

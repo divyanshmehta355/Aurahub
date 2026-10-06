@@ -12,14 +12,17 @@
 
 	let queryStr = $derived(page.url.searchParams.get('q') || '');
 
-	const searchQuery = createQuery(() => ({
-		queryKey: ['search', queryStr],
-		queryFn: async () => {
-			if (!queryStr) return [];
-			const res = await fetchApi(`/videos/search?q=${encodeURIComponent(queryStr)}`);
-			return res.videos || res.data || [];
-		}
-	}), () => queryClient);
+	const searchQuery = createQuery(
+		() => ({
+			queryKey: ['search', queryStr],
+			queryFn: async () => {
+				if (!queryStr) return [];
+				const res = await fetchApi(`/videos/search?q=${encodeURIComponent(queryStr)}`);
+				return res.videos || res.data || [];
+			}
+		}),
+		() => queryClient
+	);
 
 	function formatTimeAgo(dateString: string) {
 		const date = new Date(dateString);
@@ -43,9 +46,9 @@
 	<title>{queryStr ? `${queryStr} - Search` : 'Search'} - Aurahub</title>
 </svelte:head>
 
-<div class="space-y-4 md:space-y-6 px-4 md:px-0">
-	<div class="flex items-center justify-between border-b pb-4 pt-2 md:pt-0">
-		<h1 class="text-xl md:text-2xl font-bold tracking-tight">
+<div class="space-y-4 px-4 md:space-y-6 md:px-0">
+	<div class="flex items-center justify-between border-b pt-2 pb-4 md:pt-0">
+		<h1 class="text-xl font-bold tracking-tight md:text-2xl">
 			{#if queryStr}
 				Results for "{queryStr}"
 			{:else}
@@ -72,18 +75,20 @@
 		</div>
 	{:else if searchQuery.isError}
 		<div class="flex flex-col items-center justify-center py-12 text-center">
-			<div class="rounded-xl bg-destructive/10 p-4 text-destructive">
+			<div class="bg-destructive/10 text-destructive rounded-xl p-4">
 				<p>{searchQuery.error.message || 'Failed to search videos.'}</p>
-				<Button variant="outline" class="mt-4" onclick={() => searchQuery.refetch()}>Try again</Button>
+				<Button variant="outline" class="mt-4" onclick={() => searchQuery.refetch()}
+					>Try again</Button
+				>
 			</div>
 		</div>
 	{:else if !queryStr || searchQuery.data?.length === 0}
 		<div
-			class="border-muted-foreground/20 mx-4 md:mx-0 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-16 md:py-24 text-center"
+			class="border-muted-foreground/20 mx-4 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-16 text-center md:mx-0 md:py-24"
 		>
 			<SearchIcon class="text-muted-foreground mb-4 h-12 w-12 opacity-50" />
-			<h2 class="mb-2 text-lg md:text-xl font-semibold">No results found</h2>
-			<p class="text-muted-foreground max-w-sm text-sm md:text-base px-4">
+			<h2 class="mb-2 text-lg font-semibold md:text-xl">No results found</h2>
+			<p class="text-muted-foreground max-w-sm px-4 text-sm md:text-base">
 				{#if queryStr}
 					Try different keywords or remove search filters.
 				{:else}
@@ -96,7 +101,7 @@
 			{#each searchQuery.data as video}
 				<a
 					href={`/watch/${video.fileId || video.id}`}
-					class="group hover:bg-muted/50 flex flex-col gap-3 md:gap-4 rounded-xl transition-colors sm:flex-row sm:p-2"
+					class="group hover:bg-muted/50 flex flex-col gap-3 rounded-xl transition-colors sm:flex-row sm:p-2 md:gap-4"
 				>
 					<!-- Thumbnail -->
 					<div class="w-full shrink-0 sm:w-80">
@@ -109,9 +114,9 @@
 						</VideoThumbnail>
 					</div>
 					<!-- Metadata -->
-					<div class="flex flex-1 flex-col py-1 px-1 sm:px-0">
+					<div class="flex flex-1 flex-col px-1 py-1 sm:px-0">
 						<h3
-							class="mb-1 line-clamp-2 text-base md:text-lg leading-tight font-semibold transition-colors group-hover:text-primary"
+							class="mb-1 line-clamp-2 text-base leading-tight font-semibold transition-colors group-hover:text-primary md:text-lg"
 						>
 							{video.title}
 						</h3>
@@ -121,21 +126,21 @@
 							<span>{formatTimeAgo(video.created_at || video.createdAt)}</span>
 						</div>
 
-						<div class="mb-2 md:mb-3 flex items-center gap-2 md:gap-3">
+						<div class="mb-2 flex items-center gap-2 md:mb-3 md:gap-3">
 							<img
 								src={video.uploader_avatar ||
 									video.uploader?.avatar ||
 									`https://api.dicebear.com/7.x/identicon/svg?seed=${video.uploader_username || video.uploader?.username}`}
 								alt={video.uploader_username || video.uploader?.username}
-								class="bg-muted h-6 w-6 md:h-8 md:w-8 rounded-full object-cover"
+								class="bg-muted h-6 w-6 rounded-full object-cover md:h-8 md:w-8"
 							/>
-							<p class="text-[13px] md:text-sm font-medium transition-colors hover:text-primary">
+							<p class="text-[13px] font-medium transition-colors hover:text-primary md:text-sm">
 								{video.uploader_username || video.uploader?.username}
 							</p>
 						</div>
-						
+
 						{#if video.description}
-							<p class="text-muted-foreground line-clamp-1 md:line-clamp-2 text-[11px] md:text-xs">
+							<p class="text-muted-foreground line-clamp-1 text-[11px] md:line-clamp-2 md:text-xs">
 								{video.description}
 							</p>
 						{/if}

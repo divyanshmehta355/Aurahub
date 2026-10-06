@@ -201,6 +201,7 @@ func (s *Server) CreateRecordHandler(c *fiber.Ctx) error {
 	category := c.FormValue("category")
 	visibility := c.FormValue("visibility")
 	isShort := c.FormValue("isShort") == "true"
+	isAdult := c.FormValue("isAdult") == "true"
 	tagsString := c.FormValue("tags")
 
 	if title == "" || videoId == "" {
@@ -271,6 +272,7 @@ func (s *Server) CreateRecordHandler(c *fiber.Ctx) error {
 		Visibility:       db.NullVideoVisibility{VideoVisibility: videoVis, Valid: true},
 		UploaderID:       userId,
 		IsShort:          pgtype.Bool{Bool: isShort, Valid: true},
+		IsAdult:          pgtype.Bool{Bool: isAdult, Valid: true},
 		StreamtapeUrl:    pgtype.Text{String: "https://streamtape.com/v/" + videoId + "/", Valid: true},
 		StreamtapeStatus: db.NullStreamtapeStatus{StreamtapeStatus: db.StreamtapeStatusActive, Valid: true},
 	})

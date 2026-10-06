@@ -105,6 +105,12 @@ func (s *Server) AvatarUploadHandler(c *fiber.Ctx) error {
 
 	files := form.File["avatar"]
 	if len(files) == 0 {
+		files = form.File["image"]
+	}
+	if len(files) == 0 {
+		files = form.File["file"]
+	}
+	if len(files) == 0 {
 		return c.Status(400).JSON(fiber.Map{"message": "No file uploaded"})
 	}
 

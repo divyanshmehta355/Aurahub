@@ -35,6 +35,8 @@ func TestUnifiedAPIRoutes(t *testing.T) {
 		"GET /api/thumbnail/:seed",
 		"PUT /api/playlists/",
 		"PUT /api/videos/bulk",
+		"PUT /api/videos/bulk-adult",
+		"PUT /api/creator/videos/bulk-adult",
 	}
 	for _, route := range apiRoutes {
 		if !registered[route] {

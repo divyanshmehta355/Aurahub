@@ -166,10 +166,13 @@ func (s *Server) GetProfileHandler(c *fiber.Ctx) error {
 	}
 	offset := (page - 1) * limit
 
+	showAdult := c.Query("adult") == "true"
+
 	videos, err := s.Repository.ListUserVideos(context.Background(), db.ListUserVideosParams{
 		UploaderID: user.ID,
 		Limit:      int32(limit),
 		Offset:     int32(offset),
+		ShowAdult:  showAdult,
 	})
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch user videos"})
@@ -206,12 +209,13 @@ func (s *Server) GetProfileHandler(c *fiber.Ctx) error {
 }
 
 type FullProfileUpdateRequest struct {
-	Username string  `json:"username"`
-	Email    string  `json:"email"`
-	Password string  `json:"password"`
-	Avatar   string  `json:"avatar"`
-	Bio      *string `json:"bio"`
-	Banner   string  `json:"banner"`
+	Username         string  `json:"username"`
+	Email            string  `json:"email"`
+	Password         string  `json:"password"`
+	Avatar           string  `json:"avatar"`
+	Bio              *string `json:"bio"`
+	Banner           string  `json:"banner"`
+	ShowAdultContent *bool   `json:"showAdultContent"`
 }
 
 func (s *Server) UpdateProfileHandler(c *fiber.Ctx) error {
@@ -269,17 +273,21 @@ func (s *Server) UpdateProfileHandler(c *fiber.Ctx) error {
 	if req.Banner != "" {
 		update.Banner = pgtype.Text{String: req.Banner, Valid: true}
 	}
+	if req.ShowAdultContent != nil {
+		update.ShowAdultContent = pgtype.Bool{Bool: *req.ShowAdultContent, Valid: true}
+	}
 	user, err := s.Repository.UpdateUserProfile(context.Background(), update)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to update profile"})
 	}
 
 	return c.JSON(fiber.Map{
-		"id":       formatUUID(user.ID),
-		"username": user.Username,
-		"email":    user.Email,
-		"avatar":   user.Avatar.String,
-		"banner":   user.Banner.String,
-		"bio":      user.Bio.String,
+		"id":               formatUUID(user.ID),
+		"username":         user.Username,
+		"email":            user.Email,
+		"avatar":           user.Avatar.String,
+		"banner":           user.Banner.String,
+		"bio":              user.Bio.String,
+		"showAdultContent": user.ShowAdultContent.Bool,
 	})
 }

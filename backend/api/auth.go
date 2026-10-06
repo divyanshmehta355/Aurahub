@@ -184,10 +184,13 @@ func (s *Server) GetMeHandler(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"id":       formatUUID(user.ID),
-		"username": user.Username,
-		"email":    user.Email,
-		"avatar":   user.Avatar.String,
+		"id":               formatUUID(user.ID),
+		"username":         user.Username,
+		"email":            user.Email,
+		"avatar":           user.Avatar.String,
+		"banner":           user.Banner.String,
+		"bio":              user.Bio.String,
+		"showAdultContent": user.ShowAdultContent.Bool,
 	})
 }
 

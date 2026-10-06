@@ -54,6 +54,18 @@ func (q *Repository) BulkUpdateVideoVisibility(ctx context.Context, arg BulkUpda
 		Update("visibility", arg.Visibility.VideoVisibility).Error
 }
 
+type BulkUpdateVideoAdultParams struct {
+	UploaderID pgtype.UUID
+	Column2    []pgtype.UUID
+	IsAdult    bool
+}
+
+func (q *Repository) BulkUpdateVideoAdult(ctx context.Context, arg BulkUpdateVideoAdultParams) error {
+	return q.orm.WithContext(ctx).Model(&Video{}).
+		Where("uploader_id = ? AND id IN ?", arg.UploaderID, arg.Column2).
+		Update("is_adult", arg.IsAdult).Error
+}
+
 func (q *Repository) CheckEmailExists(ctx context.Context, email string) (bool, error) {
 	var count int64
 	err := q.orm.WithContext(ctx).Model(&User{}).Where("email = ?", email).Count(&count).Error
@@ -162,6 +174,7 @@ type CreateVideoParams struct {
 	Visibility       NullVideoVisibility
 	UploaderID       pgtype.UUID
 	IsShort          pgtype.Bool
+	IsAdult          pgtype.Bool
 	StreamtapeUrl    pgtype.Text
 	StreamtapeStatus NullStreamtapeStatus
 }
@@ -171,7 +184,7 @@ func (q *Repository) CreateVideo(ctx context.Context, arg CreateVideoParams) (Vi
 		Title: arg.Title, Description: arg.Description, FileID: arg.FileID,
 		ThumbnailUrl: arg.ThumbnailUrl, Category: arg.Category, Tags: TextArray(arg.Tags),
 		Visibility: arg.Visibility, UploaderID: arg.UploaderID, IsShort: arg.IsShort,
-		StreamtapeUrl: arg.StreamtapeUrl, StreamtapeStatus: arg.StreamtapeStatus,
+		IsAdult: arg.IsAdult, StreamtapeUrl: arg.StreamtapeUrl, StreamtapeStatus: arg.StreamtapeStatus,
 	}
 	err := q.orm.WithContext(ctx).Create(&video).Error
 	return video, err
@@ -420,12 +433,16 @@ type ListUserVideosParams struct {
 	UploaderID pgtype.UUID
 	Limit      int32
 	Offset     int32
+	ShowAdult  bool
 }
 
 func (q *Repository) ListUserVideos(ctx context.Context, arg ListUserVideosParams) ([]Video, error) {
 	var videos []Video
-	err := q.orm.WithContext(ctx).Where("uploader_id = ? AND visibility = ?", arg.UploaderID, VideoVisibilityPublic).
-		Order("created_at DESC").Limit(int(arg.Limit)).Offset(int(arg.Offset)).Find(&videos).Error
+	query := q.orm.WithContext(ctx).Where("uploader_id = ? AND visibility = ?", arg.UploaderID, VideoVisibilityPublic)
+	if !arg.ShowAdult {
+		query = query.Where("is_adult = ?", false)
+	}
+	err := query.Order("created_at DESC").Limit(int(arg.Limit)).Offset(int(arg.Offset)).Find(&videos).Error
 	return videos, err
 }
 

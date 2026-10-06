@@ -16,10 +16,11 @@ import (
 
 func (s *Server) AutocompleteHandler(c *fiber.Ctx) error {
 	query := strings.TrimSpace(c.Query("q"))
+	showAdult := c.Query("adult") == "true"
 	if len([]rune(query)) < 2 {
 		return c.JSON(fiber.Map{"videos": []fiber.Map{}, "users": []fiber.Map{}})
 	}
-	videos, err := s.Repository.SearchAutocompleteVideos(context.Background(), query)
+	videos, err := s.Repository.SearchAutocompleteVideos(context.Background(), query, showAdult)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to search videos"})
 	}
@@ -56,6 +57,7 @@ func parseUUID(idStr string) (pgtype.UUID, error) {
 
 func (s *Server) ListVideosHandler(c *fiber.Ctx) error {
 	page, limit := pageLimit(c, 12, 100)
+	showAdult := c.Query("adult") == "true"
 	category := c.Query("category")
 	if category == "All" {
 		category = ""
@@ -67,11 +69,11 @@ func (s *Server) ListVideosHandler(c *fiber.Ctx) error {
 	case "standard":
 		shortFilter = pgtype.Bool{Bool: false, Valid: true}
 	}
-	videos, err := s.Repository.ListPublicVideos(context.Background(), category, shortFilter, c.Query("sort", "trending"), int32(limit), int32((page-1)*limit))
+	videos, err := s.Repository.ListPublicVideos(context.Background(), category, shortFilter, showAdult, c.Query("sort", "trending"), int32(limit), int32((page-1)*limit))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch videos"})
 	}
-	total, err := s.Repository.CountPublicVideos(context.Background(), category, shortFilter)
+	total, err := s.Repository.CountPublicVideos(context.Background(), category, shortFilter, showAdult)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to count videos"})
 	}
@@ -166,6 +168,7 @@ func (s *Server) GetVideoHandler(c *fiber.Ctx) error {
 		"likesCount":    likesCount,
 		"commentCount":  commentCount,
 		"isLiked":       isLiked,
+		"isAdult":       video.IsAdult.Bool,
 		"uploader": fiber.Map{
 			"id":       formatUUID(uploader.ID),
 			"username": uploader.Username,
@@ -221,10 +224,11 @@ func (s *Server) DeleteVideoHandler(c *fiber.Ctx) error {
 
 func (s *Server) SearchVideosHandler(c *fiber.Ctx) error {
 	q := strings.TrimSpace(c.Query("q", ""))
+	showAdult := c.Query("adult") == "true"
 	if q == "" {
 		return c.JSON(fiber.Map{"videos": []fiber.Map{}, "query": q, "total": 0})
 	}
-	videos, err := s.Repository.SearchPublicVideos(context.Background(), q, c.Query("sort", "relevance"), 30)
+	videos, err := s.Repository.SearchPublicVideos(context.Background(), q, showAdult, c.Query("sort", "relevance"), 30)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to search videos"})
 	}
@@ -366,6 +370,7 @@ type UpdateVideoRequest struct {
 	Visibility  *string         `json:"visibility"`
 	Category    *string         `json:"category"`
 	Tags        json.RawMessage `json:"tags"`
+	IsAdult     *bool           `json:"isAdult"`
 }
 
 func (s *Server) UpdateVideoHandler(c *fiber.Ctx) error {
@@ -423,6 +428,9 @@ func (s *Server) UpdateVideoHandler(c *fiber.Ctx) error {
 			}
 		}
 		update.ReplaceTags = true
+	}
+	if req.IsAdult != nil {
+		update.IsAdult = pgtype.Bool{Bool: *req.IsAdult, Valid: true}
 	}
 
 	updated, err := s.Repository.UpdateVideoMetadata(context.Background(), update)

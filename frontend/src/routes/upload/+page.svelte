@@ -22,19 +22,23 @@
 	let uploadType = $state('direct'); // 'direct', 'remote', 'playlist'
 
 	// Fetch playlists for PlaylistBatch mode if needed
-	const playlistsQuery = createQuery(() => ({
-		queryKey: ['my-playlists'],
-		queryFn: async () => {
-			const res = await fetchApi('/playlists/my-playlists');
-			return res || [];
-		}
-	}), () => queryClient);
+	const playlistsQuery = createQuery(
+		() => ({
+			queryKey: ['my-playlists'],
+			queryFn: async () => {
+				const res = await fetchApi('/playlists/my-playlists');
+				return res || [];
+			}
+		}),
+		() => queryClient
+	);
 
 	// Common form
 	let title = $state('');
 	let description = $state('');
 	let category = $state('Other');
 	let isShort = $state(false);
+	let isAdult = $state(false);
 
 	// Direct
 	let file: File | null = $state(null);
@@ -105,6 +109,7 @@
 			finalData.append('category', category);
 			finalData.append('visibility', 'public');
 			finalData.append('isShort', isShort.toString());
+			finalData.append('isAdult', isAdult.toString());
 
 			await fetchApi('/videos/create-record', {
 				method: 'POST',
@@ -161,6 +166,7 @@
 						finalData.append('category', category);
 						finalData.append('visibility', 'public');
 						finalData.append('isShort', isShort.toString());
+						finalData.append('isAdult', isAdult.toString());
 
 						await fetchApi('/videos/create-record', {
 							method: 'POST',
@@ -195,6 +201,7 @@
 		description = '';
 		category = 'Other';
 		isShort = false;
+		isAdult = false;
 		videoUrl = '';
 		isUploading = false;
 		uploadProgress = 0;
@@ -273,7 +280,7 @@
 				>
 					{#if error}
 						<div
-							class="flex items-center justify-between rounded-lg bg-destructive/10 p-4 text-sm font-medium text-destructive"
+							class="bg-destructive/10 text-destructive flex items-center justify-between rounded-lg p-4 text-sm font-medium"
 						>
 							{error}
 							<button type="button" onclick={() => (error = '')}><X class="h-4 w-4" /></button>
@@ -295,7 +302,10 @@
 
 						{#if uploadType === 'remote'}
 							<div class="space-y-1.5">
-								<Label for="url">Remote URL (Direct MP4 / Stream URL) <span class="text-destructive">*</span></Label>
+								<Label for="url"
+									>Remote URL (Direct MP4 / Stream URL) <span class="text-destructive">*</span
+									></Label
+								>
 								<Input
 									type="url"
 									id="url"
@@ -322,7 +332,9 @@
 										for="videoFile"
 										class="hover:bg-muted/50 border-muted-foreground/30 flex h-40 w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed bg-background/50 transition-colors"
 									>
-										<div class="flex flex-col items-center justify-center px-4 pt-5 pb-6 text-center">
+										<div
+											class="flex flex-col items-center justify-center px-4 pt-5 pb-6 text-center"
+										>
 											{#if file}
 												<FileVideo class="mb-3 h-10 w-10 text-primary" />
 												<p class="text-sm font-semibold">{file.name}</p>
@@ -370,15 +382,27 @@
 							/>
 						</div>
 
-						<div class="flex items-center space-x-2">
-							<input
-								type="checkbox"
-								id="isShort"
-								bind:checked={isShort}
-								disabled={isUploading}
-								class="border-input h-4 w-4 rounded text-primary focus:ring-primary disabled:opacity-50"
-							/>
-							<Label for="isShort" class="cursor-pointer">Upload as Short (Vertical Video)</Label>
+						<div class="flex flex-col gap-3">
+							<div class="flex items-center space-x-2">
+								<input
+									type="checkbox"
+									id="isShort"
+									bind:checked={isShort}
+									disabled={isUploading}
+									class="border-input h-4 w-4 rounded text-primary focus:ring-primary disabled:opacity-50"
+								/>
+								<Label for="isShort" class="cursor-pointer">Upload as Short (Vertical Video)</Label>
+							</div>
+							<div class="flex items-center space-x-2">
+								<input
+									type="checkbox"
+									id="isAdult"
+									bind:checked={isAdult}
+									disabled={isUploading}
+									class="border-input h-4 w-4 rounded text-primary focus:ring-primary disabled:opacity-50"
+								/>
+								<Label for="isAdult" class="cursor-pointer">Contains Adult Content</Label>
+							</div>
 						</div>
 					</div>
 
@@ -401,7 +425,7 @@
 						<Button
 							type="submit"
 							disabled={isUploading || (uploadType === 'direct' && !file)}
-							class="w-full h-12 text-md"
+							class="text-md h-12 w-full"
 						>
 							{#if isUploading}
 								<Loader2 class="mr-2 h-5 w-5 animate-spin" />

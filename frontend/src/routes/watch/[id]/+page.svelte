@@ -10,8 +10,13 @@
 	import { Skeleton } from '#lib/components/ui/skeleton';
 	import { Button } from '#lib/components/ui/button';
 	import { Input } from '#lib/components/ui/input';
-	
-	import { createQuery, createMutation, createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
+
+	import {
+		createQuery,
+		createMutation,
+		createInfiniteQuery,
+		useQueryClient
+	} from '@tanstack/svelte-query';
 
 	const queryClient = useQueryClient();
 
@@ -21,53 +26,72 @@
 	let newCommentText = $state('');
 
 	// Queries
-	const videoQuery = createQuery(() => ({
-		queryKey: ['video', videoId],
-		queryFn: async () => {
-			const data = await fetchApi(`/videos/${videoId}`);
-			// Record view async
-			fetchApi(`/videos/${data.id || data.fileId || videoId}/view`, { method: 'POST' }).catch(console.error);
-			return data;
-		}
-	}), () => queryClient);
+	const videoQuery = createQuery(
+		() => ({
+			queryKey: ['video', videoId],
+			queryFn: async () => {
+				const data = await fetchApi(`/videos/${videoId}`);
+				// Record view async
+				fetchApi(`/videos/${data.id || data.fileId || videoId}/view`, { method: 'POST' }).catch(
+					console.error
+				);
+				return data;
+			}
+		}),
+		() => queryClient
+	);
 
 	let uploaderUsername = $derived(videoQuery.data?.uploader?.username);
-	const uploaderQuery = createQuery(() => ({
-		queryKey: ['profile', uploaderUsername],
-		queryFn: async () => await fetchApi(`/users/${uploaderUsername}/profile`),
-		enabled: !!uploaderUsername
-	}), () => queryClient);
+	const uploaderQuery = createQuery(
+		() => ({
+			queryKey: ['profile', uploaderUsername],
+			queryFn: async () => await fetchApi(`/users/${uploaderUsername}/profile`),
+			enabled: !!uploaderUsername
+		}),
+		() => queryClient
+	);
 
-	const playlistQuery = createQuery(() => ({
-		queryKey: ['playlist', playlistId],
-		queryFn: async () => {
-			const res = await fetchApi(`/playlists/${playlistId}`);
-			const p = res.playlist || res;
-			if (res.videos) p.videos = res.videos;
-			return p;
-		},
-		enabled: !!playlistId
-	}), () => queryClient);
+	const playlistQuery = createQuery(
+		() => ({
+			queryKey: ['playlist', playlistId],
+			queryFn: async () => {
+				const res = await fetchApi(`/playlists/${playlistId}`);
+				const p = res.playlist || res;
+				if (res.videos) p.videos = res.videos;
+				return p;
+			},
+			enabled: !!playlistId
+		}),
+		() => queryClient
+	);
 
-	const commentsQuery = createQuery(() => ({
-		queryKey: ['comments', videoId],
-		queryFn: async () => {
-			const res = await fetchApi(`/comments/${videoId}`);
-			return res.comments || res.data || [];
-		}
-	}), () => queryClient);
+	const commentsQuery = createQuery(
+		() => ({
+			queryKey: ['comments', videoId],
+			queryFn: async () => {
+				const res = await fetchApi(`/comments/${videoId}`);
+				return res.comments || res.data || [];
+			}
+		}),
+		() => queryClient
+	);
 
-	const suggestionsQuery = createInfiniteQuery(() => ({
-		queryKey: ['suggestions', videoId],
-		queryFn: async ({ pageParam = 1 }) => {
-			const res = await fetchApi(`/videos/suggestions?exclude=${videoId}&limit=10&page=${pageParam}`);
-			return res;
-		},
-		getNextPageParam: (lastPage: any) => {
-			return lastPage.currentPage < lastPage.totalPages ? lastPage.currentPage + 1 : undefined;
-		},
-		initialPageParam: 1
-	}), () => queryClient);
+	const suggestionsQuery = createInfiniteQuery(
+		() => ({
+			queryKey: ['suggestions', videoId],
+			queryFn: async ({ pageParam = 1 }) => {
+				const res = await fetchApi(
+					`/videos/suggestions?exclude=${videoId}&limit=10&page=${pageParam}`
+				);
+				return res;
+			},
+			getNextPageParam: (lastPage: any) => {
+				return lastPage.currentPage < lastPage.totalPages ? lastPage.currentPage + 1 : undefined;
+			},
+			initialPageParam: 1
+		}),
+		() => queryClient
+	);
 
 	// Infinite scroll action
 	function infiniteScroll(node: HTMLElement) {
@@ -82,53 +106,66 @@
 			{ rootMargin: '200px' }
 		);
 		observer.observe(node);
-		return { destroy() { observer.disconnect(); } };
+		return {
+			destroy() {
+				observer.disconnect();
+			}
+		};
 	}
 
 	// Mutations
-	const likeMutation = createMutation(() => ({
-		mutationFn: async (action: 'like' | 'unlike') => {
-			return await fetchApi(`/videos/${videoId}/like?action=${action}`, { method: 'POST' });
-		},
-		onMutate: async (action) => {
-			await queryClient.cancelQueries({ queryKey: ['video', videoId] });
-			const previous = queryClient.getQueryData(['video', videoId]);
-			queryClient.setQueryData(['video', videoId], (old: any) => ({
-				...old,
-				isLiked: action === 'like',
-				likesCount: old.likesCount + (action === 'like' ? 1 : -1)
-			}));
-			return { previous };
-		},
-		onError: (err, newTodo, context: any) => {
-			queryClient.setQueryData(['video', videoId], context?.previous);
-		},
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: ['video', videoId] });
-		}
-	}), () => queryClient);
+	const likeMutation = createMutation(
+		() => ({
+			mutationFn: async (action: 'like' | 'unlike') => {
+				return await fetchApi(`/videos/${videoId}/like?action=${action}`, { method: 'POST' });
+			},
+			onMutate: async (action) => {
+				await queryClient.cancelQueries({ queryKey: ['video', videoId] });
+				const previous = queryClient.getQueryData(['video', videoId]);
+				queryClient.setQueryData(['video', videoId], (old: any) => ({
+					...old,
+					isLiked: action === 'like',
+					likesCount: old.likesCount + (action === 'like' ? 1 : -1)
+				}));
+				return { previous };
+			},
+			onError: (err, newTodo, context: any) => {
+				queryClient.setQueryData(['video', videoId], context?.previous);
+			},
+			onSettled: () => {
+				queryClient.invalidateQueries({ queryKey: ['video', videoId] });
+			}
+		}),
+		() => queryClient
+	);
 
-	const subscribeMutation = createMutation(() => ({
-		mutationFn: async () => {
-			return await fetchApi(`/users/${uploaderUsername}/subscribe`, { method: 'POST' });
-		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ['profile', uploaderUsername] });
-		}
-	}), () => queryClient);
+	const subscribeMutation = createMutation(
+		() => ({
+			mutationFn: async () => {
+				return await fetchApi(`/users/${uploaderUsername}/subscribe`, { method: 'POST' });
+			},
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: ['profile', uploaderUsername] });
+			}
+		}),
+		() => queryClient
+	);
 
-	const commentMutation = createMutation(() => ({
-		mutationFn: async (content: string) => {
-			return await fetchApi('/comments', {
-				method: 'POST',
-				body: JSON.stringify({ videoId, content })
-			});
-		},
-		onSuccess: () => {
-			newCommentText = '';
-			queryClient.invalidateQueries({ queryKey: ['comments', videoId] });
-		}
-	}), () => queryClient);
+	const commentMutation = createMutation(
+		() => ({
+			mutationFn: async (content: string) => {
+				return await fetchApi('/comments', {
+					method: 'POST',
+					body: JSON.stringify({ videoId, content })
+				});
+			},
+			onSuccess: () => {
+				newCommentText = '';
+				queryClient.invalidateQueries({ queryKey: ['comments', videoId] });
+			}
+		}),
+		() => queryClient
+	);
 
 	// Handlers
 	function handleLike() {
@@ -186,12 +223,18 @@
 			</div>
 		{:else if videoQuery.isError}
 			<div class="bg-muted flex aspect-video w-full items-center justify-center rounded-xl border">
-				<p class="font-medium text-destructive">{videoQuery.error.message || 'Failed to load video.'}</p>
-				<Button variant="outline" class="mt-4" onclick={() => videoQuery.refetch()}>Try again</Button>
+				<p class="text-destructive font-medium">
+					{videoQuery.error.message || 'Failed to load video.'}
+				</p>
+				<Button variant="outline" class="mt-4" onclick={() => videoQuery.refetch()}
+					>Try again</Button
+				>
 			</div>
 		{:else if videoQuery.data}
 			<!-- Video Player -->
-			<div class="relative aspect-video w-full overflow-hidden rounded-xl border border-border/50 bg-black shadow-lg">
+			<div
+				class="relative aspect-video w-full overflow-hidden rounded-xl border border-border/50 bg-black shadow-lg"
+			>
 				<iframe
 					src={`https://streamtape.com/e/${videoQuery.data.fileId}`}
 					class="h-full w-full border-0"
@@ -222,7 +265,9 @@
 							>
 								{videoQuery.data.uploader.username}
 							</a>
-							<span class="text-muted-foreground text-xs">{uploaderQuery.data?.subscriberCount || 0} subscribers</span>
+							<span class="text-muted-foreground text-xs"
+								>{uploaderQuery.data?.subscriberCount || 0} subscribers</span
+							>
 						</div>
 						<Button
 							variant={uploaderQuery.data?.isSubscribed ? 'secondary' : 'default'}
@@ -247,7 +292,11 @@
 							<Share2 class="mr-2 h-4 w-4" />
 							Share
 						</Button>
-						<Button variant="secondary" class="rounded-full px-4" onclick={() => (isSaveModalOpen = true)}>
+						<Button
+							variant="secondary"
+							class="rounded-full px-4"
+							onclick={() => (isSaveModalOpen = true)}
+						>
 							<ListPlus class="mr-2 h-4 w-4" />
 							Save
 						</Button>
@@ -257,7 +306,9 @@
 				<!-- Description Box -->
 				<div class="bg-secondary/50 hover:bg-secondary/70 rounded-xl p-4 text-sm transition-all">
 					<div class="mb-1 font-medium">
-						{videoQuery.data.views} views • {formatTimeAgo(videoQuery.data.createdAt || new Date().toISOString())}
+						{videoQuery.data.views} views • {formatTimeAgo(
+							videoQuery.data.createdAt || new Date().toISOString()
+						)}
 					</div>
 					<div class="text-muted-foreground leading-relaxed whitespace-pre-wrap">
 						{videoQuery.data.description || 'No description provided.'}
@@ -283,12 +334,18 @@
 							bind:value={newCommentText}
 							placeholder={userState.user ? 'Add a comment...' : 'Log in to add a comment...'}
 							disabled={!userState.user || commentMutation.isPending}
-							class="border-b-only border-muted-foreground/30 bg-transparent px-2 py-1 focus-visible:ring-0 focus-visible:border-primary rounded-none"
+							class="border-b-only border-muted-foreground/30 rounded-none bg-transparent px-2 py-1 focus-visible:border-primary focus-visible:ring-0"
 						/>
 						{#if newCommentText.length > 0}
-							<div class="flex justify-end gap-2 mt-2">
-								<Button variant="ghost" size="sm" onclick={() => (newCommentText = '')}>Cancel</Button>
-								<Button size="sm" onclick={handleCommentSubmit} disabled={commentMutation.isPending}>
+							<div class="mt-2 flex justify-end gap-2">
+								<Button variant="ghost" size="sm" onclick={() => (newCommentText = '')}
+									>Cancel</Button
+								>
+								<Button
+									size="sm"
+									onclick={handleCommentSubmit}
+									disabled={commentMutation.isPending}
+								>
 									{#if commentMutation.isPending}
 										<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 									{/if}
@@ -302,7 +359,7 @@
 				<div class="space-y-6">
 					{#if commentsQuery.isPending}
 						{#each Array(3) as _}
-							<div class="flex gap-4 animate-pulse">
+							<div class="flex animate-pulse gap-4">
 								<Skeleton class="h-10 w-10 rounded-full" />
 								<div class="flex-1 space-y-2">
 									<Skeleton class="h-4 w-1/4 rounded" />

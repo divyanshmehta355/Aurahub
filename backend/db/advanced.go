@@ -17,6 +17,7 @@ type UpdateVideoMetadataParams struct {
 	Category    pgtype.Text
 	Tags        []string
 	ReplaceTags bool
+	IsAdult     pgtype.Bool
 }
 
 func (q *Repository) UpdateVideoMetadata(ctx context.Context, arg UpdateVideoMetadataParams) (Video, error) {
@@ -35,6 +36,9 @@ func (q *Repository) UpdateVideoMetadata(ctx context.Context, arg UpdateVideoMet
 	}
 	if arg.ReplaceTags {
 		updates["tags"] = TextArray(arg.Tags)
+	}
+	if arg.IsAdult.Valid {
+		updates["is_adult"] = arg.IsAdult.Bool
 	}
 	if err := q.orm.WithContext(ctx).Model(&Video{}).Where("id = ?", arg.ID).Updates(updates).Error; err != nil {
 		return Video{}, err
@@ -99,9 +103,12 @@ func (q *Repository) GetCreatorVideoCategories(ctx context.Context, uploaderID p
 	return categories, err
 }
 
-func (q *Repository) ListPublicVideos(ctx context.Context, category string, shortFilter pgtype.Bool, sort string, limit, offset int32) ([]Video, error) {
+func (q *Repository) ListPublicVideos(ctx context.Context, category string, shortFilter pgtype.Bool, showAdult bool, sort string, limit, offset int32) ([]Video, error) {
 	query := q.orm.WithContext(ctx).Model(&Video{}).
 		Where("visibility = ?", VideoVisibilityPublic)
+	if !showAdult {
+		query = query.Where("is_adult = ?", false)
+	}
 	if category != "" {
 		query = query.Where("category = ?", category)
 	}
@@ -138,8 +145,11 @@ func (q *Repository) ListCreatorVideos(ctx context.Context, uploaderID pgtype.UU
 	return videos, err
 }
 
-func (q *Repository) CountPublicVideos(ctx context.Context, category string, shortFilter pgtype.Bool) (int64, error) {
+func (q *Repository) CountPublicVideos(ctx context.Context, category string, shortFilter pgtype.Bool, showAdult bool) (int64, error) {
 	query := q.orm.WithContext(ctx).Model(&Video{}).Where("visibility = ?", VideoVisibilityPublic)
+	if !showAdult {
+		query = query.Where("is_adult = ?", false)
+	}
 	if category != "" {
 		query = query.Where("category = ?", category)
 	}
@@ -151,30 +161,41 @@ func (q *Repository) CountPublicVideos(ctx context.Context, category string, sho
 	return count, err
 }
 
-func (q *Repository) ListSuggestedVideos(ctx context.Context, excludeID pgtype.UUID, category string, tags []string, limit, offset int32) ([]Video, error) {
+func (q *Repository) ListSuggestedVideos(ctx context.Context, excludeID pgtype.UUID, category string, tags []string, showAdult bool, limit, offset int32) ([]Video, error) {
 	score := "(CASE WHEN videos.category = ? AND ? <> '' THEN 20 ELSE 0 END + 15 * (SELECT COUNT(*) FROM unnest(videos.tags) AS video_tag WHERE video_tag = ANY(?::text[]))) DESC"
 	var videos []Video
-	err := q.orm.WithContext(ctx).Model(&Video{}).
-		Where("videos.visibility = ? AND videos.id <> ?", VideoVisibilityPublic, excludeID).
-		Order(clause.Expr{SQL: score, Vars: []interface{}{category, category, tags}}).
+	query := q.orm.WithContext(ctx).Model(&Video{}).
+		Where("videos.visibility = ? AND videos.id <> ?", VideoVisibilityPublic, excludeID)
+	if !showAdult {
+		query = query.Where("videos.is_adult = ?", false)
+	}
+	err := query.Order(clause.Expr{SQL: score, Vars: []interface{}{category, category, tags}}).
 		Order("videos.views DESC, videos.created_at DESC").
 		Limit(int(limit)).Offset(int(offset)).Find(&videos).Error
 	return videos, err
 }
 
-func (q *Repository) CountSuggestedVideos(ctx context.Context, excludeID pgtype.UUID) (int64, error) {
+func (q *Repository) CountSuggestedVideos(ctx context.Context, excludeID pgtype.UUID, showAdult bool) (int64, error) {
 	var count int64
-	err := q.orm.WithContext(ctx).Model(&Video{}).
-		Where("visibility = ? AND id <> ?", VideoVisibilityPublic, excludeID).
-		Count(&count).Error
+	query := q.orm.WithContext(ctx).Model(&Video{}).
+		Where("visibility = ? AND id <> ?", VideoVisibilityPublic, excludeID)
+	if !showAdult {
+		query = query.Where("is_adult = ?", false)
+	}
+	err := query.Count(&count).Error
 	return count, err
 }
 
-func (q *Repository) SearchPublicVideos(ctx context.Context, query, sort string, limit int32) ([]Video, error) {
+func (q *Repository) SearchPublicVideos(ctx context.Context, query string, showAdult bool, sort string, limit int32) ([]Video, error) {
 	queryBuilder := q.orm.WithContext(ctx).Model(&Video{}).
 		Where("videos.visibility = ?", VideoVisibilityPublic).
-		Where("videos.streamtape_status IS DISTINCT FROM ?", StreamtapeStatusDead).
-		Where(`(videos.title ILIKE ? OR videos.description ILIKE ? OR videos.category ILIKE ?
+		Where("videos.streamtape_status IS DISTINCT FROM ?", StreamtapeStatusDead)
+	
+	if !showAdult {
+		queryBuilder = queryBuilder.Where("videos.is_adult = ?", false)
+	}
+
+	queryBuilder = queryBuilder.Where(`(videos.title ILIKE ? OR videos.description ILIKE ? OR videos.category ILIKE ?
 			OR EXISTS (SELECT 1 FROM unnest(videos.tags) AS tag WHERE tag ILIKE ?))`,
 			"%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%")
 	switch sort {
@@ -192,13 +213,18 @@ func (q *Repository) SearchPublicVideos(ctx context.Context, query, sort string,
 	return videos, err
 }
 
-func (q *Repository) SearchAutocompleteVideos(ctx context.Context, query string) ([]Video, error) {
+func (q *Repository) SearchAutocompleteVideos(ctx context.Context, query string, showAdult bool) ([]Video, error) {
 	var videos []Video
-	err := q.orm.WithContext(ctx).Model(&Video{}).
+	queryBuilder := q.orm.WithContext(ctx).Model(&Video{}).
 		Select("id, title, thumbnail_url, category").
 		Where("visibility = ? AND (title ILIKE ? OR EXISTS (SELECT 1 FROM unnest(tags) AS tag WHERE tag ILIKE ?))",
-			VideoVisibilityPublic, "%"+query+"%", "%"+query+"%").
-		Order("created_at DESC").Limit(4).Find(&videos).Error
+			VideoVisibilityPublic, "%"+query+"%", "%"+query+"%")
+	
+	if !showAdult {
+		queryBuilder = queryBuilder.Where("is_adult = ?", false)
+	}
+	
+	err := queryBuilder.Order("created_at DESC").Limit(4).Find(&videos).Error
 	return videos, err
 }
 
@@ -312,9 +338,10 @@ type UpdateUserProfileParams struct {
 	Username pgtype.Text
 	Email    pgtype.Text
 	Password pgtype.Text
-	Avatar   pgtype.Text
-	Bio      pgtype.Text
-	Banner   pgtype.Text
+	Avatar           pgtype.Text
+	Bio              pgtype.Text
+	Banner           pgtype.Text
+	ShowAdultContent pgtype.Bool
 }
 
 func (q *Repository) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error) {
@@ -336,6 +363,9 @@ func (q *Repository) UpdateUserProfile(ctx context.Context, arg UpdateUserProfil
 	}
 	if arg.Banner.Valid {
 		updates["banner"] = arg.Banner.String
+	}
+	if arg.ShowAdultContent.Valid {
+		updates["show_adult_content"] = arg.ShowAdultContent.Bool
 	}
 	if err := q.orm.WithContext(ctx).Model(&User{}).Where("id = ?", arg.ID).Updates(updates).Error; err != nil {
 		return User{}, err

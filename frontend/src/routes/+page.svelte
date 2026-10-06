@@ -15,13 +15,16 @@
 	let currentPage = $derived(Number(page.url.searchParams.get('page')) || 1);
 	const limit = 12;
 
-	let query = createQuery(() => ({
-		queryKey: ['videos', currentPage, limit],
-		queryFn: async () => {
-			const res = await fetchApi(`/videos?page=${currentPage}&limit=${limit}`);
-			return res;
-		}
-	}), () => queryClient);
+	let query = createQuery(
+		() => ({
+			queryKey: ['videos', currentPage, limit],
+			queryFn: async () => {
+				const res = await fetchApi(`/videos?page=${currentPage}&limit=${limit}`);
+				return res;
+			}
+		}),
+		() => queryClient
+	);
 
 	function goToPage(p: number) {
 		const totalPages = query.data?.totalPages || 1;

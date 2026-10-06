@@ -50,6 +50,7 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 	videos.Get("/remote-upload/status", s.RemoteUploadStatusHandler)
 	videos.Post("/remote-upload/start", middleware.AuthRequired(), s.RemoteUploadStartHandler)
 	videos.Put("/bulk", middleware.AuthRequired(), s.BulkUpdateVideoVisibilityHandler)
+	videos.Put("/bulk-adult", middleware.AuthRequired(), s.BulkUpdateVideoAdultHandler)
 	videos.Delete("/bulk", middleware.AuthRequired(), s.BulkDeleteVideosHandler)
 
 	// Protected video routes
@@ -74,6 +75,8 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 	users.Post("/:identifier/subscribe", middleware.AuthRequired(), s.ToggleSubscriptionHandler)
 	users.Put("/me", middleware.AuthRequired(), s.UpdateUserHandler)
 	users.Put("/profile", middleware.AuthRequired(), s.UpdateProfileHandler)
+	users.Put("/security", middleware.AuthRequired(), s.UpdateProfileHandler)
+	users.Post("/profile/image", middleware.AuthRequired(), s.AvatarUploadHandler)
 
 	// Comments routes
 	comments := api.Group("/comments")
@@ -90,13 +93,16 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 	notifications.Post("/", s.MarkNotificationsReadHandler)
 	notifications.Delete("/", s.ClearNotificationsHandler)
 
-	// User History & Watch Later routes
+	// User History, Watch Later, and Profile settings routes
 	userGroup := api.Group("/user", middleware.AuthRequired())
 	userGroup.Get("/history", s.GetWatchHistoryHandler)
 	userGroup.Delete("/history", s.DeleteWatchHistoryHandler)
 	userGroup.Get("/watch-later", s.GetWatchLaterHandler)
 	userGroup.Post("/watch-later", s.ToggleWatchLaterHandler)
 	userGroup.Delete("/watch-later", s.DeleteWatchLaterHandler)
+	userGroup.Put("/profile", s.UpdateProfileHandler)
+	userGroup.Put("/security", s.UpdateProfileHandler)
+	userGroup.Post("/profile/image", s.AvatarUploadHandler)
 
 	// Playlists routes
 	playlists := api.Group("/playlists")
@@ -113,5 +119,7 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 	creator.Get("/dashboard", s.CreatorDashboardHandler)
 	creator.Get("/analytics", s.CreatorAnalyticsHandler)
 	creator.Put("/videos/bulk", s.BulkUpdateVideoVisibilityHandler)
+	creator.Put("/videos/bulk-adult", s.BulkUpdateVideoAdultHandler)
+	creator.Put("/videos/bulk/adult", s.BulkUpdateVideoAdultHandler)
 	creator.Delete("/videos/bulk", s.BulkDeleteVideosHandler)
 }

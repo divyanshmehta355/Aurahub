@@ -23,11 +23,12 @@ func (s *Server) RecommendationsHandler(c *fiber.Ctx) error {
 	}
 
 	ctx := context.Background()
-	videos, err := s.Repository.ListPublicVideos(ctx, category, shortFilter, c.Query("sort", "random"), int32(limit), int32((page-1)*limit))
+	showAdult := c.Query("adult") == "true"
+	videos, err := s.Repository.ListPublicVideos(ctx, category, shortFilter, showAdult, c.Query("sort", "random"), int32(limit), int32((page-1)*limit))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch videos"})
 	}
-	total, err := s.Repository.CountPublicVideos(ctx, category, shortFilter)
+	total, err := s.Repository.CountPublicVideos(ctx, category, shortFilter, showAdult)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to count videos"})
 	}
@@ -58,11 +59,12 @@ func (s *Server) SuggestionsHandler(c *fiber.Ctx) error {
 		if err == nil {
 			excludeID = current.ID
 			var queryErr error
-			videos, queryErr = s.Repository.ListSuggestedVideos(ctx, current.ID, current.Category.String, []string(current.Tags), int32(limit), offset)
+			showAdult := c.Query("adult") == "true"
+			videos, queryErr = s.Repository.ListSuggestedVideos(ctx, current.ID, current.Category.String, []string(current.Tags), showAdult, int32(limit), offset)
 			if queryErr != nil {
 				return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch suggestions"})
 			}
-			total, queryErr = s.Repository.CountSuggestedVideos(ctx, current.ID)
+			total, queryErr = s.Repository.CountSuggestedVideos(ctx, current.ID, showAdult)
 			if queryErr != nil {
 				return c.Status(500).JSON(fiber.Map{"message": "Failed to count suggestions"})
 			}
@@ -71,11 +73,12 @@ func (s *Server) SuggestionsHandler(c *fiber.Ctx) error {
 
 	if !excludeID.Valid {
 		var queryErr error
-		videos, queryErr = s.Repository.ListPublicVideos(ctx, "", pgtype.Bool{}, "trending", int32(limit), offset)
+		showAdult := c.Query("adult") == "true"
+		videos, queryErr = s.Repository.ListPublicVideos(ctx, "", pgtype.Bool{}, showAdult, "trending", int32(limit), offset)
 		if queryErr != nil {
 			return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch suggestions"})
 		}
-		total, queryErr = s.Repository.CountPublicVideos(ctx, "", pgtype.Bool{})
+		total, queryErr = s.Repository.CountPublicVideos(ctx, "", pgtype.Bool{}, showAdult)
 		if queryErr != nil {
 			return c.Status(500).JSON(fiber.Map{"message": "Failed to count suggestions"})
 		}

@@ -230,9 +230,10 @@ type User struct {
 	Username  string             `gorm:"type:varchar(100);uniqueIndex;not null"`
 	Avatar    pgtype.Text        `gorm:"type:text"`
 	Banner    pgtype.Text        `gorm:"type:text"`
-	Bio       pgtype.Text        `gorm:"type:text"`
-	CreatedAt pgtype.Timestamptz `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
-	UpdatedAt pgtype.Timestamptz `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
+	Bio              pgtype.Text        `gorm:"type:text"`
+	ShowAdultContent pgtype.Bool        `gorm:"default:false"`
+	CreatedAt        pgtype.Timestamptz `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
+	UpdatedAt        pgtype.Timestamptz `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 }
 
 type UserActivity struct {
@@ -255,6 +256,7 @@ type Video struct {
 	Visibility            NullVideoVisibility  `gorm:"type:video_visibility;default:public"`
 	UploaderID            pgtype.UUID          `gorm:"type:uuid;not null"`
 	IsShort               pgtype.Bool          `gorm:"default:false"`
+	IsAdult               pgtype.Bool          `gorm:"default:false"`
 	Views                 pgtype.Int4          `gorm:"default:0"`
 	StreamtapeUrl         pgtype.Text          `gorm:"column:streamtape_url;type:text"`
 	LastRefreshedAt       pgtype.Timestamptz   `gorm:"column:last_refreshed_at;type:timestamptz;default:CURRENT_TIMESTAMP"`

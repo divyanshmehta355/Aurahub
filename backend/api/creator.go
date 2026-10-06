@@ -34,6 +34,10 @@ func (s *Server) CreatorDashboardHandler(c *fiber.Ctx) error {
 			"fileId":       v.FileID,
 			"title":        v.Title,
 			"thumbnailUrl": v.ThumbnailUrl.String,
+			"description":  v.Description.String,
+			"category":     v.Category.String,
+			"tags":         v.Tags,
+			"isAdult":      v.IsAdult.Bool,
 			"views":        v.Views.Int32,
 			"isShort":      v.IsShort.Bool,
 			"visibility":   v.Visibility.VideoVisibility,
@@ -41,7 +45,7 @@ func (s *Server) CreatorDashboardHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(fiber.Map{"videos": res, "page": page})
+	return c.JSON(fiber.Map{"videos": res, "page": page, "hasMore": len(videos) == limit})
 }
 
 func (s *Server) CreatorAnalyticsHandler(c *fiber.Ctx) error {
@@ -156,6 +160,7 @@ func (s *Server) CreatorAnalyticsHandler(c *fiber.Ctx) error {
 type BulkUpdateVisibilityRequest struct {
 	VideoIds   []string `json:"videoIds"`
 	Visibility string   `json:"visibility"`
+	IsAdult    *bool    `json:"isAdult"`
 }
 
 func (s *Server) BulkUpdateVideoVisibilityHandler(c *fiber.Ctx) error {
@@ -182,28 +187,82 @@ func (s *Server) BulkUpdateVideoVisibilityHandler(c *fiber.Ctx) error {
 		uuids = append(uuids, id)
 	}
 
-	var visibility db.VideoVisibility
-	switch req.Visibility {
-	case "public":
-		visibility = db.VideoVisibilityPublic
-	case "unlisted":
-		visibility = db.VideoVisibilityUnlisted
-	case "private":
-		visibility = db.VideoVisibilityPrivate
-	default:
-		return c.Status(400).JSON(fiber.Map{"message": "Invalid visibility"})
+	if req.Visibility != "" {
+		var visibility db.VideoVisibility
+		switch req.Visibility {
+		case "public":
+			visibility = db.VideoVisibilityPublic
+		case "unlisted":
+			visibility = db.VideoVisibilityUnlisted
+		case "private":
+			visibility = db.VideoVisibilityPrivate
+		default:
+			return c.Status(400).JSON(fiber.Map{"message": "Invalid visibility"})
+		}
+
+		err = s.Repository.BulkUpdateVideoVisibility(context.Background(), db.BulkUpdateVideoVisibilityParams{
+			UploaderID: userId,
+			Column2:    uuids,
+			Visibility: db.NullVideoVisibility{VideoVisibility: visibility, Valid: true},
+		})
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"message": "Failed to update videos"})
+		}
 	}
 
-	err = s.Repository.BulkUpdateVideoVisibility(context.Background(), db.BulkUpdateVideoVisibilityParams{
-		UploaderID: userId,
-		Column2:    uuids,
-		Visibility: db.NullVideoVisibility{VideoVisibility: visibility, Valid: true},
-	})
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "Failed to update videos"})
+	if req.IsAdult != nil {
+		err = s.Repository.BulkUpdateVideoAdult(context.Background(), db.BulkUpdateVideoAdultParams{
+			UploaderID: userId,
+			Column2:    uuids,
+			IsAdult:    *req.IsAdult,
+		})
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"message": "Failed to update adult status"})
+		}
 	}
 
 	return c.JSON(fiber.Map{"message": "Videos updated successfully"})
+}
+
+type BulkUpdateAdultRequest struct {
+	VideoIds []string `json:"videoIds"`
+	IsAdult  *bool    `json:"isAdult"`
+}
+
+func (s *Server) BulkUpdateVideoAdultHandler(c *fiber.Ctx) error {
+	var req BulkUpdateAdultRequest
+	if err := c.BodyParser(&req); err != nil || req.IsAdult == nil {
+		return c.Status(400).JSON(fiber.Map{"message": "Invalid payload"})
+	}
+
+	userID, ok := c.Locals("userId").(string)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	}
+	userId, err := parseUUID(userID)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	}
+
+	var uuids []pgtype.UUID
+	for _, idStr := range req.VideoIds {
+		id, err := parseUUID(idStr)
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"message": "Invalid video ID"})
+		}
+		uuids = append(uuids, id)
+	}
+
+	err = s.Repository.BulkUpdateVideoAdult(context.Background(), db.BulkUpdateVideoAdultParams{
+		UploaderID: userId,
+		Column2:    uuids,
+		IsAdult:    *req.IsAdult,
+	})
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "Failed to update adult status"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Videos adult rating updated successfully"})
 }
 
 type BulkDeleteVideosRequest struct {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { userState } from '#lib/user.svelte';
+	import { userState, setUser } from '#lib/user.svelte';
 	import { fetchApi } from '#lib/api';
 	import { Image as ImageIcon, Shield, User, CheckCircle2, XCircle, Loader2 } from 'lucide-svelte';
 	import { Button } from '#lib/components/ui/button';
@@ -18,6 +18,7 @@
 	let bio = $state(userState.user?.bio || '');
 	let avatar = $state(userState.user?.avatar || '');
 	let banner = $state(userState.user?.banner || '');
+	let showAdultContent = $state(userState.user?.showAdultContent || false);
 
 	// Security State
 	let email = $state(userState.user?.email || '');
@@ -33,34 +34,41 @@
 			avatar = userState.user.avatar || '';
 			banner = userState.user.banner || '';
 			email = userState.user.email || '';
+			showAdultContent = userState.user.showAdultContent || false;
 		}
 	});
 
-	const imageUploadMutation = createMutation(() => ({
-		mutationFn: async ({ file, type }: { file: File; type: 'avatar' | 'banner' }) => {
-			const formData = new FormData();
-			formData.append('image', file);
-			formData.append('type', type);
-			
-			return await fetchApi('/user/profile/image', {
-				method: 'POST',
-				body: formData
-			});
-		},
-		onSuccess: (data, { type }) => {
-			if (type === 'avatar') {
-				avatar = data.url;
-				if (userState.user) userState.user.avatar = data.url;
-			} else {
-				banner = data.url;
-				if (userState.user) userState.user.banner = data.url;
+	const imageUploadMutation = createMutation(
+		() => ({
+			mutationFn: async ({ file, type }: { file: File; type: 'avatar' | 'banner' }) => {
+				const formData = new FormData();
+				formData.append('image', file);
+				formData.append('type', type);
+
+				return await fetchApi('/user/profile/image', {
+					method: 'POST',
+					body: formData
+				});
+			},
+			onSuccess: (data, { type }) => {
+				if (type === 'avatar') {
+					avatar = data.url;
+					if (userState.user) userState.user.avatar = data.url;
+				} else {
+					banner = data.url;
+					if (userState.user) userState.user.banner = data.url;
+				}
+				message = {
+					type: 'success',
+					text: `${type.charAt(0).toUpperCase() + type.slice(1)} updated successfully!`
+				};
+			},
+			onError: (err: any) => {
+				message = { type: 'error', text: err.message || 'Failed to upload image.' };
 			}
-			message = { type: 'success', text: `${type.charAt(0).toUpperCase() + type.slice(1)} updated successfully!` };
-		},
-		onError: (err: any) => {
-			message = { type: 'error', text: err.message || 'Failed to upload image.' };
-		}
-	}), () => queryClient);
+		}),
+		() => queryClient
+	);
 
 	async function handleImageUpload(e: Event, type: 'avatar' | 'banner') {
 		const target = e.target as HTMLInputElement;
@@ -71,45 +79,58 @@
 		}
 	}
 
-	const saveProfileMutation = createMutation(() => ({
-		mutationFn: async () => {
-			return await fetchApi('/user/profile', {
-				method: 'PUT',
-				body: JSON.stringify({ bio })
-			});
-		},
-		onSuccess: (res) => {
-			if (userState.user) userState.user.bio = bio;
-			message = { type: 'success', text: 'Profile updated successfully!' };
-		},
-		onError: (err: any) => {
-			message = { type: 'error', text: err.message || 'Failed to update profile.' };
-		}
-	}), () => queryClient);
-
-	const saveSecurityMutation = createMutation(() => ({
-		mutationFn: async () => {
-			if (password && password !== confirmPassword) {
-				throw new Error('Passwords do not match');
+	const saveProfileMutation = createMutation(
+		() => ({
+			mutationFn: async () => {
+				return await fetchApi('/user/profile', {
+					method: 'PUT',
+					body: JSON.stringify({ bio, showAdultContent, avatar, banner })
+				});
+			},
+			onSuccess: (res) => {
+				if (userState.user) {
+					setUser({ ...userState.user, ...res, bio, showAdultContent, avatar, banner });
+				}
+				if (typeof window !== 'undefined') {
+					localStorage.setItem('showAdultContent', showAdultContent ? 'true' : 'false');
+				}
+				message = { type: 'success', text: 'Profile updated successfully!' };
+			},
+			onError: (err: any) => {
+				message = { type: 'error', text: err.message || 'Failed to update profile.' };
 			}
-			const body: any = { email };
-			if (password) body.password = password;
-			
-			return await fetchApi('/user/security', {
-				method: 'PUT',
-				body: JSON.stringify(body)
-			});
-		},
-		onSuccess: (res) => {
-			if (userState.user) userState.user.email = email;
-			message = { type: 'success', text: 'Security settings updated successfully!' };
-			password = '';
-			confirmPassword = '';
-		},
-		onError: (err: any) => {
-			message = { type: 'error', text: err.message || 'Failed to update security settings.' };
-		}
-	}), () => queryClient);
+		}),
+		() => queryClient
+	);
+
+	const saveSecurityMutation = createMutation(
+		() => ({
+			mutationFn: async () => {
+				if (password && password !== confirmPassword) {
+					throw new Error('Passwords do not match');
+				}
+				const body: any = { email };
+				if (password) body.password = password;
+
+				return await fetchApi('/user/security', {
+					method: 'PUT',
+					body: JSON.stringify(body)
+				});
+			},
+			onSuccess: (res) => {
+				if (userState.user) {
+					setUser({ ...userState.user, ...res, email });
+				}
+				message = { type: 'success', text: 'Security settings updated successfully!' };
+				password = '';
+				confirmPassword = '';
+			},
+			onError: (err: any) => {
+				message = { type: 'error', text: err.message || 'Failed to update security settings.' };
+			}
+		}),
+		() => queryClient
+	);
 
 	function saveProfile(e: Event) {
 		e.preventDefault();
@@ -128,21 +149,27 @@
 	<title>My Profile - Aurahub</title>
 </svelte:head>
 
-<main class="mx-auto max-w-4xl space-y-6 md:space-y-8 px-4 md:px-0 py-4 md:py-8">
+<main class="mx-auto max-w-4xl space-y-6 px-4 py-4 md:space-y-8 md:px-0 md:py-8">
 	<div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
 		<div>
-			<h1 class="text-2xl md:text-3xl font-bold tracking-tight">Settings</h1>
-			<p class="text-muted-foreground mt-1 text-sm md:text-base">Manage your public profile and account security.</p>
+			<h1 class="text-2xl font-bold tracking-tight md:text-3xl">Settings</h1>
+			<p class="text-muted-foreground mt-1 text-sm md:text-base">
+				Manage your public profile and account security.
+			</p>
 		</div>
 	</div>
 
 	<!-- Custom Tabs (No Sidebar) -->
-	<div class="flex border-b overflow-x-auto hide-scrollbar">
+	<div class="hide-scrollbar flex overflow-x-auto border-b">
 		<button
-			class="border-b-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap {activeTab === 'profile'
+			class="border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {activeTab ===
+			'profile'
 				? 'border-primary text-primary'
 				: 'text-muted-foreground border-transparent hover:border-border hover:text-primary'}"
-			onclick={() => { activeTab = 'profile'; message = { type: '', text: '' }; }}
+			onclick={() => {
+				activeTab = 'profile';
+				message = { type: '', text: '' };
+			}}
 		>
 			<div class="flex items-center gap-2">
 				<User class="h-4 w-4" />
@@ -150,10 +177,14 @@
 			</div>
 		</button>
 		<button
-			class="border-b-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap {activeTab === 'security'
+			class="border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {activeTab ===
+			'security'
 				? 'border-primary text-primary'
 				: 'text-muted-foreground border-transparent hover:border-border hover:text-primary'}"
-			onclick={() => { activeTab = 'security'; message = { type: '', text: '' }; }}
+			onclick={() => {
+				activeTab = 'security';
+				message = { type: '', text: '' };
+			}}
 		>
 			<div class="flex items-center gap-2">
 				<Shield class="h-4 w-4" />
@@ -173,13 +204,13 @@
 				{:else}
 					<XCircle size={20} class="shrink-0" />
 				{/if}
-				<span class="font-medium text-sm md:text-base">{message.text}</span>
+				<span class="text-sm font-medium md:text-base">{message.text}</span>
 			</div>
 		{/if}
 
 		<!-- PUBLIC PROFILE TAB -->
 		{#if activeTab === 'profile'}
-			<div class="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6 md:space-y-8">
+			<div class="animate-in fade-in slide-in-from-bottom-2 space-y-6 duration-300 md:space-y-8">
 				<!-- Banner & Avatar Section -->
 				<div class="bg-card relative overflow-hidden rounded-2xl border shadow-sm">
 					<!-- Banner -->
@@ -192,14 +223,20 @@
 							</div>
 						{/if}
 						<label
-							class="bg-foreground/40 absolute inset-0 flex cursor-pointer items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100 {imageUploadMutation.isPending ? 'cursor-not-allowed opacity-100' : ''}"
+							class="bg-foreground/40 absolute inset-0 flex cursor-pointer items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100 {imageUploadMutation.isPending
+								? 'cursor-not-allowed opacity-100'
+								: ''}"
 						>
 							{#if imageUploadMutation.isPending}
-								<span class="text-primary-foreground bg-foreground/50 flex items-center gap-2 rounded-full px-4 py-2 font-medium backdrop-blur-sm">
+								<span
+									class="text-primary-foreground bg-foreground/50 flex items-center gap-2 rounded-full px-4 py-2 font-medium backdrop-blur-sm"
+								>
 									<Loader2 size={18} class="animate-spin" /> Uploading...
 								</span>
 							{:else}
-								<span class="text-primary-foreground bg-foreground/50 flex items-center gap-2 rounded-full px-4 py-2 font-medium backdrop-blur-sm">
+								<span
+									class="text-primary-foreground bg-foreground/50 flex items-center gap-2 rounded-full px-4 py-2 font-medium backdrop-blur-sm"
+								>
 									<ImageIcon size={18} /> Change Banner
 								</span>
 								<input
@@ -214,18 +251,23 @@
 					</div>
 
 					<!-- Avatar -->
-					<div class="relative z-10 flex items-end justify-between px-4 sm:px-6 pb-4 sm:pb-6">
-						<div class="group relative -mt-10 sm:-mt-16 inline-block">
+					<div class="relative z-10 flex items-end justify-between px-4 pb-4 sm:px-6 sm:pb-6">
+						<div class="group relative -mt-10 inline-block sm:-mt-16">
 							<img
 								src={avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${username}`}
 								alt={username || 'Profile picture'}
-								class="bg-card h-20 w-20 sm:h-32 sm:w-32 rounded-full object-cover ring-4 ring-background"
+								class="bg-card h-20 w-20 rounded-full object-cover ring-4 ring-background sm:h-32 sm:w-32"
 							/>
 							<label
-								class="bg-foreground/50 absolute inset-0 flex cursor-pointer items-center justify-center rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 {imageUploadMutation.isPending ? 'cursor-not-allowed' : ''}"
+								class="bg-foreground/50 absolute inset-0 flex cursor-pointer items-center justify-center rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100 {imageUploadMutation.isPending
+									? 'cursor-not-allowed'
+									: ''}"
 							>
 								{#if !imageUploadMutation.isPending}
-									<span class="text-primary-foreground text-center text-[10px] sm:text-xs font-medium">Change<br />Avatar</span>
+									<span
+										class="text-primary-foreground text-center text-[10px] font-medium sm:text-xs"
+										>Change<br />Avatar</span
+									>
 									<input
 										type="file"
 										accept="image/*"
@@ -240,8 +282,8 @@
 				</div>
 
 				<!-- Form Section -->
-				<div class="bg-card rounded-2xl border p-4 sm:p-6 md:p-8 shadow-sm">
-					<h2 class="text-foreground mb-4 sm:mb-6 text-lg sm:text-xl font-bold tracking-tight">
+				<div class="bg-card rounded-2xl border p-4 shadow-sm sm:p-6 md:p-8">
+					<h2 class="text-foreground mb-4 text-lg font-bold tracking-tight sm:mb-6 sm:text-xl">
 						Profile Details
 					</h2>
 					<form onsubmit={saveProfile} class="space-y-4 sm:space-y-5">
@@ -266,11 +308,28 @@
 							/>
 						</div>
 
+						<div class="mt-4 space-y-1.5 border-t pt-2">
+							<h3 class="text-sm font-medium">Content Preferences</h3>
+							<label class="mt-2 flex cursor-pointer items-center gap-3">
+								<input
+									type="checkbox"
+									bind:checked={showAdultContent}
+									class="border-input focus:ring-ring h-4 w-4 rounded bg-background text-primary ring-offset-background focus:ring-2 focus:ring-offset-2"
+								/>
+								<div class="space-y-1">
+									<span class="text-sm leading-none font-medium">Show Adult Content</span>
+									<p class="text-muted-foreground text-xs">
+										Allow content marked as adult to appear in feeds and search results.
+									</p>
+								</div>
+							</label>
+						</div>
+
 						<div class="flex justify-end pt-2 sm:pt-4">
 							<Button
 								type="submit"
 								disabled={saveProfileMutation.isPending}
-								class="w-full sm:w-auto rounded-full px-6"
+								class="w-full rounded-full px-6 sm:w-auto"
 							>
 								{#if saveProfileMutation.isPending}
 									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
@@ -286,8 +345,8 @@
 		<!-- SECURITY TAB -->
 		{#if activeTab === 'security'}
 			<div class="animate-in fade-in slide-in-from-bottom-2 duration-300">
-				<div class="bg-card rounded-2xl border p-4 sm:p-6 md:p-8 shadow-sm">
-					<h2 class="text-foreground mb-1 md:mb-2 text-lg sm:text-xl font-bold tracking-tight">
+				<div class="bg-card rounded-2xl border p-4 shadow-sm sm:p-6 md:p-8">
+					<h2 class="text-foreground mb-1 text-lg font-bold tracking-tight sm:text-xl md:mb-2">
 						Account Security
 					</h2>
 					<p class="text-muted-foreground mb-6 text-xs sm:text-sm">
@@ -297,16 +356,14 @@
 					<form onsubmit={saveSecurity} class="space-y-4 sm:space-y-5">
 						<div class="space-y-1.5">
 							<Label>Email Address</Label>
-							<Input
-								type="email"
-								bind:value={email}
-								required
-							/>
+							<Input type="email" bind:value={email} required />
 						</div>
 
 						<hr class="my-6 border-border" />
 
-						<h3 class="text-foreground mb-3 sm:mb-4 text-xs sm:text-sm font-semibold tracking-wider uppercase">
+						<h3
+							class="text-foreground mb-3 text-xs font-semibold tracking-wider uppercase sm:mb-4 sm:text-sm"
+						>
 							Change Password
 						</h3>
 
@@ -322,11 +379,7 @@
 						{#if password}
 							<div class="animate-in fade-in slide-in-from-top-2 space-y-1.5">
 								<Label>Confirm New Password</Label>
-								<Input
-									type="password"
-									bind:value={confirmPassword}
-									required={!!password}
-								/>
+								<Input type="password" bind:value={confirmPassword} required={!!password} />
 							</div>
 						{/if}
 
@@ -334,7 +387,7 @@
 							<Button
 								type="submit"
 								disabled={saveSecurityMutation.isPending}
-								class="w-full sm:w-auto rounded-full px-6"
+								class="w-full rounded-full px-6 sm:w-auto"
 							>
 								{#if saveSecurityMutation.isPending}
 									<Loader2 class="mr-2 h-4 w-4 animate-spin" />

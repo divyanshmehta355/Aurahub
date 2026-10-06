@@ -11,36 +11,45 @@
 	let isCreating = $state(false);
 	let newPlaylistName = $state('');
 
-	const playlistsQuery = createQuery(() => ({
-		queryKey: ['playlists'],
-		queryFn: async () => {
-			const res = await fetchApi('/playlists');
-			return res.playlists || res.data || [];
-		}
-	}), () => queryClient);
+	const playlistsQuery = createQuery(
+		() => ({
+			queryKey: ['playlists'],
+			queryFn: async () => {
+				const res = await fetchApi('/playlists');
+				return res.playlists || res.data || [];
+			}
+		}),
+		() => queryClient
+	);
 
-	const createPlaylistMutation = createMutation(() => ({
-		mutationFn: async (title: string) => {
-			return await fetchApi('/playlists', {
-				method: 'POST',
-				body: JSON.stringify({ title, description: '', visibility: 'public' })
-			});
-		},
-		onSuccess: () => {
-			isCreating = false;
-			newPlaylistName = '';
-			queryClient.invalidateQueries({ queryKey: ['playlists'] });
-		}
-	}), () => queryClient);
+	const createPlaylistMutation = createMutation(
+		() => ({
+			mutationFn: async (title: string) => {
+				return await fetchApi('/playlists', {
+					method: 'POST',
+					body: JSON.stringify({ title, description: '', visibility: 'public' })
+				});
+			},
+			onSuccess: () => {
+				isCreating = false;
+				newPlaylistName = '';
+				queryClient.invalidateQueries({ queryKey: ['playlists'] });
+			}
+		}),
+		() => queryClient
+	);
 
-	const deletePlaylistMutation = createMutation(() => ({
-		mutationFn: async (id: string) => {
-			return await fetchApi(`/playlists/${id}`, { method: 'DELETE' });
-		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ['playlists'] });
-		}
-	}), () => queryClient);
+	const deletePlaylistMutation = createMutation(
+		() => ({
+			mutationFn: async (id: string) => {
+				return await fetchApi(`/playlists/${id}`, { method: 'DELETE' });
+			},
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: ['playlists'] });
+			}
+		}),
+		() => queryClient
+	);
 
 	function handleCreate() {
 		if (!newPlaylistName.trim()) return;
@@ -60,25 +69,21 @@
 	<title>My Playlists - Aurahub</title>
 </svelte:head>
 
-<div class="space-y-4 md:space-y-6 px-4 md:px-0">
-	<div class="flex items-center justify-between border-b pb-4 pt-2 md:pt-0">
+<div class="space-y-4 px-4 md:space-y-6 md:px-0">
+	<div class="flex items-center justify-between border-b pt-2 pb-4 md:pt-0">
 		<div class="flex items-center gap-3">
 			<ListVideo class="h-6 w-6 text-primary" />
-			<h1 class="text-xl md:text-2xl font-bold tracking-tight">My Playlists</h1>
+			<h1 class="text-xl font-bold tracking-tight md:text-2xl">My Playlists</h1>
 		</div>
-		<Button 
-			size="sm" 
-			class="rounded-full"
-			onclick={() => (isCreating = !isCreating)}
-		>
+		<Button size="sm" class="rounded-full" onclick={() => (isCreating = !isCreating)}>
 			<Plus class="mr-2 h-4 w-4" /> New Playlist
 		</Button>
 	</div>
 
 	{#if isCreating}
-		<div class="bg-card rounded-xl border p-4 shadow-sm animate-in slide-in-from-top-2">
+		<div class="bg-card animate-in slide-in-from-top-2 rounded-xl border p-4 shadow-sm">
 			<h3 class="mb-3 font-semibold">Create New Playlist</h3>
-			<div class="flex flex-col sm:flex-row gap-3">
+			<div class="flex flex-col gap-3 sm:flex-row">
 				<Input
 					type="text"
 					bind:value={newPlaylistName}
@@ -86,15 +91,15 @@
 					class="flex-1"
 					disabled={createPlaylistMutation.isPending}
 				/>
-				<div class="flex gap-2 justify-end">
-					<Button 
-						variant="outline" 
+				<div class="flex justify-end gap-2">
+					<Button
+						variant="outline"
 						onclick={() => (isCreating = false)}
 						disabled={createPlaylistMutation.isPending}
 					>
 						Cancel
 					</Button>
-					<Button 
+					<Button
 						onclick={handleCreate}
 						disabled={!newPlaylistName.trim() || createPlaylistMutation.isPending}
 					>
@@ -106,7 +111,7 @@
 	{/if}
 
 	{#if playlistsQuery.isPending}
-		<div class="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
 			{#each Array(4) as _}
 				<div class="flex animate-pulse flex-col space-y-3">
 					<Skeleton class="aspect-video w-full rounded-xl" />
@@ -117,18 +122,20 @@
 		</div>
 	{:else if playlistsQuery.isError}
 		<div class="flex flex-col items-center justify-center py-12 text-center">
-			<div class="rounded-xl bg-destructive/10 p-4 text-destructive">
+			<div class="bg-destructive/10 text-destructive rounded-xl p-4">
 				<p>{playlistsQuery.error.message || 'Failed to load playlists.'}</p>
-				<Button variant="outline" class="mt-4" onclick={() => playlistsQuery.refetch()}>Try again</Button>
+				<Button variant="outline" class="mt-4" onclick={() => playlistsQuery.refetch()}
+					>Try again</Button
+				>
 			</div>
 		</div>
 	{:else if !playlistsQuery.data || playlistsQuery.data.length === 0}
 		<div
-			class="border-muted-foreground/20 mx-4 md:mx-0 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-16 md:py-24 text-center"
+			class="border-muted-foreground/20 mx-4 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-16 text-center md:mx-0 md:py-24"
 		>
 			<ListVideo class="text-muted-foreground mb-4 h-12 w-12 opacity-50" />
-			<h2 class="mb-2 text-lg md:text-xl font-semibold">No playlists yet</h2>
-			<p class="text-muted-foreground max-w-sm text-sm md:text-base px-4">
+			<h2 class="mb-2 text-lg font-semibold md:text-xl">No playlists yet</h2>
+			<p class="text-muted-foreground max-w-sm px-4 text-sm md:text-base">
 				Create a playlist to organize and share your favorite videos.
 			</p>
 			<Button variant="default" class="mt-6 rounded-full" onclick={() => (isCreating = true)}>
@@ -136,7 +143,7 @@
 			</Button>
 		</div>
 	{:else}
-		<div class="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
 			{#each playlistsQuery.data as playlist}
 				<a
 					href={`/playlist/${playlist.id}`}
@@ -162,22 +169,26 @@
 							</span>
 						</div>
 					</div>
-					<div class="flex flex-1 flex-col p-3 md:p-4 relative">
-						<h3 class="line-clamp-1 text-base md:text-lg font-semibold transition-colors group-hover:text-primary">
+					<div class="relative flex flex-1 flex-col p-3 md:p-4">
+						<h3
+							class="line-clamp-1 text-base font-semibold transition-colors group-hover:text-primary md:text-lg"
+						>
 							{playlist.title}
 						</h3>
 						<p class="text-muted-foreground mt-1 text-xs md:text-sm">
 							{playlist.videoCount || playlist.videos?.length || 0} videos
 						</p>
-						<div class="mt-2 text-[11px] md:text-xs text-muted-foreground">
+						<div class="text-muted-foreground mt-2 text-[11px] md:text-xs">
 							{playlist.visibility === 'private' ? 'Private' : 'Public'}
 						</div>
-						
-						<div class="absolute top-3 right-3 opacity-100 md:opacity-0 transition-opacity group-hover:opacity-100 flex gap-1">
+
+						<div
+							class="absolute top-3 right-3 flex gap-1 opacity-100 transition-opacity group-hover:opacity-100 md:opacity-0"
+						>
 							<Button
 								variant="ghost"
 								size="icon"
-								class="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+								class="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8"
 								onclick={(e) => handleDelete(e, playlist.id)}
 								title="Delete Playlist"
 							>
