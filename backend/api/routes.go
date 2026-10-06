@@ -89,8 +89,13 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 
 	// Notifications routes
 	notifications := api.Group("/notifications", middleware.AuthRequired())
+	notifications.Get("/stream", s.NotificationStreamHandler)
 	notifications.Get("/", s.ListNotificationsHandler)
 	notifications.Post("/", s.MarkNotificationsReadHandler)
+	notifications.Post("/read-all", s.MarkNotificationsReadHandler)
+	notifications.Post("/:id/read", s.MarkNotificationReadHandler)
+	notifications.Patch("/:id/read", s.MarkNotificationReadHandler)
+	notifications.Delete("/:id", s.DeleteNotificationHandler)
 	notifications.Delete("/", s.ClearNotificationsHandler)
 
 	// User History, Watch Later, and Profile settings routes

@@ -18,6 +18,10 @@ func AuthRequired() fiber.Handler {
 				tokenString = strings.TrimPrefix(authHeader, "Bearer ")
 			}
 		}
+		if tokenString == "" {
+			// fallback to query parameter (e.g. for EventSource / SSE connections)
+			tokenString = c.Query("token")
+		}
 
 		if tokenString == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})

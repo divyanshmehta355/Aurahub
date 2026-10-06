@@ -123,12 +123,60 @@ type CreateNotificationParams struct {
 	CommentID   pgtype.UUID
 }
 
-func (q *Repository) CreateNotification(ctx context.Context, arg CreateNotificationParams) error {
+func (q *Repository) CreateNotificationWithResult(ctx context.Context, arg CreateNotificationParams) (*Notification, error) {
+	if arg.RecipientID == arg.SenderID {
+		return nil, nil
+	}
 	notification := Notification{
 		RecipientID: arg.RecipientID, SenderID: arg.SenderID, Type: arg.Type,
 		VideoID: arg.VideoID, CommentID: arg.CommentID,
 	}
-	return q.orm.WithContext(ctx).Create(&notification).Error
+	err := q.orm.WithContext(ctx).Create(&notification).Error
+	if err != nil {
+		return nil, err
+	}
+	return &notification, nil
+}
+
+func (q *Repository) CreateNotification(ctx context.Context, arg CreateNotificationParams) error {
+	_, err := q.CreateNotificationWithResult(ctx, arg)
+	return err
+}
+
+func (q *Repository) NotifySubscribersNewVideoWithResult(ctx context.Context, uploaderID pgtype.UUID, videoID pgtype.UUID) ([]Notification, error) {
+	var subscriberIDs []pgtype.UUID
+	err := q.orm.WithContext(ctx).Model(&Subscription{}).
+		Where("subscribed_to_id = ?", uploaderID).
+		Pluck("subscriber_id", &subscriberIDs).Error
+	if err != nil || len(subscriberIDs) == 0 {
+		return nil, err
+	}
+
+	notifications := make([]Notification, 0, len(subscriberIDs))
+	for _, subID := range subscriberIDs {
+		if subID == uploaderID {
+			continue
+		}
+		notifications = append(notifications, Notification{
+			RecipientID: subID,
+			SenderID:    uploaderID,
+			Type:        NotificationTypeNewVideo,
+			VideoID:     videoID,
+		})
+	}
+	if len(notifications) == 0 {
+		return nil, nil
+	}
+	err = q.orm.WithContext(ctx).Create(&notifications).Error
+	if err != nil {
+		return nil, err
+	}
+	return notifications, nil
+}
+
+func (q *Repository) NotifySubscribersNewVideo(ctx context.Context, uploaderID pgtype.UUID, videoID pgtype.UUID) error {
+	_, err := q.NotifySubscribersNewVideoWithResult(ctx, uploaderID, videoID)
+	return err
 }
 
 type CreatePlaylistParams struct {
@@ -196,8 +244,16 @@ type DeleteCommentParams struct {
 }
 
 func (q *Repository) DeleteComment(ctx context.Context, arg DeleteCommentParams) error {
+	_ = q.orm.WithContext(ctx).Where("comment_id = ?", arg.ID).Delete(&Notification{}).Error
+	_ = q.orm.WithContext(ctx).Where("parent_comment_id = ?", arg.ID).Delete(&Comment{}).Error
 	return q.orm.WithContext(ctx).Where("id = ? AND author_id = ?", arg.ID, arg.AuthorID).
 		Delete(&Comment{}).Error
+}
+
+func (q *Repository) DeleteCommentByID(ctx context.Context, id pgtype.UUID) error {
+	_ = q.orm.WithContext(ctx).Where("comment_id = ?", id).Delete(&Notification{}).Error
+	_ = q.orm.WithContext(ctx).Where("parent_comment_id = ?", id).Delete(&Comment{}).Error
+	return q.orm.WithContext(ctx).Where("id = ?", id).Delete(&Comment{}).Error
 }
 
 type DeletePlaylistParams struct {
@@ -462,6 +518,18 @@ func (q *Repository) MarkNotificationsRead(ctx context.Context, recipientID pgty
 	return q.orm.WithContext(ctx).Model(&Notification{}).
 		Where("recipient_id = ? AND is_read = ?", recipientID, false).
 		Update("is_read", true).Error
+}
+
+func (q *Repository) MarkNotificationRead(ctx context.Context, recipientID, notificationID pgtype.UUID) error {
+	return q.orm.WithContext(ctx).Model(&Notification{}).
+		Where("recipient_id = ? AND id = ?", recipientID, notificationID).
+		Update("is_read", true).Error
+}
+
+func (q *Repository) DeleteNotification(ctx context.Context, recipientID, notificationID pgtype.UUID) error {
+	return q.orm.WithContext(ctx).
+		Where("recipient_id = ? AND id = ?", recipientID, notificationID).
+		Delete(&Notification{}).Error
 }
 
 type RemoveVideoFromPlaylistParams struct {

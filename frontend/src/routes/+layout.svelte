@@ -16,10 +16,12 @@
 		Bird,
 		Smartphone,
 		Video,
-		BarChart
+		BarChart,
+		Bell
 	} from 'lucide-svelte';
 	import { fetchApi } from '#lib/api';
 	import { userState, setUser, clearUser } from '#lib/user.svelte';
+	import NotificationBell from '#lib/components/NotificationBell.svelte';
 
 	import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
 
@@ -176,6 +178,7 @@
 
 						{#if userState.isLoaded}
 							{#if userState.user}
+								<NotificationBell />
 								<div class="ml-2 flex items-center gap-4">
 									<a
 										href="/dashboard"
@@ -261,6 +264,12 @@
 
 					<div class="my-4 border-t"></div>
 					<h3 class="text-muted-foreground mb-2 px-3 text-sm font-semibold">You</h3>
+					<a
+						href="/notifications"
+						onclick={() => (isSidebarOpen = false)}
+						class="hover:bg-muted flex items-center gap-3 rounded-lg px-3 py-2 transition-colors"
+						><Bell class="h-5 w-5" /> Notifications</a
+					>
 					<a
 						href="/history"
 						onclick={() => (isSidebarOpen = false)}

@@ -18,6 +18,8 @@
 	--color-foreground: var(--color-mono-950);
 	--color-card: #ffffff;
 	--color-card-foreground: var(--color-mono-950);
+	--color-popover: #ffffff;
+	--color-popover-foreground: var(--color-mono-950);
 	--color-border: var(--color-mono-200);
 	--color-input: var(--color-mono-200);
 	--color-primary: var(--color-mono-950);
@@ -45,6 +47,8 @@
 		--color-foreground: var(--color-mono-50);
 		--color-card: var(--color-mono-950);
 		--color-card-foreground: var(--color-mono-50);
+		--color-popover: var(--color-mono-950);
+		--color-popover-foreground: var(--color-mono-50);
 		--color-border: var(--color-mono-800);
 		--color-input: var(--color-mono-800);
 		--color-primary: var(--color-mono-50);

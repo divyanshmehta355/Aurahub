@@ -55,6 +55,17 @@ func parseUUID(idStr string) (pgtype.UUID, error) {
 	return u, err
 }
 
+func (s *Server) resolveVideoUUID(ctx context.Context, idStr string) (pgtype.UUID, error) {
+	if id, err := parseUUID(idStr); err == nil {
+		return id, nil
+	}
+	video, err := s.Repository.GetVideoByFileId(ctx, idStr)
+	if err == nil {
+		return video.ID, nil
+	}
+	return pgtype.UUID{}, err
+}
+
 func (s *Server) ListVideosHandler(c *fiber.Ctx) error {
 	page, limit := pageLimit(c, 12, 100)
 	showAdult := c.Query("adult") == "true"
@@ -179,7 +190,7 @@ func (s *Server) GetVideoHandler(c *fiber.Ctx) error {
 
 func (s *Server) DeleteVideoHandler(c *fiber.Ctx) error {
 	idStr := c.Params("id")
-	videoId, err := parseUUID(idStr)
+	videoId, err := s.resolveVideoUUID(context.Background(), idStr)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid video ID."})
 	}
@@ -375,7 +386,7 @@ type UpdateVideoRequest struct {
 
 func (s *Server) UpdateVideoHandler(c *fiber.Ctx) error {
 	videoIdStr := c.Params("id")
-	videoId, err := parseUUID(videoIdStr)
+	videoId, err := s.resolveVideoUUID(context.Background(), videoIdStr)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid video ID"})
 	}

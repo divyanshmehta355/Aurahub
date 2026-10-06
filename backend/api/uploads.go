@@ -288,6 +288,12 @@ func (s *Server) CreateRecordHandler(c *fiber.Ctx) error {
 		}
 	}
 
+	if videoVis == db.VideoVisibilityPublic {
+		go func() {
+			s.PublishSubscribersNewVideo(context.Background(), userId, video.ID)
+		}()
+	}
+
 	return c.Status(201).JSON(fiber.Map{
 		"message": "Video published successfully!",
 		"video": fiber.Map{

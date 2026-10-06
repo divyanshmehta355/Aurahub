@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { fetchApi } from '#lib/api';
 	import { userState } from '#lib/user.svelte';
-	import { ThumbsUp, Share2, MessageSquare, Play, ListPlus, Loader2 } from 'lucide-svelte';
+	import { ThumbsUp, Share2, MessageSquare, Play, ListPlus, Loader2, Trash2 } from 'lucide-svelte';
 	import VideoThumbnail from '#lib/components/VideoThumbnail.svelte';
 	import WatchLaterButton from '#lib/components/WatchLaterButton.svelte';
 	import SaveToPlaylistModal from '#lib/components/SaveToPlaylistModal.svelte';
@@ -69,7 +69,8 @@
 		() => ({
 			queryKey: ['comments', videoId],
 			queryFn: async () => {
-				const res = await fetchApi(`/comments/${videoId}`);
+				const idToUse = videoQuery.data?.id || videoId;
+				const res = await fetchApi(`/comments/${idToUse}`);
 				return res.comments || res.data || [];
 			}
 		}),
@@ -117,20 +118,35 @@
 	const likeMutation = createMutation(
 		() => ({
 			mutationFn: async (action: 'like' | 'unlike') => {
-				return await fetchApi(`/videos/${videoId}/like?action=${action}`, { method: 'POST' });
+				const idToUse = videoQuery.data?.id || videoId;
+				return await fetchApi(`/videos/${idToUse}/like?action=${action}`, { method: 'POST' });
 			},
 			onMutate: async (action) => {
 				await queryClient.cancelQueries({ queryKey: ['video', videoId] });
 				const previous = queryClient.getQueryData(['video', videoId]);
-				queryClient.setQueryData(['video', videoId], (old: any) => ({
-					...old,
-					isLiked: action === 'like',
-					likesCount: old.likesCount + (action === 'like' ? 1 : -1)
-				}));
+				queryClient.setQueryData(['video', videoId], (old: any) => {
+					if (!old) return old;
+					const currentLikes = typeof old.likesCount === 'number' ? old.likesCount : (old.likes || 0);
+					return {
+						...old,
+						isLiked: action === 'like',
+						likesCount: Math.max(0, currentLikes + (action === 'like' ? 1 : -1))
+					};
+				});
 				return { previous };
 			},
 			onError: (err, newTodo, context: any) => {
 				queryClient.setQueryData(['video', videoId], context?.previous);
+			},
+			onSuccess: (data) => {
+				if (data && (typeof data.likesCount === 'number' || typeof data.likes === 'number')) {
+					const count = typeof data.likesCount === 'number' ? data.likesCount : data.likes;
+					queryClient.setQueryData(['video', videoId], (old: any) => ({
+						...old,
+						isLiked: data.isLiked,
+						likesCount: count
+					}));
+				}
 			},
 			onSettled: () => {
 				queryClient.invalidateQueries({ queryKey: ['video', videoId] });
@@ -154,18 +170,44 @@
 	const commentMutation = createMutation(
 		() => ({
 			mutationFn: async (content: string) => {
+				const idToUse = videoQuery.data?.id || videoId;
 				return await fetchApi('/comments', {
 					method: 'POST',
-					body: JSON.stringify({ videoId, content })
+					body: JSON.stringify({ videoId: idToUse, content, text: content })
 				});
 			},
 			onSuccess: () => {
 				newCommentText = '';
 				queryClient.invalidateQueries({ queryKey: ['comments', videoId] });
+				if (videoQuery.data?.id && videoQuery.data.id !== videoId) {
+					queryClient.invalidateQueries({ queryKey: ['comments', videoQuery.data.id] });
+				}
 			}
 		}),
 		() => queryClient
 	);
+
+	const deleteCommentMutation = createMutation(
+		() => ({
+			mutationFn: async (commentId: string) => {
+				return await fetchApi(`/comments/${commentId}`, {
+					method: 'DELETE'
+				});
+			},
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: ['comments', videoId] });
+				if (videoQuery.data?.id && videoQuery.data.id !== videoId) {
+					queryClient.invalidateQueries({ queryKey: ['comments', videoQuery.data.id] });
+				}
+			}
+		}),
+		() => queryClient
+	);
+
+	function handleDeleteComment(commentId: string) {
+		if (!confirm('Are you sure you want to delete this comment?')) return;
+		deleteCommentMutation.mutate(commentId);
+	}
 
 	// Handlers
 	function handleLike() {
@@ -369,21 +411,42 @@
 						{/each}
 					{:else if commentsQuery.data}
 						{#each commentsQuery.data as comment}
-							<div class="flex gap-4">
+							<div class="group flex gap-4 items-start">
 								<img
 									src={comment.user?.avatar ||
-										`https://api.dicebear.com/7.x/identicon/svg?seed=${comment.user?.username || 'user'}`}
+										comment.author?.avatar ||
+										`https://api.dicebear.com/7.x/identicon/svg?seed=${comment.user?.username || comment.author?.username || 'user'}`}
 									alt="Avatar"
-									class="bg-muted h-10 w-10 shrink-0 rounded-full"
+									class="bg-muted h-10 w-10 shrink-0 rounded-full object-cover"
 								/>
-								<div class="space-y-1">
-									<div class="flex items-baseline gap-2">
-										<span class="text-sm font-semibold">{comment.user?.username || 'Unknown'}</span>
-										<span class="text-muted-foreground text-xs"
-											>{formatTimeAgo(comment.createdAt || comment.created_at)}</span
-										>
+								<div class="flex-1 space-y-1">
+									<div class="flex items-baseline justify-between">
+										<div class="flex items-baseline gap-2">
+											<span class="text-sm font-semibold"
+												>{comment.user?.username || comment.author?.username || 'User'}</span
+											>
+											<span class="text-muted-foreground text-xs"
+												>{formatTimeAgo(comment.createdAt || comment.created_at)}</span
+											>
+										</div>
+										{#if userState.user && (
+											userState.user.id === (comment.authorId || comment.author?.id || comment.user?.id || comment.author?._id || comment.user?._id) ||
+											userState.user.username === (comment.author?.username || comment.user?.username) ||
+											userState.user.id === (videoQuery.data?.uploaderId || videoQuery.data?.uploader?.id || videoQuery.data?.uploader?._id) ||
+											userState.user.username === uploaderUsername
+										)}
+											<button
+												type="button"
+												onclick={() => handleDeleteComment(comment.id || comment._id)}
+												disabled={deleteCommentMutation.isPending}
+												class="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive p-1 rounded transition-opacity"
+												title="Delete comment"
+											>
+												<Trash2 class="h-3.5 w-3.5" />
+											</button>
+										{/if}
 									</div>
-									<p class="text-sm leading-relaxed">{comment.content}</p>
+									<p class="text-sm leading-relaxed">{comment.content || comment.text}</p>
 								</div>
 							</div>
 						{/each}
