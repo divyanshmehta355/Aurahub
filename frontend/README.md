@@ -15,7 +15,7 @@ To recreate this project with the same configuration:
 
 ```sh
 # recreate this project
-npx sv@1.1.0 create --template minimal --types ts --add prettier eslint tailwindcss="plugins:none" --install npm frontend
+npx sv@1.1.0 create --template minimal --types ts --no-install frontend
 ```
 
 ## Adding features
