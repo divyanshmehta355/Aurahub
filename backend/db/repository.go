@@ -351,7 +351,7 @@ func (q *Repository) GetSubscriptionFeed(ctx context.Context, arg GetSubscriptio
 	var videos []Video
 	err := q.orm.WithContext(ctx).Model(&Video{}).
 		Joins("JOIN subscriptions ON subscriptions.subscribed_to_id = videos.uploader_id").
-		Where("subscriptions.subscriber_id = ? AND videos.visibility = ?", arg.SubscriberID, VideoVisibilityPublic).
+		Where("subscriptions.subscriber_id = ? AND videos.visibility = ? AND videos.is_short = ?", arg.SubscriberID, VideoVisibilityPublic, false).
 		Order("videos.created_at DESC").Limit(int(arg.Limit)).Offset(int(arg.Offset)).Find(&videos).Error
 	return videos, err
 }
@@ -360,7 +360,7 @@ func (q *Repository) CountSubscriptionFeed(ctx context.Context, subscriberID pgt
 	var count int64
 	err := q.orm.WithContext(ctx).Model(&Video{}).
 		Joins("JOIN subscriptions ON subscriptions.subscribed_to_id = videos.uploader_id").
-		Where("subscriptions.subscriber_id = ? AND videos.visibility = ?", subscriberID, VideoVisibilityPublic).
+		Where("subscriptions.subscriber_id = ? AND videos.visibility = ? AND videos.is_short = ?", subscriberID, VideoVisibilityPublic, false).
 		Count(&count).Error
 	return count, err
 }
@@ -494,7 +494,7 @@ type ListUserVideosParams struct {
 
 func (q *Repository) ListUserVideos(ctx context.Context, arg ListUserVideosParams) ([]Video, error) {
 	var videos []Video
-	query := q.orm.WithContext(ctx).Where("uploader_id = ? AND visibility = ?", arg.UploaderID, VideoVisibilityPublic)
+	query := q.orm.WithContext(ctx).Where("uploader_id = ? AND visibility = ? AND is_short = ?", arg.UploaderID, VideoVisibilityPublic, false)
 	if !arg.ShowAdult {
 		query = query.Where("is_adult = ?", false)
 	}

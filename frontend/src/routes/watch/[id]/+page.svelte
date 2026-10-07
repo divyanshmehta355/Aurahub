@@ -126,7 +126,7 @@
 				const previous = queryClient.getQueryData(['video', videoId]);
 				queryClient.setQueryData(['video', videoId], (old: any) => {
 					if (!old) return old;
-					const currentLikes = typeof old.likesCount === 'number' ? old.likesCount : (old.likes || 0);
+					const currentLikes = typeof old.likesCount === 'number' ? old.likesCount : old.likes || 0;
 					return {
 						...old,
 						isLiked: action === 'like',
@@ -411,7 +411,7 @@
 						{/each}
 					{:else if commentsQuery.data}
 						{#each commentsQuery.data as comment}
-							<div class="group flex gap-4 items-start">
+							<div class="group flex items-start gap-4">
 								<img
 									src={comment.user?.avatar ||
 										comment.author?.avatar ||
@@ -429,17 +429,12 @@
 												>{formatTimeAgo(comment.createdAt || comment.created_at)}</span
 											>
 										</div>
-										{#if userState.user && (
-											userState.user.id === (comment.authorId || comment.author?.id || comment.user?.id || comment.author?._id || comment.user?._id) ||
-											userState.user.username === (comment.author?.username || comment.user?.username) ||
-											userState.user.id === (videoQuery.data?.uploaderId || videoQuery.data?.uploader?.id || videoQuery.data?.uploader?._id) ||
-											userState.user.username === uploaderUsername
-										)}
+										{#if userState.user && (userState.user.id === (comment.authorId || comment.author?.id || comment.user?.id || comment.author?._id || comment.user?._id) || userState.user.username === (comment.author?.username || comment.user?.username) || userState.user.id === (videoQuery.data?.uploaderId || videoQuery.data?.uploader?.id || videoQuery.data?.uploader?._id) || userState.user.username === uploaderUsername)}
 											<button
 												type="button"
 												onclick={() => handleDeleteComment(comment.id || comment._id)}
 												disabled={deleteCommentMutation.isPending}
-												class="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive p-1 rounded transition-opacity"
+												class="text-muted-foreground hover:text-destructive rounded p-1 opacity-0 transition-opacity group-hover:opacity-100"
 												title="Delete comment"
 											>
 												<Trash2 class="h-3.5 w-3.5" />
@@ -522,7 +517,7 @@
 		{:else if suggestionsQuery.data}
 			<div class="flex flex-col gap-3">
 				{#each suggestionsQuery.data.pages as page}
-					{#each page.videos as nextVideo}
+					{#each (page.videos || []).filter((v) => !v.isShort) as nextVideo}
 						<a
 							href={`/watch/${nextVideo.fileId || nextVideo.id}`}
 							class="group hover:bg-muted/50 -mx-2 flex items-start gap-3 rounded-xl p-2 transition-colors"

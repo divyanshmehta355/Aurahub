@@ -15,10 +15,9 @@ func (s *Server) RecommendationsHandler(c *fiber.Ctx) error {
 		category = ""
 	}
 	var shortFilter pgtype.Bool
-	switch c.Query("type", "all") {
-	case "short":
+	if c.Query("type") == "short" {
 		shortFilter = pgtype.Bool{Bool: true, Valid: true}
-	case "standard":
+	} else {
 		shortFilter = pgtype.Bool{Bool: false, Valid: true}
 	}
 
@@ -74,11 +73,11 @@ func (s *Server) SuggestionsHandler(c *fiber.Ctx) error {
 	if !excludeID.Valid {
 		var queryErr error
 		showAdult := c.Query("adult") == "true"
-		videos, queryErr = s.Repository.ListPublicVideos(ctx, "", pgtype.Bool{}, showAdult, "trending", int32(limit), offset)
+		videos, queryErr = s.Repository.ListPublicVideos(ctx, "", pgtype.Bool{Bool: false, Valid: true}, showAdult, "trending", int32(limit), offset)
 		if queryErr != nil {
 			return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch suggestions"})
 		}
-		total, queryErr = s.Repository.CountPublicVideos(ctx, "", pgtype.Bool{}, showAdult)
+		total, queryErr = s.Repository.CountPublicVideos(ctx, "", pgtype.Bool{Bool: false, Valid: true}, showAdult)
 		if queryErr != nil {
 			return c.Status(500).JSON(fiber.Map{"message": "Failed to count suggestions"})
 		}

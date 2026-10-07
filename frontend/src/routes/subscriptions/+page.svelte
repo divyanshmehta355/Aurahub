@@ -104,7 +104,7 @@
 		</div>
 	{:else}
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
-			{#each subscriptionsQuery.data.videos as video}
+			{#each (subscriptionsQuery.data.videos || []).filter((v) => !v.isShort) as video}
 				<a
 					href={`/watch/${video.fileId || video.id}`}
 					class="group flex flex-col space-y-2 sm:space-y-3"

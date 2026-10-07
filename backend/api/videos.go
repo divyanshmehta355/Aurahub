@@ -74,10 +74,10 @@ func (s *Server) ListVideosHandler(c *fiber.Ctx) error {
 		category = ""
 	}
 	var shortFilter pgtype.Bool
-	switch c.Query("type", "all") {
-	case "short":
+	if c.Query("type") == "short" {
 		shortFilter = pgtype.Bool{Bool: true, Valid: true}
-	case "standard":
+	} else {
+		// Default to standard videos only; shorts are only served to the shorts section
 		shortFilter = pgtype.Bool{Bool: false, Valid: true}
 	}
 	videos, err := s.Repository.ListPublicVideos(context.Background(), category, shortFilter, showAdult, c.Query("sort", "trending"), int32(limit), int32((page-1)*limit))

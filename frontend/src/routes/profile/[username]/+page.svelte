@@ -181,7 +181,7 @@
 				class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
 			>
 				{#if profileQuery.data.videos && profileQuery.data.videos.length > 0}
-					{#each profileQuery.data.videos as video}
+					{#each profileQuery.data.videos.filter((v) => !v.isShort) as video}
 						<a href={`/watch/${video.fileId || video.id}`} class="group flex flex-col space-y-3">
 							<!-- Thumbnail -->
 							<VideoThumbnail

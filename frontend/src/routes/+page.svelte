@@ -19,7 +19,7 @@
 		() => ({
 			queryKey: ['videos', currentPage, limit],
 			queryFn: async () => {
-				const res = await fetchApi(`/videos?page=${currentPage}&limit=${limit}`);
+				const res = await fetchApi(`/videos?type=standard&page=${currentPage}&limit=${limit}`);
 				return res;
 			}
 		}),
@@ -120,7 +120,7 @@
 		</div>
 	{:else}
 		<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-			{#each query.data.videos as video}
+			{#each (query.data.videos || []).filter((v) => !v.isShort) as video}
 				<a href={`/watch/${video.fileId}`} class="group flex flex-col space-y-3">
 					<!-- Thumbnail -->
 					<VideoThumbnail

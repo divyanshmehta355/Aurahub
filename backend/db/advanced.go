@@ -165,7 +165,7 @@ func (q *Repository) ListSuggestedVideos(ctx context.Context, excludeID pgtype.U
 	score := "(CASE WHEN videos.category = ? AND ? <> '' THEN 20 ELSE 0 END + 15 * (SELECT COUNT(*) FROM unnest(videos.tags) AS video_tag WHERE video_tag = ANY(?::text[]))) DESC"
 	var videos []Video
 	query := q.orm.WithContext(ctx).Model(&Video{}).
-		Where("videos.visibility = ? AND videos.id <> ?", VideoVisibilityPublic, excludeID)
+		Where("videos.visibility = ? AND videos.id <> ? AND videos.is_short = ?", VideoVisibilityPublic, excludeID, false)
 	if !showAdult {
 		query = query.Where("videos.is_adult = ?", false)
 	}
@@ -178,7 +178,7 @@ func (q *Repository) ListSuggestedVideos(ctx context.Context, excludeID pgtype.U
 func (q *Repository) CountSuggestedVideos(ctx context.Context, excludeID pgtype.UUID, showAdult bool) (int64, error) {
 	var count int64
 	query := q.orm.WithContext(ctx).Model(&Video{}).
-		Where("visibility = ? AND id <> ?", VideoVisibilityPublic, excludeID)
+		Where("visibility = ? AND id <> ? AND is_short = ?", VideoVisibilityPublic, excludeID, false)
 	if !showAdult {
 		query = query.Where("is_adult = ?", false)
 	}
@@ -189,6 +189,7 @@ func (q *Repository) CountSuggestedVideos(ctx context.Context, excludeID pgtype.
 func (q *Repository) SearchPublicVideos(ctx context.Context, query string, showAdult bool, sort string, limit int32) ([]Video, error) {
 	queryBuilder := q.orm.WithContext(ctx).Model(&Video{}).
 		Where("videos.visibility = ?", VideoVisibilityPublic).
+		Where("videos.is_short = ?", false).
 		Where("videos.streamtape_status IS DISTINCT FROM ?", StreamtapeStatusDead)
 	
 	if !showAdult {
@@ -217,8 +218,8 @@ func (q *Repository) SearchAutocompleteVideos(ctx context.Context, query string,
 	var videos []Video
 	queryBuilder := q.orm.WithContext(ctx).Model(&Video{}).
 		Select("id, title, thumbnail_url, category").
-		Where("visibility = ? AND (title ILIKE ? OR EXISTS (SELECT 1 FROM unnest(tags) AS tag WHERE tag ILIKE ?))",
-			VideoVisibilityPublic, "%"+query+"%", "%"+query+"%")
+		Where("visibility = ? AND is_short = ? AND (title ILIKE ? OR EXISTS (SELECT 1 FROM unnest(tags) AS tag WHERE tag ILIKE ?))",
+			VideoVisibilityPublic, false, "%"+query+"%", "%"+query+"%")
 	
 	if !showAdult {
 		queryBuilder = queryBuilder.Where("is_adult = ?", false)

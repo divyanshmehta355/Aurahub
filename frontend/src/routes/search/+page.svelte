@@ -98,7 +98,7 @@
 		</div>
 	{:else if searchQuery.data}
 		<div class="flex max-w-4xl flex-col gap-6 md:gap-4">
-			{#each searchQuery.data as video}
+			{#each searchQuery.data.filter((v) => !v.isShort) as video}
 				<a
 					href={`/watch/${video.fileId || video.id}`}
 					class="group hover:bg-muted/50 flex flex-col gap-3 rounded-xl transition-colors sm:flex-row sm:p-2 md:gap-4"
