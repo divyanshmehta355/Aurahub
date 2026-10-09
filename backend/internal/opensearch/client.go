@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 
 	osClient "github.com/opensearch-project/opensearch-go/v5"
@@ -34,17 +35,57 @@ func NewClient(cfg Config) (*Client, error) {
 		return &Client{enabled: false}, nil
 	}
 
+	cleanedAddresses := make([]string, 0, len(cfg.Addresses))
+	username := cfg.Username
+	password := cfg.Password
+
+	for _, addr := range cfg.Addresses {
+		trimmed := strings.TrimSpace(addr)
+		if trimmed == "" {
+			continue
+		}
+
+		u, err := url.Parse(trimmed)
+		if err == nil && u.User != nil {
+			if username == "" {
+				username = u.User.Username()
+			}
+			if password == "" {
+				if p, ok := u.User.Password(); ok {
+					password = p
+				}
+			}
+			u.User = nil
+			cleanedAddresses = append(cleanedAddresses, u.String())
+		} else {
+			cleanedAddresses = append(cleanedAddresses, trimmed)
+		}
+	}
+
+	if len(cleanedAddresses) == 0 {
+		log.Println("[OpenSearch] No valid cluster URL configured. Client operating in standby mode.")
+		return &Client{enabled: false}, nil
+	}
+
 	tp := http.DefaultTransport.(*http.Transport).Clone()
 	if cfg.InsecureSkipVerify {
 		tp.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
+	// Disable client node discovery on managed cloud clusters (e.g. Aiven, AWS, etc.).
+	// Cloud nodes publish their internal IP addresses which lack IP SANs on
+	// cloud-issued TLS certificates (*.aivencloud.com), causing x509 validation failures.
+	discoverOnStart := false
+
 	osCfg := opensearchapi.Config{
 		Client: osClient.Config{
-			Addresses: cfg.Addresses,
-			Username:  cfg.Username,
-			Password:  cfg.Password,
-			Transport: tp,
+			Addresses:             cleanedAddresses,
+			Username:              username,
+			Password:              password,
+			Transport:             tp,
+			InsecureSkipVerify:    cfg.InsecureSkipVerify,
+			DiscoverNodesOnStart:  &discoverOnStart,
+			DiscoverNodesInterval: 0,
 		},
 	}
 
@@ -53,7 +94,7 @@ func NewClient(cfg Config) (*Client, error) {
 		return nil, fmt.Errorf("failed to create opensearch client: %w", err)
 	}
 
-	log.Printf("[OpenSearch] Client initialized for cluster: %v\n", cfg.Addresses)
+	log.Printf("[OpenSearch] Client initialized for cluster: %v\n", cleanedAddresses)
 	return &Client{
 		api:     apiClient,
 		enabled: true,

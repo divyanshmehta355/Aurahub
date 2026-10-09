@@ -77,3 +77,15 @@ func TestVideoDocumentJSON(t *testing.T) {
 		t.Errorf("unmarshaled document does not match original: %+v", parsed)
 	}
 }
+
+func TestURLWithCredentialsSanitization(t *testing.T) {
+	client, err := NewClient(Config{
+		Addresses: []string{"https://user:pass@example.com:9200"},
+	})
+	if err != nil {
+		t.Fatalf("expected client to initialize without error, got %v", err)
+	}
+	if !client.Enabled() {
+		t.Errorf("expected client to be enabled")
+	}
+}
