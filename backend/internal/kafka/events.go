@@ -8,8 +8,9 @@ const (
 	TopicNotifications    = "aurahub.notifications"
 	TopicVideoLifecycle   = "aurahub.video.lifecycle"
 
-	GroupViewsFlusher     = "aurahub-views-flusher"
-	GroupBatchUploadJobs  = "aurahub-batch-upload-worker"
+	GroupViewsFlusher        = "aurahub-views-flusher"
+	GroupBatchUploadJobs     = "aurahub-batch-upload-worker"
+	GroupOpenSearchIndexer   = "aurahub-opensearch-indexer"
 )
 
 // VideoViewEvent is emitted every time a user or guest views a video.

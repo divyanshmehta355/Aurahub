@@ -16,8 +16,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/divyanshmehta355/aurahub/backend/db"
+	"github.com/divyanshmehta355/aurahub/backend/internal/kafka"
 	"github.com/divyanshmehta355/aurahub/backend/internal/httpclient"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -296,6 +298,15 @@ func (s *Server) CreateRecordHandler(c *fiber.Ctx) error {
 		go func() {
 			s.PublishSubscribersNewVideo(context.Background(), userId, video.ID)
 		}()
+	}
+
+	videoIDStr := formatUUID(video.ID)
+	if s.Kafka != nil {
+		_ = s.Kafka.Publish(c.UserContext(), kafka.TopicVideoLifecycle, videoIDStr, kafka.VideoLifecycleEvent{
+			Action:    "created",
+			VideoID:   videoIDStr,
+			Timestamp: time.Now(),
+		})
 	}
 
 	return c.Status(201).JSON(fiber.Map{

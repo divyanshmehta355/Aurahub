@@ -25,6 +25,10 @@ type Config struct {
 	KafkaClientCert     string
 	KafkaClientKey      string
 	KafkaInsecureSkip   bool
+	OpenSearchURL       string
+	OpenSearchUser      string
+	OpenSearchPassword  string
+	OpenSearchInsecure  bool
 }
 
 func LoadConfig() *Config {
@@ -91,5 +95,9 @@ func LoadConfig() *Config {
 		KafkaClientCert:     os.Getenv("KAFKA_CLIENT_CERT"),
 		KafkaClientKey:      os.Getenv("KAFKA_CLIENT_KEY"),
 		KafkaInsecureSkip:   insecureSkip,
+		OpenSearchURL:       os.Getenv("OPENSEARCH_URL"),
+		OpenSearchUser:      os.Getenv("OPENSEARCH_USER"),
+		OpenSearchPassword:  os.Getenv("OPENSEARCH_PASSWORD"),
+		OpenSearchInsecure:  os.Getenv("OPENSEARCH_INSECURE_SKIP_VERIFY") == "true" || os.Getenv("OPENSEARCH_INSECURE_SKIP_VERIFY") == "1",
 	}
 }

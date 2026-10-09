@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/divyanshmehta355/aurahub/backend/db"
 	"github.com/divyanshmehta355/aurahub/backend/internal/kafka"
+	"github.com/divyanshmehta355/aurahub/backend/internal/opensearch"
 	"github.com/divyanshmehta355/aurahub/backend/middleware"
 	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
@@ -12,18 +13,23 @@ type Server struct {
 	Repository *db.Repository
 	Cache      *redis.Client
 	Kafka      *kafka.Producer
+	OpenSearch *opensearch.Client
 }
 
-func NewServer(repository *db.Repository, cache *redis.Client, kafkaProducer ...*kafka.Producer) *Server {
-	var kp *kafka.Producer
-	if len(kafkaProducer) > 0 {
-		kp = kafkaProducer[0]
-	}
-	return &Server{
+func NewServer(repository *db.Repository, cache *redis.Client, options ...any) *Server {
+	s := &Server{
 		Repository: repository,
 		Cache:      cache,
-		Kafka:      kp,
 	}
+	for _, opt := range options {
+		switch v := opt.(type) {
+		case *kafka.Producer:
+			s.Kafka = v
+		case *opensearch.Client:
+			s.OpenSearch = v
+		}
+	}
+	return s
 }
 
 func (s *Server) SetupRoutes(app *fiber.App) {

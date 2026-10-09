@@ -1,6 +1,6 @@
 module github.com/divyanshmehta355/aurahub/backend
 
-go 1.26.0
+go 1.26.8
 
 require (
 	github.com/dop251/goja v0.0.0-20261002135814-104bc28c3abd
@@ -33,8 +33,11 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
+	github.com/opensearch-project/opensearch-go/v2 v2.3.0 // indirect
+	github.com/opensearch-project/opensearch-go/v5 v5.0.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rs/dnscache v0.0.0-20230804202142-fc85eb664529 // indirect
 	github.com/segmentio/kafka-go v0.4.51 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.51.0 // indirect

@@ -33,23 +33,42 @@ func (s *Server) AutocompleteHandler(c *fiber.Ctx) error {
 		}
 	}
 
-	videos, err := s.Repository.SearchAutocompleteVideos(context.Background(), query, showAdult)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "Failed to search videos"})
-	}
-	users, err := s.Repository.SearchAutocompleteUsers(context.Background(), query)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "Failed to search users"})
+	var videoResults []fiber.Map
+	if s.OpenSearch != nil && s.OpenSearch.Enabled() {
+		suggestions, osErr := s.OpenSearch.Autocomplete(c.UserContext(), query, showAdult, 8)
+		if osErr == nil && len(suggestions) > 0 {
+			videoResults = make([]fiber.Map, 0, len(suggestions))
+			for _, item := range suggestions {
+				videoResults = append(videoResults, fiber.Map{
+					"id":           item.ID,
+					"title":        item.Title,
+					"thumbnailUrl": item.ThumbnailUrl,
+					"category":     item.Category,
+				})
+			}
+		}
 	}
 
-	videoResults := make([]fiber.Map, 0, len(videos))
-	for _, video := range videos {
-		videoResults = append(videoResults, fiber.Map{
-			"id":           formatUUID(video.ID),
-			"title":        video.Title,
-			"thumbnailUrl": video.ThumbnailUrl.String,
-			"category":     video.Category.String,
-		})
+	// Fallback to PostgreSQL if OpenSearch is disabled or yielded no results
+	if videoResults == nil {
+		videos, err := s.Repository.SearchAutocompleteVideos(context.Background(), query, showAdult)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"message": "Failed to search videos"})
+		}
+		videoResults = make([]fiber.Map, 0, len(videos))
+		for _, video := range videos {
+			videoResults = append(videoResults, fiber.Map{
+				"id":           formatUUID(video.ID),
+				"title":        video.Title,
+				"thumbnailUrl": video.ThumbnailUrl.String,
+				"category":     video.Category.String,
+			})
+		}
+	}
+
+	users, err := s.Repository.SearchAutocompleteUsers(context.Background(), query)
+	if err != nil {
+		users = nil
 	}
 	userResults := make([]fiber.Map, 0, len(users))
 	for _, user := range users {
@@ -248,6 +267,15 @@ func (s *Server) DeleteVideoHandler(c *fiber.Ctx) error {
 		s.invalidateFeedCache(context.Background())
 	}
 
+	videoIDStr := formatUUID(videoId)
+	if s.Kafka != nil {
+		_ = s.Kafka.Publish(c.UserContext(), kafka.TopicVideoLifecycle, videoIDStr, kafka.VideoLifecycleEvent{
+			Action:    "deleted",
+			VideoID:   videoIDStr,
+			Timestamp: time.Now(),
+		})
+	}
+
 	return c.JSON(fiber.Map{"message": "Video deleted successfully"})
 }
 
@@ -287,27 +315,56 @@ func (s *Server) SearchVideosHandler(c *fiber.Ctx) error {
 		}
 	}
 
-	videos, err := s.Repository.SearchPublicVideos(context.Background(), q, showAdult, sortType, 30)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "Failed to search videos"})
+	var res []fiber.Map
+	var total int
+
+	if s.OpenSearch != nil && s.OpenSearch.Enabled() {
+		osRes, err := s.OpenSearch.SearchVideos(c.UserContext(), q, "", showAdult, sortType, 30, 0)
+		if err == nil {
+			res = make([]fiber.Map, 0, len(osRes.Videos))
+			for _, v := range osRes.Videos {
+				res = append(res, fiber.Map{
+					"id":           v.ID,
+					"fileId":       v.FileID,
+					"title":        v.Title,
+					"description":  v.Description,
+					"thumbnailUrl": v.ThumbnailUrl,
+					"views":        v.Views,
+					"isShort":      v.IsShort,
+					"category":     v.Category,
+					"createdAt":    v.CreatedAt,
+				})
+			}
+			total = int(osRes.Total)
+		} else {
+			log.Printf("[OpenSearch] Search error, falling back to PostgreSQL: %v\n", err)
+		}
 	}
 
-	res := make([]fiber.Map, 0, len(videos))
-	for _, v := range videos {
-		res = append(res, fiber.Map{
-			"id":           formatUUID(v.ID),
-			"fileId":       v.FileID,
-			"title":        v.Title,
-			"description":  v.Description.String,
-			"thumbnailUrl": v.ThumbnailUrl.String,
-			"views":        v.Views.Int32,
-			"isShort":      v.IsShort.Bool,
-			"category":     v.Category.String,
-			"createdAt":    v.CreatedAt.Time,
-		})
+	// Fallback to PostgreSQL if OpenSearch is disabled or returned an error
+	if res == nil {
+		videos, err := s.Repository.SearchPublicVideos(context.Background(), q, showAdult, sortType, 30)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"message": "Failed to search videos"})
+		}
+		res = make([]fiber.Map, 0, len(videos))
+		for _, v := range videos {
+			res = append(res, fiber.Map{
+				"id":           formatUUID(v.ID),
+				"fileId":       v.FileID,
+				"title":        v.Title,
+				"description":  v.Description.String,
+				"thumbnailUrl": v.ThumbnailUrl.String,
+				"views":        v.Views.Int32,
+				"isShort":      v.IsShort.Bool,
+				"category":     v.Category.String,
+				"createdAt":    v.CreatedAt.Time,
+			})
+		}
+		total = len(res)
 	}
 
-	respMap := fiber.Map{"videos": res, "query": q, "total": len(res)}
+	respMap := fiber.Map{"videos": res, "query": q, "total": total}
 	if s.Cache != nil {
 		if data, err := json.Marshal(respMap); err == nil {
 			_ = s.Cache.Set(c.UserContext(), cacheKey, string(data), 2*time.Minute).Err()

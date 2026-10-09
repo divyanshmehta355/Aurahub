@@ -16,6 +16,7 @@ import (
 
 	"github.com/divyanshmehta355/aurahub/backend/internal/kafka"
 	"github.com/divyanshmehta355/aurahub/backend/internal/kafka/workers"
+	"github.com/divyanshmehta355/aurahub/backend/internal/opensearch"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
@@ -109,9 +110,32 @@ func main() {
 	kafkaProducer := kafka.NewProducer(cfg.KafkaBrokers, kafkaAuth)
 	defer kafkaProducer.Close()
 
+	// Initialize OpenSearch client (Phase 3)
+	var osAddresses []string
+	if cfg.OpenSearchURL != "" {
+		osAddresses = []string{cfg.OpenSearchURL}
+	}
+	osClient, err := opensearch.NewClient(opensearch.Config{
+		Addresses:          osAddresses,
+		Username:           cfg.OpenSearchUser,
+		Password:           cfg.OpenSearchPassword,
+		InsecureSkipVerify: cfg.OpenSearchInsecure,
+	})
+	if err != nil {
+		log.Printf("[OpenSearch] Warning: Initialization error: %v\n", err)
+	}
+
 	var workerWg sync.WaitGroup
 	workerCtx, cancelWorkers := context.WithCancel(context.Background())
 	defer cancelWorkers()
+
+	if osClient != nil && osClient.Enabled() {
+		go func() {
+			if err := osClient.EnsureIndex(workerCtx); err != nil {
+				log.Printf("[OpenSearch] EnsureIndex warning: %v\n", err)
+			}
+		}()
+	}
 
 	if len(cfg.KafkaBrokers) > 0 {
 		go kafka.EnsureTopics(workerCtx, cfg.KafkaBrokers, kafkaAuth,
@@ -122,10 +146,13 @@ func main() {
 		)
 		go workers.StartViewsFlusher(workerCtx, cfg.KafkaBrokers, kafkaAuth, repository, &workerWg)
 		go workers.StartBatchUploadWorker(workerCtx, cfg.KafkaBrokers, kafkaAuth, repository, rdb, kafkaProducer, &workerWg)
+		if osClient != nil && osClient.Enabled() {
+			go workers.StartOpenSearchIndexer(workerCtx, cfg.KafkaBrokers, kafkaAuth, repository, osClient, &workerWg)
+		}
 	}
 
-	// Pass the PostgreSQL query layer, Valkey client, and Kafka producer to handlers.
-	server := api.NewServer(repository, rdb, kafkaProducer)
+	// Pass the PostgreSQL query layer, Valkey client, Kafka producer, and OpenSearch client to handlers.
+	server := api.NewServer(repository, rdb, kafkaProducer, osClient)
 	server.SetupRoutes(app)
 
 	// Graceful shutdown listener on SIGINT / SIGTERM
