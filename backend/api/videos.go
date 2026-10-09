@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -22,6 +23,16 @@ func (s *Server) AutocompleteHandler(c *fiber.Ctx) error {
 	if len([]rune(query)) < 2 {
 		return c.JSON(fiber.Map{"videos": []fiber.Map{}, "users": []fiber.Map{}})
 	}
+
+	cacheKey := fmt.Sprintf("autocomplete:%s:adult:%t", strings.ToLower(query), showAdult)
+	if s.Cache != nil {
+		if cached, err := s.Cache.Get(c.UserContext(), cacheKey).Result(); err == nil && cached != "" {
+			c.Set("Content-Type", "application/json")
+			c.Set("X-Cache", "HIT")
+			return c.SendString(cached)
+		}
+	}
+
 	videos, err := s.Repository.SearchAutocompleteVideos(context.Background(), query, showAdult)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to search videos"})
@@ -48,7 +59,16 @@ func (s *Server) AutocompleteHandler(c *fiber.Ctx) error {
 			"avatar":   user.Avatar.String,
 		})
 	}
-	return c.JSON(fiber.Map{"videos": videoResults, "users": userResults})
+
+	resMap := fiber.Map{"videos": videoResults, "users": userResults}
+	if s.Cache != nil {
+		if data, err := json.Marshal(resMap); err == nil {
+			_ = s.Cache.Set(c.UserContext(), cacheKey, string(data), 5*time.Minute).Err()
+		}
+	}
+
+	c.Set("X-Cache", "MISS")
+	return c.JSON(resMap)
 }
 
 func parseUUID(idStr string) (pgtype.UUID, error) {
@@ -75,14 +95,29 @@ func (s *Server) ListVideosHandler(c *fiber.Ctx) error {
 	if category == "All" {
 		category = ""
 	}
+	videoType := c.Query("type", "video")
+	sortType := c.Query("sort", "trending")
+
+	cacheKey := fmt.Sprintf("feed:videos:cat=%s:type=%s:adult=%t:sort=%s:p=%d:l=%d",
+		category, videoType, showAdult, sortType, page, limit)
+
+	// Microcache first 2 pages for 60 seconds
+	if s.Cache != nil && page <= 2 {
+		if cached, err := s.Cache.Get(c.UserContext(), cacheKey).Result(); err == nil && cached != "" {
+			c.Set("Content-Type", "application/json")
+			c.Set("X-Cache", "HIT")
+			return c.SendString(cached)
+		}
+	}
+
 	var shortFilter pgtype.Bool
-	if c.Query("type") == "short" {
+	if videoType == "short" {
 		shortFilter = pgtype.Bool{Bool: true, Valid: true}
 	} else {
 		// Default to standard videos only; shorts are only served to the shorts section
 		shortFilter = pgtype.Bool{Bool: false, Valid: true}
 	}
-	videos, err := s.Repository.ListPublicVideos(context.Background(), category, shortFilter, showAdult, c.Query("sort", "trending"), int32(limit), int32((page-1)*limit))
+	videos, err := s.Repository.ListPublicVideos(context.Background(), category, shortFilter, showAdult, sortType, int32(limit), int32((page-1)*limit))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch videos"})
 	}
@@ -106,14 +141,23 @@ func (s *Server) ListVideosHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(fiber.Map{
+	respMap := fiber.Map{
 		"videos":      res,
 		"page":        page,
 		"currentPage": page,
 		"limit":       limit,
 		"totalVideos": total,
 		"totalPages":  (total + int64(limit) - 1) / int64(limit),
-	})
+	}
+
+	if s.Cache != nil && page <= 2 {
+		if data, err := json.Marshal(respMap); err == nil {
+			_ = s.Cache.Set(c.UserContext(), cacheKey, string(data), 60*time.Second).Err()
+		}
+	}
+
+	c.Set("X-Cache", "MISS")
+	return c.JSON(respMap)
 }
 
 func (s *Server) GetVideoHandler(c *fiber.Ctx) error {
@@ -198,12 +242,32 @@ func (s *Server) DeleteVideoHandler(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to delete video"})
 	}
 	if s.Cache != nil {
-		if err := s.Cache.Del(context.Background(), "video:"+idStr, "thumbnail:"+idStr).Err(); err != nil {
+		if err := s.Cache.Del(context.Background(), "thumbnail:"+idStr, "stream:"+idStr).Err(); err != nil {
 			log.Printf("Cache invalidation failed after deleting video %s: %v", idStr, err)
 		}
+		s.invalidateFeedCache(context.Background())
 	}
 
 	return c.JSON(fiber.Map{"message": "Video deleted successfully"})
+}
+
+// invalidateFeedCache clears cached public feeds and search entries on upload or deletion
+func (s *Server) invalidateFeedCache(ctx context.Context) {
+	if s.Cache == nil {
+		return
+	}
+	iter := s.Cache.Scan(ctx, 0, "feed:videos:*", 100).Iterator()
+	var keys []string
+	for iter.Next(ctx) {
+		keys = append(keys, iter.Val())
+		if len(keys) >= 100 {
+			_ = s.Cache.Del(ctx, keys...).Err()
+			keys = keys[:0]
+		}
+	}
+	if len(keys) > 0 {
+		_ = s.Cache.Del(ctx, keys...).Err()
+	}
 }
 
 func (s *Server) SearchVideosHandler(c *fiber.Ctx) error {
@@ -212,7 +276,18 @@ func (s *Server) SearchVideosHandler(c *fiber.Ctx) error {
 	if q == "" {
 		return c.JSON(fiber.Map{"videos": []fiber.Map{}, "query": q, "total": 0})
 	}
-	videos, err := s.Repository.SearchPublicVideos(context.Background(), q, showAdult, c.Query("sort", "relevance"), 30)
+	sortType := c.Query("sort", "relevance")
+	cacheKey := fmt.Sprintf("search:q=%s:adult=%t:sort=%s", strings.ToLower(q), showAdult, sortType)
+
+	if s.Cache != nil {
+		if cached, err := s.Cache.Get(c.UserContext(), cacheKey).Result(); err == nil && cached != "" {
+			c.Set("Content-Type", "application/json")
+			c.Set("X-Cache", "HIT")
+			return c.SendString(cached)
+		}
+	}
+
+	videos, err := s.Repository.SearchPublicVideos(context.Background(), q, showAdult, sortType, 30)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to search videos"})
 	}
@@ -231,7 +306,16 @@ func (s *Server) SearchVideosHandler(c *fiber.Ctx) error {
 			"createdAt":    v.CreatedAt.Time,
 		})
 	}
-	return c.JSON(fiber.Map{"videos": res, "query": q, "total": len(res)})
+
+	respMap := fiber.Map{"videos": res, "query": q, "total": len(res)}
+	if s.Cache != nil {
+		if data, err := json.Marshal(respMap); err == nil {
+			_ = s.Cache.Set(c.UserContext(), cacheKey, string(data), 2*time.Minute).Err()
+		}
+	}
+
+	c.Set("X-Cache", "MISS")
+	return c.JSON(respMap)
 }
 
 func pageLimit(c *fiber.Ctx, defaultLimit, maxLimit int) (int, int) {

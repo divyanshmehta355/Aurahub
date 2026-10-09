@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/url"
 	"os"
 	"strings"
@@ -125,13 +124,6 @@ func (s *Server) LoginHandler(c *fiber.Ctx) error {
 	tokenString, err := token.SignedString([]byte(secret))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Could not login"})
-	}
-
-	// Optionally store session in Valkey for invalidation check
-	if s.Cache != nil {
-		if err := s.Cache.Set(context.Background(), "session:"+userIdStr, tokenString, time.Hour*24*7).Err(); err != nil {
-			log.Printf("Failed to store login session for user %s: %v", userIdStr, err)
-		}
 	}
 
 	c.Cookie(&fiber.Cookie{

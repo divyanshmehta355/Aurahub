@@ -174,7 +174,19 @@ func processUploadJob(ctx context.Context, job kafka.BatchUploadJobEvent, repo *
 		return
 	}
 
-	// 4. Attach to playlist if requested
+	// 4. Invalidate public feed cache so new video appears
+	if cache != nil {
+		iter := cache.Scan(ctx, 0, "feed:videos:*", 100).Iterator()
+		var feedKeys []string
+		for iter.Next(ctx) {
+			feedKeys = append(feedKeys, iter.Val())
+		}
+		if len(feedKeys) > 0 {
+			_ = cache.Del(ctx, feedKeys...).Err()
+		}
+	}
+
+	// 5. Attach to playlist if requested
 	if job.PlaylistID != "" {
 		var playlistUUID pgtype.UUID
 		if err := playlistUUID.Scan(job.PlaylistID); err == nil && playlistUUID.Valid {

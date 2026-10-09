@@ -280,6 +280,10 @@ func (s *Server) CreateRecordHandler(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to save record"})
 	}
 
+	if s.Cache != nil {
+		s.invalidateFeedCache(c.UserContext())
+	}
+
 	if playlistIDValue != "" {
 		if err := s.Repository.AddVideoToPlaylist(context.Background(), db.AddVideoToPlaylistParams{
 			PlaylistID: playlistID, VideoID: video.ID,
