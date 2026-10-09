@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+*.exe
+tmp/
+certs/
+*.pem
+*.cert
+*.key
+.git
+.github

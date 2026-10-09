@@ -1,3 +1,9 @@
+-- Ensure PostgreSQL enum types exist idempotently
+DO $$ BEGIN CREATE TYPE video_visibility AS ENUM ('public', 'unlisted', 'private'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE streamtape_status AS ENUM ('active', 'dead', 'pending'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE notification_type AS ENUM ('like', 'comment', 'reply', 'new_video'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE interaction_type AS ENUM ('view', 'like'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -6,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     avatar TEXT,
     banner TEXT,
     bio TEXT,
+    show_adult_content BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -126,3 +133,7 @@ CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON comments(parent_comment_id)
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient_id ON notifications(recipient_id);
 CREATE INDEX IF NOT EXISTS idx_watch_history_updated_at ON watch_history(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_watch_later_created_at ON watch_later(created_at DESC);
+
+-- Backward-compatibility column migrations
+ALTER TABLE users ADD COLUMN IF NOT EXISTS show_adult_content BOOLEAN DEFAULT FALSE;
+ALTER TABLE videos ADD COLUMN IF NOT EXISTS is_adult BOOLEAN DEFAULT FALSE;

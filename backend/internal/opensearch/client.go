@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	osClient "github.com/opensearch-project/opensearch-go/v5"
 	"github.com/opensearch-project/opensearch-go/v5/opensearchapi"
@@ -115,33 +116,52 @@ func (c *Client) Ping(ctx context.Context) error {
 }
 
 // EnsureIndex checks if the aurahub_videos index exists, creating it with analyzers and mappings if not.
+// It retries with backoff to handle container startup orchestration smoothly.
 func (c *Client) EnsureIndex(ctx context.Context) error {
 	if !c.Enabled() {
 		return nil
 	}
 
-	existsResp, err := c.api.Indices.Exists(ctx, &opensearchapi.IndicesExistsReq{
-		Indices: []string{IndexVideos},
-	})
-	if err == nil && existsResp.StatusCode == http.StatusOK {
-		log.Printf("[OpenSearch] Index %q verified.\n", IndexVideos)
-		return nil
+	var lastErr error
+	for attempt := 1; attempt <= 10; attempt++ {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		existsResp, err := c.api.Indices.Exists(ctx, &opensearchapi.IndicesExistsReq{
+			Indices: []string{IndexVideos},
+		})
+		if err == nil {
+			if existsResp.StatusCode == http.StatusOK {
+				log.Printf("[OpenSearch] Index %q verified.\n", IndexVideos)
+				return nil
+			}
+
+			log.Printf("[OpenSearch] Index %q not found, creating with edge-ngram schema...\n", IndexVideos)
+			createResp, err := c.api.Indices.Create(ctx, opensearchapi.IndicesCreateReq{
+				Index:      IndexVideos,
+				BodyReader: strings.NewReader(IndexVideosSchema),
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create index %q: %w", IndexVideos, err)
+			}
+			if !createResp.Acknowledged {
+				log.Printf("[OpenSearch] Warning: index creation acknowledgment was false\n")
+			} else {
+				log.Printf("[OpenSearch] Index %q successfully created.\n", IndexVideos)
+			}
+			return nil
+		}
+
+		lastErr = err
+		if attempt < 10 {
+			time.Sleep(2 * time.Second)
+		}
 	}
 
-	log.Printf("[OpenSearch] Index %q not found, creating with edge-ngram schema...\n", IndexVideos)
-	createResp, err := c.api.Indices.Create(ctx, opensearchapi.IndicesCreateReq{
-		Index:      IndexVideos,
-		BodyReader: strings.NewReader(IndexVideosSchema),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create index %q: %w", IndexVideos, err)
-	}
-	if !createResp.Acknowledged {
-		log.Printf("[OpenSearch] Warning: index creation acknowledgment was false\n")
-	} else {
-		log.Printf("[OpenSearch] Index %q successfully created.\n", IndexVideos)
-	}
-	return nil
+	return fmt.Errorf("failed to ensure index %q after retries: %w", IndexVideos, lastErr)
 }
 
 // IndexVideo indexes or updates a video document in OpenSearch.

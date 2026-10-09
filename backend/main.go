@@ -51,6 +51,11 @@ func main() {
 	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 
+	// Ensure database schema and extensions exist (100% automated fresh database setup)
+	if err := db.EnsureSchema(database); err != nil {
+		log.Fatalf("Failed to ensure database schema: %v", err)
+	}
+
 	repository := db.NewRepository(database)
 
 	// Initialize Valkey using its Redis-compatible protocol.
