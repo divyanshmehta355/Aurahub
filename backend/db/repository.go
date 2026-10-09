@@ -39,6 +39,12 @@ func (q *Repository) BulkDeleteVideos(ctx context.Context, arg BulkDeleteVideosP
 		Delete(&Video{}).Error
 }
 
+func (q *Repository) GetVideosByIDsAndUploader(ctx context.Context, uploaderID pgtype.UUID, ids []pgtype.UUID) ([]Video, error) {
+	var videos []Video
+	err := q.orm.WithContext(ctx).Where("uploader_id = ? AND id IN ?", uploaderID, ids).Find(&videos).Error
+	return videos, err
+}
+
 type BulkUpdateVideoVisibilityParams struct {
 	UploaderID pgtype.UUID
 	Column2    []pgtype.UUID

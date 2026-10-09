@@ -2,10 +2,14 @@ package api
 
 import (
 	"context"
+	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/divyanshmehta355/aurahub/backend/db"
+	"github.com/divyanshmehta355/aurahub/backend/internal/httpclient"
+	"github.com/divyanshmehta355/aurahub/backend/internal/kafka"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -293,6 +297,43 @@ func (s *Server) BulkDeleteVideosHandler(c *fiber.Ctx) error {
 		uuids = append(uuids, id)
 	}
 
+	if len(uuids) == 0 {
+		return c.JSON(fiber.Map{"message": "No videos selected"})
+	}
+
+	// 1. Fetch videos to get their file_ids for Streamtape storage deletion
+	videos, err := s.Repository.GetVideosByIDsAndUploader(c.UserContext(), userId, uuids)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "Failed to query videos for deletion"})
+	}
+
+	// 2. Delete each file from Streamtape storage, invalidate cache, and emit Kafka lifecycle deletion events
+	for _, v := range videos {
+		if strings.TrimSpace(v.FileID) != "" {
+			if err := httpclient.DeleteStreamtapeFile(c.UserContext(), v.FileID); err != nil {
+				log.Printf("[Streamtape] Warning: Failed to delete file %s from streamtape: %v", v.FileID, err)
+			}
+		}
+
+		vIDStr := formatUUID(v.ID)
+		if s.Cache != nil {
+			keysToDel := []string{"thumbnail:" + vIDStr, "stream:" + vIDStr}
+			if v.FileID != "" {
+				keysToDel = append(keysToDel, "thumbnail:"+v.FileID, "stream:"+v.FileID)
+			}
+			_ = s.Cache.Del(context.Background(), keysToDel...).Err()
+		}
+
+		if s.Kafka != nil {
+			_ = s.Kafka.Publish(c.UserContext(), kafka.TopicVideoLifecycle, vIDStr, kafka.VideoLifecycleEvent{
+				Action:    "deleted",
+				VideoID:   vIDStr,
+				Timestamp: time.Now(),
+			})
+		}
+	}
+
+	// 3. Delete from database
 	err = s.Repository.BulkDeleteVideos(context.Background(), db.BulkDeleteVideosParams{
 		UploaderID: userId,
 		Column2:    uuids,
@@ -301,5 +342,9 @@ func (s *Server) BulkDeleteVideosHandler(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to delete videos"})
 	}
 
-	return c.JSON(fiber.Map{"message": "Videos deleted successfully"})
+	if s.Cache != nil {
+		s.invalidateFeedCache(context.Background())
+	}
+
+	return c.JSON(fiber.Map{"message": "Videos deleted successfully from storage and database"})
 }

@@ -5,13 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/divyanshmehta355/aurahub/backend/db"
+	"github.com/divyanshmehta355/aurahub/backend/internal/httpclient"
 	"github.com/divyanshmehta355/aurahub/backend/internal/kafka"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -245,15 +244,11 @@ func (s *Server) DeleteVideoHandler(c *fiber.Ctx) error {
 		return c.Status(403).JSON(fiber.Map{"message": "Not authorized to delete this video"})
 	}
 
-	response, err := requestAuraAPI(c.UserContext(), http.MethodDelete, "/fs/files/delete/"+url.PathEscape(video.FileID), nil)
-	if err != nil {
-		return c.Status(502).JSON(fiber.Map{"message": "Failed to delete video from storage. The video was not removed."})
-	}
-	var deletion struct {
-		Success bool `json:"success"`
-	}
-	if err := json.Unmarshal(response, &deletion); err != nil || !deletion.Success {
-		return c.Status(502).JSON(fiber.Map{"message": "Storage did not confirm deletion. The video was not removed."})
+	if strings.TrimSpace(video.FileID) != "" {
+		if err := httpclient.DeleteStreamtapeFile(c.UserContext(), video.FileID); err != nil {
+			log.Printf("[DeleteVideo] Failed to delete file %s from streamtape: %v", video.FileID, err)
+			return c.Status(502).JSON(fiber.Map{"message": "Failed to delete video from storage. The video was not removed."})
+		}
 	}
 
 	err = s.Repository.DeleteVideo(context.Background(), videoId)
@@ -261,7 +256,11 @@ func (s *Server) DeleteVideoHandler(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to delete video"})
 	}
 	if s.Cache != nil {
-		if err := s.Cache.Del(context.Background(), "thumbnail:"+idStr, "stream:"+idStr).Err(); err != nil {
+		keysToDel := []string{"thumbnail:" + idStr, "stream:" + idStr}
+		if video.FileID != "" {
+			keysToDel = append(keysToDel, "thumbnail:"+video.FileID, "stream:"+video.FileID)
+		}
+		if err := s.Cache.Del(context.Background(), keysToDel...).Err(); err != nil {
 			log.Printf("Cache invalidation failed after deleting video %s: %v", idStr, err)
 		}
 		s.invalidateFeedCache(context.Background())
