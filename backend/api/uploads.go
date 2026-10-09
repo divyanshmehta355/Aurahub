@@ -16,9 +16,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/divyanshmehta355/aurahub/backend/db"
+	"github.com/divyanshmehta355/aurahub/backend/internal/httpclient"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -32,7 +32,7 @@ var (
 func (s *Server) GetUploadUrlHandler(c *fiber.Ctx) error {
 	query := url.Values{}
 	query.Set("folder", os.Getenv("UPLOAD_FOLDER_ID"))
-	body, err := requestAuraAPI(http.MethodGet, "/upload/url", query)
+	body, err := requestAuraAPI(c.UserContext(), http.MethodGet, "/upload/url", query)
 	if err != nil {
 		return c.Status(502).JSON(fiber.Map{"message": "Failed to get upload URL"})
 	}
@@ -104,7 +104,7 @@ func (s *Server) UploadChunkHandler(c *fiber.Ctx) error {
 		// Final chunk, upload to aura API
 		query := url.Values{}
 		query.Set("folder", os.Getenv("UPLOAD_FOLDER_ID"))
-		urlBody, err := requestAuraAPI(http.MethodGet, "/upload/url", query)
+		urlBody, err := requestAuraAPI(c.UserContext(), http.MethodGet, "/upload/url", query)
 		if err != nil {
 			os.Remove(uploadFilePath)
 			return c.Status(502).JSON(fiber.Map{"message": "Failed to get URL"})
@@ -146,14 +146,14 @@ func (s *Server) UploadChunkHandler(c *fiber.Ctx) error {
 			return c.Status(500).JSON(fiber.Map{"message": "Failed to prepare upload"})
 		}
 
-		req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, urlData.Url, body)
+		req, err := http.NewRequestWithContext(c.UserContext(), http.MethodPost, urlData.Url, body)
 		if err != nil {
 			os.Remove(uploadFilePath)
 			return c.Status(502).JSON(fiber.Map{"message": "Invalid upload URL"})
 		}
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
-		uploadResp, err := (&http.Client{Timeout: 2 * time.Minute}).Do(req)
+		uploadResp, err := httpclient.Upload.Do(req)
 		os.Remove(uploadFilePath)
 
 		if err != nil {

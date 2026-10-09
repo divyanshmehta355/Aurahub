@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/divyanshmehta355/aurahub/backend/db"
+	"github.com/divyanshmehta355/aurahub/backend/internal/kafka"
 	"github.com/divyanshmehta355/aurahub/backend/middleware"
 	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
@@ -10,12 +11,18 @@ import (
 type Server struct {
 	Repository *db.Repository
 	Cache      *redis.Client
+	Kafka      *kafka.Producer
 }
 
-func NewServer(repository *db.Repository, cache *redis.Client) *Server {
+func NewServer(repository *db.Repository, cache *redis.Client, kafkaProducer ...*kafka.Producer) *Server {
+	var kp *kafka.Producer
+	if len(kafkaProducer) > 0 {
+		kp = kafkaProducer[0]
+	}
 	return &Server{
 		Repository: repository,
 		Cache:      cache,
+		Kafka:      kp,
 	}
 }
 
@@ -49,6 +56,7 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 	videos.Get("/stream/:id", s.StreamVideoHandler)
 	videos.Get("/remote-upload/status", s.RemoteUploadStatusHandler)
 	videos.Post("/remote-upload/start", middleware.AuthRequired(), s.RemoteUploadStartHandler)
+	videos.Post("/remote-upload/batch", middleware.AuthRequired(), s.BatchRemoteUploadHandler)
 	videos.Put("/bulk", middleware.AuthRequired(), s.BulkUpdateVideoVisibilityHandler)
 	videos.Put("/bulk-adult", middleware.AuthRequired(), s.BulkUpdateVideoAdultHandler)
 	videos.Delete("/bulk", middleware.AuthRequired(), s.BulkDeleteVideosHandler)
@@ -112,6 +120,7 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 	// Playlists routes
 	playlists := api.Group("/playlists")
 	playlists.Get("/", middleware.AuthRequired(), s.ListPlaylistsHandler)
+	playlists.Get("/my-playlists", middleware.AuthRequired(), s.ListPlaylistsHandler)
 	playlists.Post("/", middleware.AuthRequired(), s.CreatePlaylistHandler)
 	playlists.Put("/", middleware.AuthRequired(), s.UpdatePlaylistCollectionHandler)
 	playlists.Get("/:id", middleware.OptionalAuth(), s.GetPlaylistHandler)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/divyanshmehta355/aurahub/backend/db"
+	"github.com/divyanshmehta355/aurahub/backend/internal/httpclient"
 	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
 )
@@ -85,17 +87,19 @@ func (s *Server) GetVideoThumbnailHandler(c *fiber.Ctx) error {
 	} else if video.FileID != "" {
 		// Try fetching from Aura Worker
 		reqUrl := AURA_API_BASE_URL + "/fs/files/thumbnail/" + video.FileID
-		client := &http.Client{Timeout: 5 * time.Second}
-		resp, apiErr := client.Get(reqUrl)
-		if apiErr == nil && resp.StatusCode == 200 {
-			var respData struct {
-				ThumbnailUrl string `json:"thumbnail_url"`
+		req, reqErr := http.NewRequestWithContext(c.UserContext(), http.MethodGet, reqUrl, nil)
+		if reqErr == nil {
+			resp, apiErr := httpclient.Default.Do(req)
+			if apiErr == nil && resp.StatusCode == 200 {
+				var respData struct {
+					ThumbnailUrl string `json:"thumbnail_url"`
+				}
+				json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&respData)
+				if respData.ThumbnailUrl != "" {
+					finalUrl = respData.ThumbnailUrl
+				}
+				resp.Body.Close()
 			}
-			json.NewDecoder(resp.Body).Decode(&respData)
-			if respData.ThumbnailUrl != "" {
-				finalUrl = respData.ThumbnailUrl
-			}
-			resp.Body.Close()
 		}
 	}
 

@@ -1,3 +1,14 @@
 .env
 .env.*
 !.env.example
+
+# Binaries & build artifacts
+*.exe
+backend.exe
+tmp/
+
+# Kafka & TLS certificates
+certs/
+*.pem
+*.cert
+*.key

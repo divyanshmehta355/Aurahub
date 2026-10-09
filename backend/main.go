@@ -3,14 +3,25 @@ package main
 import (
 	"context"
 	"log"
+	"net"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
 
 	"github.com/divyanshmehta355/aurahub/backend/api"
 	"github.com/divyanshmehta355/aurahub/backend/config"
 	"github.com/divyanshmehta355/aurahub/backend/db"
 
+	"github.com/divyanshmehta355/aurahub/backend/internal/kafka"
+	"github.com/divyanshmehta355/aurahub/backend/internal/kafka/workers"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -34,6 +45,11 @@ func main() {
 		log.Fatalf("Could not connect to database: %v", err)
 	}
 
+	// Configure connection pool boundaries for production stability
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+
 	repository := db.NewRepository(database)
 
 	// Initialize Valkey using its Redis-compatible protocol.
@@ -55,6 +71,10 @@ func main() {
 		BodyLimit: 8 * 1024 * 1024,
 	})
 
+	app.Use(recover.New())
+	app.Use(compress.New(compress.Config{
+		Level: compress.LevelDefault,
+	}))
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.AllowedOrigins,
@@ -62,12 +82,71 @@ func main() {
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 	}))
 
-	// Pass the PostgreSQL query layer and Valkey client to handlers.
-	server := api.NewServer(repository, rdb)
+	var serverName string
+	if len(cfg.KafkaBrokers) > 0 {
+		host, _, err := net.SplitHostPort(cfg.KafkaBrokers[0])
+		if err == nil {
+			serverName = host
+		} else {
+			serverName = cfg.KafkaBrokers[0]
+		}
+	}
+
+	// Initialize Kafka Producer and background event workers with TLS / SASL authentication
+	kafkaAuth := kafka.AuthConfig{
+		User:               cfg.KafkaUser,
+		Password:           cfg.KafkaPassword,
+		AuthMethod:         cfg.KafkaAuthMethod,
+		ServerName:         serverName,
+		CACertPath:         cfg.KafkaCACertPath,
+		ClientCertPath:     cfg.KafkaClientCertPath,
+		ClientKeyPath:      cfg.KafkaClientKeyPath,
+		CACert:             cfg.KafkaCACert,
+		ClientCert:         cfg.KafkaClientCert,
+		ClientKey:          cfg.KafkaClientKey,
+		InsecureSkipVerify: cfg.KafkaInsecureSkip,
+	}
+	kafkaProducer := kafka.NewProducer(cfg.KafkaBrokers, kafkaAuth)
+	defer kafkaProducer.Close()
+
+	var workerWg sync.WaitGroup
+	workerCtx, cancelWorkers := context.WithCancel(context.Background())
+	defer cancelWorkers()
+
+	if len(cfg.KafkaBrokers) > 0 {
+		go kafka.EnsureTopics(workerCtx, cfg.KafkaBrokers, kafkaAuth,
+			kafka.TopicVideoViews,
+			kafka.TopicBatchUploadJobs,
+			kafka.TopicNotifications,
+			kafka.TopicVideoLifecycle,
+		)
+		go workers.StartViewsFlusher(workerCtx, cfg.KafkaBrokers, kafkaAuth, repository, &workerWg)
+		go workers.StartBatchUploadWorker(workerCtx, cfg.KafkaBrokers, kafkaAuth, repository, rdb, kafkaProducer, &workerWg)
+	}
+
+	// Pass the PostgreSQL query layer, Valkey client, and Kafka producer to handlers.
+	server := api.NewServer(repository, rdb, kafkaProducer)
 	server.SetupRoutes(app)
+
+	// Graceful shutdown listener on SIGINT / SIGTERM
+	shutdownChan := make(chan os.Signal, 1)
+	signal.Notify(shutdownChan, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-shutdownChan
+		log.Println("Received shutdown signal. Gracefully stopping Aurahub server...")
+		if err := app.Shutdown(); err != nil {
+			log.Printf("Error shutting down HTTP server: %v\n", err)
+		}
+	}()
 
 	log.Printf("Starting server on port %s...", cfg.Port)
 	if err := app.Listen(":" + cfg.Port); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+		log.Printf("HTTP listener closed: %v\n", err)
 	}
+
+	log.Println("Draining background Kafka workers...")
+	cancelWorkers()
+	workerWg.Wait()
+	log.Println("Aurahub server and workers shutdown complete.")
 }

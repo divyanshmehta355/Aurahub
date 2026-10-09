@@ -31,6 +31,35 @@
 	let createdPlaylist: any = $state(null);
 	let abortFlag = $state(false);
 
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+
+		const handleBatchProgress = (e: any) => {
+			const data = e.detail;
+			if (!data) return;
+
+			const targetItem = items.find((i) => i.title.trim() === data.title?.trim());
+			if (targetItem) {
+				if (data.status === 'completed') {
+					targetItem.status = 'completed';
+					targetItem.progress = 100;
+					completedCount = items.filter((i) => i.status === 'completed').length;
+				} else if (data.status === 'downloading') {
+					targetItem.status = 'downloading';
+					targetItem.progress = data.progress || 50;
+				} else if (data.status === 'error') {
+					targetItem.status = 'error';
+					targetItem.error = data.error || 'Failed';
+				}
+			}
+		};
+
+		window.addEventListener('batch_upload_progress', handleBatchProgress);
+		return () => {
+			window.removeEventListener('batch_upload_progress', handleBatchProgress);
+		};
+	});
+
 	function addRow() {
 		items = [
 			...items,
@@ -96,6 +125,72 @@
 		}
 	}
 
+	function handleBatchProgress(e: any) {
+		const data = e.detail;
+		if (!data) return;
+
+		const item = items.find((i) => i.title.trim() === data.title?.trim());
+		if (item) {
+			if (data.status) item.status = data.status;
+			if (typeof data.progress === 'number') item.progress = data.progress;
+			if (data.error) item.error = data.error;
+			if (data.status === 'completed') {
+				completedCount = items.filter((i) => i.status === 'completed').length;
+			}
+		}
+	}
+
+	$effect(() => {
+		if (typeof window !== 'undefined') {
+			window.addEventListener('batch_upload_progress', handleBatchProgress);
+			return () => {
+				window.removeEventListener('batch_upload_progress', handleBatchProgress);
+			};
+		}
+	});
+
+	async function processSingleItem(item: any, targetPlaylistId: string | null) {
+		item.status = 'queuing';
+		item.progress = 0;
+		item.error = '';
+
+		try {
+			const startRes = await fetchApi('/videos/remote-upload/start', {
+				method: 'POST',
+				body: JSON.stringify({ videoUrl: item.videoUrl.trim() })
+			});
+			if (!startRes.id) throw new Error('Did not receive remote ID');
+
+			item.status = 'downloading';
+			const finalVideoId = await pollRemote(startRes.id, item);
+
+			item.status = 'publishing';
+
+			const finalData = new FormData();
+			finalData.append('videoId', finalVideoId);
+			finalData.append('title', item.title.trim());
+			finalData.append('description', '');
+			finalData.append('category', category);
+			finalData.append('visibility', 'public');
+			finalData.append('isShort', isShort.toString());
+			finalData.append('isAdult', isAdult.toString());
+			if (targetPlaylistId) {
+				finalData.append('playlistId', targetPlaylistId);
+			}
+
+			await fetchApi('/videos/create-record', {
+				method: 'POST',
+				body: finalData
+			});
+
+			item.status = 'completed';
+			completedCount = items.filter((i) => i.status === 'completed').length;
+		} catch (err: any) {
+			item.status = 'error';
+			item.error = err.message || 'Failed';
+		}
+	}
+
 	async function startUpload() {
 		const validItems = items.filter((i) => i.title.trim() && i.videoUrl.trim());
 		if (validItems.length === 0)
@@ -122,57 +217,64 @@
 			targetPlaylistId = selectedPlaylistId;
 		}
 
-		let successCount = 0;
-		for (let i = 0; i < items.length; i++) {
-			if (abortFlag) break;
-			const item = items[i];
-			if (!item.title.trim() || !item.videoUrl.trim() || item.status === 'completed') continue;
-
-			currentProcessingIndex = i;
-			item.status = 'queuing';
-			item.progress = 0;
-			item.error = '';
-
-			try {
-				const startRes = await fetchApi('/videos/remote-upload/start', {
-					method: 'POST',
-					body: JSON.stringify({ videoUrl: item.videoUrl.trim() })
-				});
-				if (!startRes.id) throw new Error('Did not receive remote ID');
-
-				item.status = 'downloading';
-				const finalVideoId = await pollRemote(startRes.id, item);
-
-				item.status = 'publishing';
-
-				const finalData = new FormData();
-				finalData.append('videoId', finalVideoId);
-				finalData.append('title', item.title.trim());
-				finalData.append('description', '');
-				finalData.append('category', category);
-				finalData.append('visibility', 'public');
-				finalData.append('isShort', isShort.toString());
-				finalData.append('isAdult', isAdult.toString());
-				if (targetPlaylistId) {
-					finalData.append('playlistId', targetPlaylistId);
+		// 1. Production Kafka Pipeline: Dispatch entire batch to background worker
+		try {
+			items.forEach((item) => {
+				if (item.title.trim() && item.videoUrl.trim() && item.status !== 'completed') {
+					item.status = 'queuing';
+					item.progress = 5;
+					item.error = '';
 				}
+			});
 
-				await fetchApi('/videos/create-record', {
-					method: 'POST',
-					body: finalData
+			const batchPayload = {
+				playlistId: targetPlaylistId,
+				category,
+				visibility: 'public',
+				isShort,
+				isAdult,
+				items: validItems.map((i) => ({ title: i.title.trim(), videoUrl: i.videoUrl.trim() }))
+			};
+
+			const batchRes = await fetchApi('/videos/remote-upload/batch', {
+				method: 'POST',
+				body: JSON.stringify(batchPayload)
+			});
+
+			if (batchRes && batchRes.enqueuedCount > 0) {
+				// Successfully enqueued to Kafka! The server worker handles remote download & polling in parallel.
+				isRunning = false;
+				items.forEach((item) => {
+					if (item.status === 'queuing') {
+						item.status = 'downloading';
+						item.progress = 10;
+					}
 				});
+				return;
+			}
+		} catch (batchErr) {
+			console.warn('Kafka batch endpoint unavailable, falling back to parallel worker pool:', batchErr);
+		}
 
-				item.status = 'completed';
-				successCount++;
-				completedCount = successCount;
-			} catch (err: any) {
-				item.status = 'error';
-				item.error = err.message || 'Failed';
+		// 2. Parallel Worker Pool Fallback (Concurrency = 3)
+		const CONCURRENCY_LIMIT = 3;
+		const queue = items.filter((i) => i.title.trim() && i.videoUrl.trim() && i.status !== 'completed');
+
+		async function worker() {
+			while (queue.length > 0 && !abortFlag) {
+				const item = queue.shift();
+				if (!item) break;
+				await processSingleItem(item, targetPlaylistId);
 			}
 		}
 
+		const workers = Array.from(
+			{ length: Math.min(CONCURRENCY_LIMIT, queue.length) },
+			() => worker()
+		);
+
+		await Promise.all(workers);
 		isRunning = false;
-		currentProcessingIndex = -1;
 	}
 
 	function stopUpload() {

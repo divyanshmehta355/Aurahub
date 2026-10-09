@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"mime/multipart"
@@ -14,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/divyanshmehta355/aurahub/backend/internal/httpclient"
+	"github.com/divyanshmehta355/aurahub/backend/internal/kafka"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -30,7 +33,7 @@ func (s *Server) RemoteUploadStartHandler(c *fiber.Ctx) error {
 	query := url.Values{}
 	query.Set("url", request.VideoURL)
 	query.Set("folder", os.Getenv("UPLOAD_FOLDER_ID"))
-	response, err := requestAuraAPI(http.MethodGet, "/remote/add", query)
+	response, err := requestAuraAPI(c.UserContext(), http.MethodGet, "/remote/add", query)
 	if err != nil {
 		return c.Status(502).JSON(fiber.Map{"message": "Failed to start remote upload"})
 	}
@@ -40,40 +43,22 @@ func (s *Server) RemoteUploadStartHandler(c *fiber.Ctx) error {
 func (s *Server) RemoteUploadStatusHandler(c *fiber.Ctx) error {
 	remoteID := c.Query("id")
 	if remoteID == "" {
+		remoteID = c.Query("ids")
+	}
+	if remoteID == "" {
 		return c.Status(400).JSON(fiber.Map{"message": "Remote ID is required."})
 	}
 	query := url.Values{}
 	query.Set("id", remoteID)
-	response, err := requestAuraAPI(http.MethodGet, "/remote/status", query)
+	response, err := requestAuraAPI(c.UserContext(), http.MethodGet, "/remote/status", query)
 	if err != nil {
 		return c.Status(502).JSON(fiber.Map{"message": "Failed to check status"})
 	}
 	return c.Type("json").Send(response)
 }
 
-func requestAuraAPI(method, path string, query url.Values) ([]byte, error) {
-	requestURL := AuraApiBaseUrl + path
-	if len(query) > 0 {
-		requestURL += "?" + query.Encode()
-	}
-	request, err := http.NewRequestWithContext(context.Background(), method, requestURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	client := &http.Client{Timeout: 20 * time.Second}
-	response, err := client.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(response.Body, 2<<20))
-	if err != nil {
-		return nil, err
-	}
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return nil, fiber.NewError(fiber.StatusBadGateway, "upstream upload service returned an error")
-	}
-	return body, nil
+func requestAuraAPI(ctx context.Context, method, path string, query url.Values) ([]byte, error) {
+	return httpclient.RequestAuraAPI(ctx, method, path, query)
 }
 
 func (s *Server) UpdateVideoThumbnailHandler(c *fiber.Ctx) error {
@@ -156,8 +141,7 @@ func uploadImage(image []byte) (string, error) {
 		return "", err
 	}
 	request.Header.Set("Content-Type", writer.FormDataContentType())
-	client := &http.Client{Timeout: 20 * time.Second}
-	response, err := client.Do(request)
+	response, err := httpclient.Default.Do(request)
 	if err != nil {
 		return "", err
 	}
@@ -179,3 +163,73 @@ func uploadImage(image []byte) (string, error) {
 	}
 	return result.Image.URL, nil
 }
+
+type BatchRemoteUploadItem struct {
+	Title    string `json:"title"`
+	VideoURL string `json:"videoUrl"`
+}
+
+type BatchRemoteUploadRequest struct {
+	PlaylistID string                  `json:"playlistId"`
+	Category   string                  `json:"category"`
+	Visibility string                  `json:"visibility"`
+	IsShort    bool                    `json:"isShort"`
+	IsAdult    bool                    `json:"isAdult"`
+	Items      []BatchRemoteUploadItem `json:"items"`
+}
+
+// BatchRemoteUploadHandler queues a playlist batch of remote video downloads to Kafka,
+// freeing the client browser from having to keep the tab open for polling.
+func (s *Server) BatchRemoteUploadHandler(c *fiber.Ctx) error {
+	userIdLocal := c.Locals("userId")
+	if userIdLocal == nil {
+		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	}
+	userID := userIdLocal.(string)
+
+	var req BatchRemoteUploadRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"message": "Invalid batch upload payload"})
+	}
+
+	if len(req.Items) == 0 {
+		return c.Status(400).JSON(fiber.Map{"message": "At least one video item is required"})
+	}
+
+	batchID := fmt.Sprintf("batch-%d", time.Now().UnixNano())
+	enqueuedCount := 0
+
+	for _, item := range req.Items {
+		title := strings.TrimSpace(item.Title)
+		videoURL := strings.TrimSpace(item.VideoURL)
+		if title == "" || videoURL == "" {
+			continue
+		}
+
+		jobID := fmt.Sprintf("%s-%d", batchID, enqueuedCount)
+		event := kafka.BatchUploadJobEvent{
+			JobID:       jobID,
+			UserID:      userID,
+			PlaylistID:  req.PlaylistID,
+			Title:       title,
+			VideoURL:    videoURL,
+			Category:    req.Category,
+			Visibility:  req.Visibility,
+			IsShort:     req.IsShort,
+			IsAdult:     req.IsAdult,
+			Timestamp:   time.Now(),
+		}
+
+		if s.Kafka != nil {
+			_ = s.Kafka.Publish(c.UserContext(), kafka.TopicBatchUploadJobs, jobID, event)
+		}
+		enqueuedCount++
+	}
+
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+		"message":       "Batch upload queued successfully",
+		"batchId":       batchID,
+		"enqueuedCount": enqueuedCount,
+	})
+}
+

@@ -8,8 +8,10 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/divyanshmehta355/aurahub/backend/db"
+	"github.com/divyanshmehta355/aurahub/backend/internal/kafka"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -115,75 +117,46 @@ func (s *Server) ListVideosHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) GetVideoHandler(c *fiber.Ctx) error {
-	idStr := c.Params("id")
-
-	// Try getting by FileID first (short ID)
-	video, err := s.Repository.GetVideoByFileId(context.Background(), idStr)
-	if err != nil {
-		// Fallback to UUID in case old URLs are hit
-		videoId, parseErr := parseUUID(idStr)
-		if parseErr != nil {
-			return c.Status(400).JSON(fiber.Map{"message": "Invalid video ID format."})
-		}
-		video, err = s.Repository.GetVideo(context.Background(), videoId)
-		if err != nil {
-			return c.Status(404).JSON(fiber.Map{"message": "Video not found"})
-		}
+	idStr := strings.TrimSpace(c.Params("id"))
+	if idStr == "" {
+		return c.Status(400).JSON(fiber.Map{"message": "Video ID is required"})
 	}
+
+	var viewerUUID pgtype.UUID
+	userIdLocal := c.Locals("userId")
+	if userID, ok := userIdLocal.(string); ok {
+		viewerUUID, _ = parseUUID(userID)
+	}
+
+	detail, err := s.Repository.GetVideoDetails(c.UserContext(), idStr, viewerUUID)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"message": "Video not found"})
 	}
 
-	uploader, err := s.Repository.GetUser(context.Background(), video.UploaderID)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch video owner"})
-	}
-
-	userIdLocal := c.Locals("userId")
-	isUploader := false
-	if userID, ok := userIdLocal.(string); ok && userID == formatUUID(video.UploaderID) {
-		isUploader = true
-	}
-
-	if video.Visibility.VideoVisibility == db.VideoVisibilityPrivate && !isUploader {
+	isUploader := viewerUUID.Valid && viewerUUID == detail.UploaderID
+	if detail.Visibility.VideoVisibility == db.VideoVisibilityPrivate && !isUploader {
 		return c.Status(403).JSON(fiber.Map{"message": "This video is private"})
-	}
-	likesCount, err := s.Repository.CountVideoLikes(context.Background(), video.ID)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch likes"})
-	}
-	commentCount, err := s.Repository.CountVideoComments(context.Background(), video.ID)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch comments"})
-	}
-	isLiked := false
-	if userID, ok := userIdLocal.(string); ok {
-		viewerID, parseErr := parseUUID(userID)
-		if parseErr == nil {
-			isLiked, err = s.Repository.HasUserLikedVideo(context.Background(), viewerID, video.ID)
-			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch like status"})
-			}
-		}
 	}
 
 	return c.JSON(fiber.Map{
-		"id":            formatUUID(video.ID),
-		"title":         video.Title,
-		"description":   video.Description.String,
-		"thumbnailUrl":  video.ThumbnailUrl.String,
-		"streamtapeUrl": video.StreamtapeUrl.String,
-		"fileId":        video.FileID,
-		"views":         video.Views.Int32,
-		"createdAt":     video.CreatedAt.Time,
-		"likesCount":    likesCount,
-		"commentCount":  commentCount,
-		"isLiked":       isLiked,
-		"isAdult":       video.IsAdult.Bool,
+		"id":            formatUUID(detail.ID),
+		"title":         detail.Title,
+		"description":   detail.Description.String,
+		"thumbnailUrl":  detail.ThumbnailUrl.String,
+		"streamtapeUrl": detail.StreamtapeUrl.String,
+		"fileId":        detail.FileID,
+		"views":         detail.Views.Int32,
+		"createdAt":     detail.CreatedAt.Time,
+		"likesCount":    detail.LikesCount,
+		"commentCount":  detail.CommentCount,
+		"isLiked":       detail.IsLiked,
+		"isAdult":       detail.IsAdult.Bool,
 		"uploader": fiber.Map{
-			"id":       formatUUID(uploader.ID),
-			"username": uploader.Username,
-			"avatar":   uploader.Avatar.String,
+			"id":               formatUUID(detail.UploaderID),
+			"username":         detail.UploaderUsername,
+			"avatar":           detail.UploaderAvatar.String,
+			"subscribersCount": detail.SubscribersCount,
+			"isSubscribed":     detail.IsSubscribed,
 		},
 	})
 }
@@ -209,7 +182,7 @@ func (s *Server) DeleteVideoHandler(c *fiber.Ctx) error {
 		return c.Status(403).JSON(fiber.Map{"message": "Not authorized to delete this video"})
 	}
 
-	response, err := requestAuraAPI(http.MethodDelete, "/fs/files/delete/"+url.PathEscape(video.FileID), nil)
+	response, err := requestAuraAPI(c.UserContext(), http.MethodDelete, "/fs/files/delete/"+url.PathEscape(video.FileID), nil)
 	if err != nil {
 		return c.Status(502).JSON(fiber.Map{"message": "Failed to delete video from storage. The video was not removed."})
 	}
@@ -278,47 +251,60 @@ func pageLimit(c *fiber.Ctx, defaultLimit, maxLimit int) (int, int) {
 
 func (s *Server) RecordVideoViewHandler(c *fiber.Ctx) error {
 	id := c.Params("id")
-	video, err := s.Repository.GetVideoByFileId(context.Background(), id)
-	if err != nil {
-		videoID, parseErr := parseUUID(id)
-		if parseErr != nil {
+	var video db.Video
+	var err error
+
+	// If the ID is a valid UUID, look up directly to prevent slow fallback queries
+	if videoUUID, parseErr := parseUUID(id); parseErr == nil {
+		video, err = s.Repository.GetVideo(c.UserContext(), videoUUID)
+		if err != nil {
 			return c.Status(404).JSON(fiber.Map{"message": "Video not found"})
 		}
-		video, err = s.Repository.GetVideo(context.Background(), videoID)
+	} else {
+		video, err = s.Repository.GetVideoByFileId(c.UserContext(), id)
 		if err != nil {
 			return c.Status(404).JSON(fiber.Map{"message": "Video not found"})
 		}
 	}
 
-	ctx := context.Background()
+	var userIDStr string
+	if userIDValue := c.Locals("userId"); userIDValue != nil {
+		if uid, ok := userIDValue.(string); ok {
+			userIDStr = uid
+		}
+	}
+
+	// High-throughput Kafka Stream: emit view event non-blocking and return immediately (< 2ms)
+	if s.Kafka != nil {
+		videoIDStr := formatUUID(video.ID)
+		go func(vID, uID string) {
+			pubCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = s.Kafka.Publish(pubCtx, kafka.TopicVideoViews, vID, kafka.VideoViewEvent{
+				VideoID:   vID,
+				UserID:    uID,
+				Timestamp: time.Now(),
+			})
+		}(videoIDStr, userIDStr)
+		return c.JSON(fiber.Map{"success": true})
+	}
+
+	// Standby / Fallback path if Kafka is not running
+	ctx := c.UserContext()
 	if err := s.Repository.IncrementVideoViews(ctx, video.ID); err != nil {
 		return c.Status(500).JSON(fiber.Map{"success": false, "message": "Could not count view."})
 	}
 
-	if userIDValue := c.Locals("userId"); userIDValue != nil {
-		userID, ok := userIDValue.(string)
-		if !ok {
-			return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-		}
-		userUUID, err := parseUUID(userID)
-		if err != nil {
-			return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-		}
-		if err := s.Repository.UpsertVideoViewActivity(ctx, userUUID, video.ID); err != nil {
-			return c.Status(500).JSON(fiber.Map{"success": false, "message": "Could not record view activity."})
-		}
-		if err := s.Repository.UpsertWatchHistory(ctx, db.UpsertWatchHistoryParams{
-			UserID: userUUID, VideoID: video.ID,
-		}); err != nil {
-			return c.Status(500).JSON(fiber.Map{"success": false, "message": "Could not update watch history."})
+	if userIDStr != "" {
+		if userUUID, err := parseUUID(userIDStr); err == nil {
+			_ = s.Repository.UpsertVideoViewActivity(ctx, userUUID, video.ID)
+			_ = s.Repository.UpsertWatchHistory(ctx, db.UpsertWatchHistoryParams{
+				UserID:  userUUID,
+				VideoID: video.ID,
+			})
 		}
 	}
 
-	if s.Cache != nil {
-		if err := s.Cache.Del(ctx, "video:"+id).Err(); err != nil {
-			log.Printf("Cache invalidation failed after recording view for %s: %v", id, err)
-		}
-	}
 	return c.JSON(fiber.Map{"success": true})
 }
 

@@ -46,9 +46,16 @@
 		() => ({
 			queryKey: ['profile', uploaderUsername],
 			queryFn: async () => await fetchApi(`/users/${uploaderUsername}/profile`),
-			enabled: !!uploaderUsername
+			enabled: !!uploaderUsername && videoQuery.data?.uploader?.subscribersCount === undefined
 		}),
 		() => queryClient
+	);
+
+	let subscriberCount = $derived(
+		uploaderQuery.data?.subscriberCount ?? videoQuery.data?.uploader?.subscribersCount ?? 0
+	);
+	let isSubscribed = $derived(
+		uploaderQuery.data?.isSubscribed ?? videoQuery.data?.uploader?.isSubscribed ?? false
 	);
 
 	const playlistQuery = createQuery(
@@ -308,16 +315,16 @@
 								{videoQuery.data.uploader.username}
 							</a>
 							<span class="text-muted-foreground text-xs"
-								>{uploaderQuery.data?.subscriberCount || 0} subscribers</span
+								>{subscriberCount} subscribers</span
 							>
 						</div>
 						<Button
-							variant={uploaderQuery.data?.isSubscribed ? 'secondary' : 'default'}
+							variant={isSubscribed ? 'secondary' : 'default'}
 							class="ml-2 rounded-full px-5"
 							onclick={handleSubscribe}
 							disabled={subscribeMutation.isPending}
 						>
-							{uploaderQuery.data?.isSubscribed ? 'Subscribed' : 'Subscribe'}
+							{isSubscribed ? 'Subscribed' : 'Subscribe'}
 						</Button>
 					</div>
 

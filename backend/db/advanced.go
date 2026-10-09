@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -196,9 +197,10 @@ func (q *Repository) SearchPublicVideos(ctx context.Context, query string, showA
 		queryBuilder = queryBuilder.Where("videos.is_adult = ?", false)
 	}
 
-	queryBuilder = queryBuilder.Where(`(videos.title ILIKE ? OR videos.description ILIKE ? OR videos.category ILIKE ?
+	queryBuilder = queryBuilder.Where(`(videos.search_vector @@ plainto_tsquery('english', ?) 
+			OR videos.title ILIKE ? OR videos.category ILIKE ?
 			OR EXISTS (SELECT 1 FROM unnest(videos.tags) AS tag WHERE tag ILIKE ?))`,
-			"%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%")
+			query, "%"+query+"%", "%"+query+"%", "%"+query+"%")
 	switch sort {
 	case "date_desc":
 		queryBuilder = queryBuilder.Order("videos.created_at DESC")
@@ -375,3 +377,78 @@ func (q *Repository) UpdateUserProfile(ctx context.Context, arg UpdateUserProfil
 	err := q.orm.WithContext(ctx).Where("id = ?", arg.ID).Take(&user).Error
 	return user, err
 }
+
+type VideoDetailsResult struct {
+	Video
+	UploaderUsername string      `gorm:"column:uploader_username"`
+	UploaderAvatar   pgtype.Text `gorm:"column:uploader_avatar"`
+	LikesCount       int64       `gorm:"column:likes_count"`
+	CommentCount     int64       `gorm:"column:comment_count"`
+	SubscribersCount int64       `gorm:"column:subscribers_count"`
+	IsLiked          bool        `gorm:"column:is_liked"`
+	IsSubscribed     bool        `gorm:"column:is_subscribed"`
+}
+
+// GetVideoDetails retrieves a video with uploader info, counters, and viewer interactions in a single query.
+func (q *Repository) GetVideoDetails(ctx context.Context, identifier string, viewerID pgtype.UUID) (*VideoDetailsResult, error) {
+	var result VideoDetailsResult
+	var parsedUUID pgtype.UUID
+	_ = parsedUUID.Scan(identifier)
+
+	query := q.orm.WithContext(ctx).Table("videos").
+		Joins("JOIN users ON users.id = videos.uploader_id")
+
+	if viewerID.Valid {
+		query = query.Select(`videos.*,
+			users.username AS uploader_username,
+			users.avatar AS uploader_avatar,
+			COALESCE((SELECT COUNT(*) FROM user_activities ua WHERE ua.video_id = videos.id AND ua.interaction_type = 'like'), 0) AS likes_count,
+			COALESCE((SELECT COUNT(*) FROM comments c WHERE c.video_id = videos.id), 0) AS comment_count,
+			COALESCE((SELECT COUNT(*) FROM subscriptions s WHERE s.subscribed_to_id = videos.uploader_id), 0) AS subscribers_count,
+			EXISTS(SELECT 1 FROM user_activities ua WHERE ua.video_id = videos.id AND ua.user_id = ? AND ua.interaction_type = 'like') AS is_liked,
+			EXISTS(SELECT 1 FROM subscriptions s WHERE s.subscribed_to_id = videos.uploader_id AND s.subscriber_id = ?) AS is_subscribed`,
+			viewerID, viewerID)
+	} else {
+		query = query.Select(`videos.*,
+			users.username AS uploader_username,
+			users.avatar AS uploader_avatar,
+			COALESCE((SELECT COUNT(*) FROM user_activities ua WHERE ua.video_id = videos.id AND ua.interaction_type = 'like'), 0) AS likes_count,
+			COALESCE((SELECT COUNT(*) FROM comments c WHERE c.video_id = videos.id), 0) AS comment_count,
+			COALESCE((SELECT COUNT(*) FROM subscriptions s WHERE s.subscribed_to_id = videos.uploader_id), 0) AS subscribers_count,
+			false AS is_liked,
+			false AS is_subscribed`)
+	}
+
+	if parsedUUID.Valid {
+		query = query.Where("videos.id = ? OR videos.file_id = ?", parsedUUID, identifier)
+	} else {
+		query = query.Where("videos.file_id = ?", identifier)
+	}
+
+	err := query.First(&result).Error
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// IncrementVideoViewsBy atomically increments view counts by a batch delta.
+func (q *Repository) IncrementVideoViewsBy(ctx context.Context, id pgtype.UUID, delta int) error {
+	if delta <= 0 {
+		return nil
+	}
+	res := q.orm.WithContext(ctx).Model(&Video{}).Where("id = ?", id).
+		UpdateColumn("views", gorm.Expr("views + ?", delta))
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 && id.Valid {
+		b := id.Bytes
+		uuidStr := fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+		return q.orm.WithContext(ctx).Model(&Video{}).Where("id = ?", uuidStr).
+			UpdateColumn("views", gorm.Expr("views + ?", delta)).Error
+	}
+	return nil
+}
+
+

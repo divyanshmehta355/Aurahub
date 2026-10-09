@@ -129,6 +129,8 @@
 						notifications: old?.notifications || [],
 						unreadCount: data.unreadCount
 					}));
+				} else if (data.event === 'batch_upload_progress') {
+					window.dispatchEvent(new CustomEvent('batch_upload_progress', { detail: data }));
 				}
 			} catch (err) {
 				console.error('Failed to parse real-time notification event:', err);
