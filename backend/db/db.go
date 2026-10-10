@@ -10,6 +10,8 @@ func OpenPostgres(dsn string) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Enable pg_trgm extension for typo-tolerant fuzzy matching across videos & users
+	_ = db.Exec("CREATE EXTENSION IF NOT EXISTS pg_trgm;").Error
 	return db, nil
 }
 

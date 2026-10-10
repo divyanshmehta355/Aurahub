@@ -267,15 +267,32 @@ func (c *Client) SearchVideos(ctx context.Context, q string, category string, sh
 		queryClause = map[string]any{"match_all": map[string]any{}}
 	} else {
 		queryClause = map[string]any{
-			"multi_match": map[string]any{
-				"query": cleanQ,
-				"fields": []string{
-					"title^3",
-					"tags^2",
-					"uploaderUsername^1.5",
-					"description^1",
+			"bool": map[string]any{
+				"should": []map[string]any{
+					{
+						"match_phrase": map[string]any{
+							"title": map[string]any{
+								"query": cleanQ,
+								"boost": 10,
+							},
+						},
+					},
+					{
+						"multi_match": map[string]any{
+							"query": cleanQ,
+							"fields": []string{
+								"title^5",
+								"title.autocomplete^4",
+								"tags^3",
+								"uploaderUsername^2",
+								"description^1",
+							},
+							"fuzziness":     "AUTO",
+							"prefix_length": 0,
+						},
+					},
 				},
-				"fuzziness": "AUTO",
+				"minimum_should_match": 1,
 			},
 		}
 	}
@@ -371,16 +388,29 @@ func (c *Client) Autocomplete(ctx context.Context, prefix string, showAdult bool
 		"size": limit,
 		"query": map[string]any{
 			"bool": map[string]any{
-				"must": map[string]any{
-					"multi_match": map[string]any{
-						"query": cleanPrefix,
-						"fields": []string{
-							"title.autocomplete^3",
-							"title^1",
+				"should": []map[string]any{
+					{
+						"multi_match": map[string]any{
+							"query": cleanPrefix,
+							"fields": []string{
+								"title.autocomplete^5",
+								"title^3",
+							},
+						},
+					},
+					{
+						"multi_match": map[string]any{
+							"query": cleanPrefix,
+							"fields": []string{
+								"title^3",
+								"title.autocomplete^2",
+							},
+							"fuzziness": "AUTO",
 						},
 					},
 				},
-				"filter": filterClauses,
+				"minimum_should_match": 1,
+				"filter":               filterClauses,
 			},
 		},
 		"sort": []any{

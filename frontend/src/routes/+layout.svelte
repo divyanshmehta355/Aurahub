@@ -22,6 +22,7 @@
 	import { fetchApi } from '#lib/api';
 	import { userState, setUser, clearUser } from '#lib/user.svelte';
 	import NotificationBell from '#lib/components/NotificationBell.svelte';
+	import SearchAutocomplete from '#lib/components/SearchAutocomplete.svelte';
 
 	import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
 
@@ -102,15 +103,11 @@
 							<Search class="h-5 w-5 rotate-90" />
 							<!-- makeshift back arrow or use ArrowLeft if imported -->
 						</button>
-						<form action="/search" method="GET" class="flex-1">
-							<input
-								type="search"
-								name="q"
-								placeholder="Search videos..."
-								class="bg-muted/50 w-full rounded-full border border-border px-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:outline-none"
-								autofocus
-							/>
-						</form>
+						<SearchAutocomplete
+							autofocus={true}
+							onSearchSubmitted={() => (isMobileSearchOpen = false)}
+							class="flex-1"
+						/>
 					</div>
 				{:else}
 					<!-- Logo -->
@@ -132,17 +129,7 @@
 
 					<!-- Search (Desktop) -->
 					<div class="mx-8 hidden max-w-xl flex-1 md:flex">
-						<form action="/search" method="GET" class="relative w-full">
-							<Search
-								class="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
-							/>
-							<input
-								type="search"
-								name="q"
-								placeholder="Search videos..."
-								class="bg-muted/50 w-full rounded-full border border-border py-2 pr-4 pl-10 text-sm transition-all focus:ring-2 focus:ring-primary/20 focus:outline-none"
-							/>
-						</form>
+						<SearchAutocomplete />
 					</div>
 
 					<!-- Actions -->

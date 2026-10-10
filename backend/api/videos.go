@@ -79,7 +79,21 @@ func (s *Server) AutocompleteHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	resMap := fiber.Map{"videos": videoResults, "users": userResults}
+	adultHidden := false
+	if !showAdult && len(videoResults) == 0 {
+		if s.OpenSearch != nil && s.OpenSearch.Enabled() {
+			if adultSuggs, err := s.OpenSearch.Autocomplete(c.UserContext(), query, true, 1); err == nil && len(adultSuggs) > 0 {
+				adultHidden = true
+			}
+		}
+		if !adultHidden {
+			if adultVids, err := s.Repository.SearchAutocompleteVideos(context.Background(), query, true); err == nil && len(adultVids) > 0 {
+				adultHidden = true
+			}
+		}
+	}
+
+	resMap := fiber.Map{"videos": videoResults, "users": userResults, "adultHidden": adultHidden}
 	if s.Cache != nil {
 		if data, err := json.Marshal(resMap); err == nil {
 			_ = s.Cache.Set(c.UserContext(), cacheKey, string(data), 5*time.Minute).Err()
@@ -364,7 +378,27 @@ func (s *Server) SearchVideosHandler(c *fiber.Ctx) error {
 		total = len(res)
 	}
 
-	respMap := fiber.Map{"videos": res, "query": q, "total": total}
+	adultCount := 0
+	if !showAdult && total == 0 {
+		if s.OpenSearch != nil && s.OpenSearch.Enabled() {
+			if osAdult, err := s.OpenSearch.SearchVideos(c.UserContext(), q, "", true, sortType, 1, 0); err == nil {
+				adultCount = int(osAdult.Total)
+			}
+		}
+		if adultCount == 0 {
+			if pgAdult, err := s.Repository.SearchPublicVideos(context.Background(), q, true, sortType, 1); err == nil {
+				adultCount = len(pgAdult)
+			}
+		}
+	}
+
+	respMap := fiber.Map{
+		"videos":      res,
+		"query":       q,
+		"total":       total,
+		"adultHidden": adultCount > 0,
+		"adultCount":  adultCount,
+	}
 	if s.Cache != nil {
 		if data, err := json.Marshal(respMap); err == nil {
 			_ = s.Cache.Set(c.UserContext(), cacheKey, string(data), 2*time.Minute).Err()

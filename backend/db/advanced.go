@@ -199,8 +199,9 @@ func (q *Repository) SearchPublicVideos(ctx context.Context, query string, showA
 
 	queryBuilder = queryBuilder.Where(`(videos.search_vector @@ plainto_tsquery('english', ?) 
 			OR videos.title ILIKE ? OR videos.category ILIKE ?
+			OR word_similarity(?, videos.title) > 0.35
 			OR EXISTS (SELECT 1 FROM unnest(videos.tags) AS tag WHERE tag ILIKE ?))`,
-			query, "%"+query+"%", "%"+query+"%", "%"+query+"%")
+			query, "%"+query+"%", "%"+query+"%", query, "%"+query+"%")
 	switch sort {
 	case "date_desc":
 		queryBuilder = queryBuilder.Order("videos.created_at DESC")
@@ -209,7 +210,11 @@ func (q *Repository) SearchPublicVideos(ctx context.Context, query string, showA
 	case "likes_desc":
 		queryBuilder = queryBuilder.Order("(SELECT COUNT(*) FROM user_activities ua WHERE ua.video_id = videos.id AND ua.interaction_type = 'like') DESC, videos.created_at DESC")
 	default:
-		queryBuilder = queryBuilder.Order("videos.created_at DESC, videos.views DESC")
+		// Order by highest similarity first when querying fuzzy, then recency
+		queryBuilder = queryBuilder.Order(clause.Expr{
+			SQL:  "GREATEST(word_similarity(?, videos.title), ts_rank(videos.search_vector, plainto_tsquery('english', ?))) DESC, videos.created_at DESC, videos.views DESC",
+			Vars: []interface{}{query, query},
+		})
 	}
 	var videos []Video
 	err := queryBuilder.Limit(int(limit)).Find(&videos).Error
@@ -220,22 +225,28 @@ func (q *Repository) SearchAutocompleteVideos(ctx context.Context, query string,
 	var videos []Video
 	queryBuilder := q.orm.WithContext(ctx).Model(&Video{}).
 		Select("id, title, thumbnail_url, category").
-		Where("visibility = ? AND is_short = ? AND (title ILIKE ? OR EXISTS (SELECT 1 FROM unnest(tags) AS tag WHERE tag ILIKE ?))",
-			VideoVisibilityPublic, false, "%"+query+"%", "%"+query+"%")
+		Where("visibility = ? AND is_short = ? AND (title ILIKE ? OR word_similarity(?, title) > 0.35 OR EXISTS (SELECT 1 FROM unnest(tags) AS tag WHERE tag ILIKE ?))",
+			VideoVisibilityPublic, false, "%"+query+"%", query, "%"+query+"%")
 	
 	if !showAdult {
 		queryBuilder = queryBuilder.Where("is_adult = ?", false)
 	}
 	
-	err := queryBuilder.Order("created_at DESC").Limit(4).Find(&videos).Error
+	err := queryBuilder.Order(clause.Expr{
+		SQL:  "word_similarity(?, title) DESC, created_at DESC",
+		Vars: []interface{}{query},
+	}).Limit(4).Find(&videos).Error
 	return videos, err
 }
 
 func (q *Repository) SearchAutocompleteUsers(ctx context.Context, query string) ([]User, error) {
 	var users []User
 	err := q.orm.WithContext(ctx).Select("id, username, avatar").
-		Where("username ILIKE ?", "%"+query+"%").
-		Order("username").Limit(2).Find(&users).Error
+		Where("username ILIKE ? OR similarity(username, ?) > 0.3", "%"+query+"%", query).
+		Order(clause.Expr{
+			SQL:  "similarity(username, ?) DESC, username ASC",
+			Vars: []interface{}{query},
+		}).Limit(2).Find(&users).Error
 	return users, err
 }
 
