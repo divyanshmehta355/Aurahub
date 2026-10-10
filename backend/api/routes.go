@@ -63,6 +63,7 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 	videos.Get("/remote-upload/status", s.RemoteUploadStatusHandler)
 	videos.Post("/remote-upload/start", middleware.AuthRequired(), s.RemoteUploadStartHandler)
 	videos.Post("/remote-upload/batch", middleware.AuthRequired(), s.BatchRemoteUploadHandler)
+	videos.Post("/refresh-expired", middleware.AuthRequired(), s.TriggerRefreshExpiredHandler)
 	videos.Put("/bulk", middleware.AuthRequired(), s.BulkUpdateVideoVisibilityHandler)
 	videos.Put("/bulk-adult", middleware.AuthRequired(), s.BulkUpdateVideoAdultHandler)
 	videos.Delete("/bulk", middleware.AuthRequired(), s.BulkDeleteVideosHandler)

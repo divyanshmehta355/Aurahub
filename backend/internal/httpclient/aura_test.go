@@ -57,3 +57,22 @@ func TestDeleteStreamtapeFile(t *testing.T) {
 		t.Errorf("expected success true")
 	}
 }
+
+func TestResolveStreamtapeDirectURLValidation(t *testing.T) {
+	_, err := ResolveStreamtapeDirectURL(context.Background(), "")
+	if err == nil {
+		t.Errorf("expected error for empty fileID, got nil")
+	}
+}
+
+func TestRemoteUploadHelpersValidation(t *testing.T) {
+	_, err := TriggerRemoteUpload(context.Background(), "", "")
+	if err == nil {
+		t.Errorf("expected error for empty video URL in TriggerRemoteUpload, got nil")
+	}
+
+	_, err = PollRemoteUpload(context.Background(), "", 0)
+	if err == nil {
+		t.Errorf("expected error for empty remote ID in PollRemoteUpload, got nil")
+	}
+}

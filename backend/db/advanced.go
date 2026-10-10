@@ -451,4 +451,44 @@ func (q *Repository) IncrementVideoViewsBy(ctx context.Context, id pgtype.UUID, 
 	return nil
 }
 
+// GetExpiredVideos returns videos whose last_refreshed_at is older than the given cutoff (or NULL),
+// with active streamtape_status and fewer than 5 failed clone attempts.
+func (q *Repository) GetExpiredVideos(ctx context.Context, cutoff time.Time, limit int) ([]Video, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	var videos []Video
+	err := q.orm.WithContext(ctx).
+		Where("(last_refreshed_at < ? OR last_refreshed_at IS NULL)", cutoff).
+		Where("(streamtape_status = ? OR streamtape_status IS NULL)", StreamtapeStatusActive).
+		Where("clone_attempts < ?", 5).
+		Order("last_refreshed_at ASC NULLS FIRST").
+		Limit(limit).
+		Find(&videos).Error
+	return videos, err
+}
 
+// RefreshVideoFile atomically updates the video's file_id, streamtape_url, resets last_refreshed_at to CURRENT_TIMESTAMP,
+// and resets clone_attempts to 0.
+func (q *Repository) RefreshVideoFile(ctx context.Context, videoID pgtype.UUID, newFileID, newStreamtapeURL string) error {
+	return q.orm.WithContext(ctx).Model(&Video{}).Where("id = ?", videoID).Updates(map[string]interface{}{
+		"file_id":           newFileID,
+		"streamtape_url":    newStreamtapeURL,
+		"last_refreshed_at": gorm.Expr("CURRENT_TIMESTAMP"),
+		"streamtape_status": StreamtapeStatusActive,
+		"clone_attempts":    0,
+		"updated_at":        gorm.Expr("CURRENT_TIMESTAMP"),
+	}).Error
+}
+
+// IncrementCloneAttempts increments the failed refresh attempt counter.
+func (q *Repository) IncrementCloneAttempts(ctx context.Context, videoID pgtype.UUID) error {
+	return q.orm.WithContext(ctx).Model(&Video{}).Where("id = ?", videoID).
+		Update("clone_attempts", gorm.Expr("clone_attempts + 1")).Error
+}
+
+// MarkVideoStreamtapeDead marks a video as dead if the file is confirmed deleted upstream.
+func (q *Repository) MarkVideoStreamtapeDead(ctx context.Context, videoID pgtype.UUID) error {
+	return q.orm.WithContext(ctx).Model(&Video{}).Where("id = ?", videoID).
+		Update("streamtape_status", StreamtapeStatusDead).Error
+}

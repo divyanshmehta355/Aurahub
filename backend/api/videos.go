@@ -12,6 +12,7 @@ import (
 	"github.com/divyanshmehta355/aurahub/backend/db"
 	"github.com/divyanshmehta355/aurahub/backend/internal/httpclient"
 	"github.com/divyanshmehta355/aurahub/backend/internal/kafka"
+	"github.com/divyanshmehta355/aurahub/backend/internal/kafka/workers"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -584,3 +585,36 @@ func (s *Server) UpdateVideoHandler(c *fiber.Ctx) error {
 		"tags":        updated.Tags,
 	})
 }
+
+// TriggerRefreshExpiredHandler allows an admin/user to trigger a manual pass of the 28-day re-upload cycle.
+func (s *Server) TriggerRefreshExpiredHandler(c *fiber.Ctx) error {
+	days := 28
+	if qDays := c.Query("days"); qDays != "" {
+		if d, err := strconv.Atoi(qDays); err == nil && d > 0 {
+			days = d
+		}
+	}
+
+	limit := 10
+	if qLimit := c.Query("limit"); qLimit != "" {
+		if l, err := strconv.Atoi(qLimit); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	olderThan := time.Duration(days) * 24 * time.Hour
+	refreshed, err := workers.RunAutoRefreshCycle(c.UserContext(), s.Repository, s.Cache, s.Kafka, olderThan, limit)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message":   "Error running auto-refresh cycle: " + err.Error(),
+			"refreshed": refreshed,
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message":   "Auto-refresh cycle completed successfully",
+		"refreshed": refreshed,
+		"days":      days,
+	})
+}
+

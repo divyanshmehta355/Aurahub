@@ -1,6 +1,7 @@
 package httpclient
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"time"
@@ -10,10 +11,17 @@ var (
 	// SharedTransport provides optimized connection pooling across the entire application.
 	SharedTransport = &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
-		DialContext: (&net.Dialer{
-			Timeout:   10 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).DialContext,
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			dialer := &net.Dialer{
+				Timeout:   8 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}
+			conn, err := dialer.DialContext(ctx, "tcp4", addr)
+			if err == nil {
+				return conn, nil
+			}
+			return dialer.DialContext(ctx, network, addr)
+		},
 		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          100,
 		MaxIdleConnsPerHost:   25,

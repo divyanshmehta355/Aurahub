@@ -156,6 +156,9 @@ func main() {
 		}
 	}
 
+	// Launch the 28-day video auto-refresh worker to perpetually extend Streamtape expiration
+	go workers.StartAutoRefreshWorker(workerCtx, repository, rdb, kafkaProducer, &workerWg)
+
 	// Pass the PostgreSQL query layer, Valkey client, Kafka producer, and OpenSearch client to handlers.
 	server := api.NewServer(repository, rdb, kafkaProducer, osClient)
 	server.SetupRoutes(app)
