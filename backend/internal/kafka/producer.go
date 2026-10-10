@@ -32,7 +32,7 @@ func NewProducer(brokers []string, auth ...AuthConfig) *Producer {
 		log.Printf("[Kafka] Warning: Failed to configure TLS/SASL authentication: %v\n", err)
 	}
 
-	var transport *kafkaGo.Transport
+	var transport kafkaGo.RoundTripper
 	if mechanism != nil || tlsConfig != nil {
 		transport = &kafkaGo.Transport{
 			TLS:  tlsConfig,
@@ -111,7 +111,7 @@ func EnsureTopics(ctx context.Context, brokers []string, auth AuthConfig, topics
 		log.Printf("[Kafka] Topic admin auth warning: %v\n", err)
 	}
 
-	var transport *kafkaGo.Transport
+	var transport kafkaGo.RoundTripper
 	if mechanism != nil || tlsConfig != nil {
 		transport = &kafkaGo.Transport{
 			TLS:  tlsConfig,
