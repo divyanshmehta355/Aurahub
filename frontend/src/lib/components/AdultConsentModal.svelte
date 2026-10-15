@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ShieldAlert, AlertTriangle, CheckCircle, X } from 'lucide-svelte';
 	import { Button } from '#lib/components/ui/button';
-	import { grantAdultConsent, consentState } from '#lib/consent.svelte';
+	import { grantAdultConsent, setContentMode } from '#lib/consent.svelte';
 
 	let {
 		isOpen = $bindable(false),
@@ -15,6 +15,7 @@
 
 	function handleConfirm() {
 		grantAdultConsent();
+		setContentMode(true);
 		isOpen = false;
 		if (onConsent) {
 			onConsent();

@@ -8,7 +8,7 @@
 	import { Textarea } from '#lib/components/ui/textarea';
 	import { Label } from '#lib/components/ui/label';
 	import { createMutation, useQueryClient } from '@tanstack/svelte-query';
-	import { grantAdultConsent, revokeAdultConsent } from '#lib/consent.svelte';
+	import { grantAdultConsent, revokeAdultConsent, setContentMode } from '#lib/consent.svelte';
 
 	const queryClient = useQueryClient();
 
@@ -80,6 +80,37 @@
 		}
 	}
 
+	async function handleAdultToggle(e: Event) {
+		const target = e.target as HTMLInputElement;
+		const enabled = target.checked;
+		showAdultContent = enabled;
+		try {
+			await fetchApi('/user/profile', {
+				method: 'PUT',
+				body: JSON.stringify({ showAdultContent: enabled })
+			});
+			if (userState.user) {
+				userState.user.showAdultContent = enabled;
+			}
+			if (enabled) {
+				grantAdultConsent();
+			} else {
+				revokeAdultConsent();
+				setContentMode(false);
+			}
+			queryClient.invalidateQueries();
+			message = {
+				type: 'success',
+				text: enabled
+					? '18+ content mode enabled! The toggle is now available in the header.'
+					: '18+ content mode disabled. The site is now in safe mode.'
+			};
+		} catch (err: any) {
+			showAdultContent = !enabled;
+			message = { type: 'error', text: err.message || 'Failed to update content preference.' };
+		}
+	}
+
 	const saveProfileMutation = createMutation(
 		() => ({
 			mutationFn: async () => {
@@ -92,14 +123,13 @@
 				if (userState.user) {
 					setUser({ ...userState.user, ...res, bio, showAdultContent, avatar, banner });
 				}
-				if (typeof window !== 'undefined') {
-					if (showAdultContent) {
-						grantAdultConsent();
-					} else {
-						revokeAdultConsent();
-					}
-					localStorage.removeItem('showAdultContent');
+				if (showAdultContent) {
+					grantAdultConsent();
+				} else {
+					revokeAdultConsent();
+					setContentMode(false);
 				}
+				queryClient.invalidateQueries();
 				message = { type: 'success', text: 'Profile updated successfully!' };
 			},
 			onError: (err: any) => {
@@ -314,21 +344,29 @@
 							/>
 						</div>
 
-						<div class="mt-4 space-y-1.5 border-t pt-2">
-							<h3 class="text-sm font-medium">Content Preferences</h3>
-							<label class="mt-2 flex cursor-pointer items-center gap-3">
-								<input
-									type="checkbox"
-									bind:checked={showAdultContent}
-									class="border-input focus:ring-ring h-4 w-4 rounded bg-background text-primary ring-offset-background focus:ring-2 focus:ring-offset-2"
-								/>
-								<div class="space-y-1">
-									<span class="text-sm leading-none font-medium">Enable 18+ Adult Content Access</span>
-									<p class="text-muted-foreground text-xs">
-										Allow access to the dedicated 18+ Adult Hub and age-restricted content. General feeds will remain strictly non-adult.
-									</p>
-								</div>
-							</label>
+						<div class="mt-6 border-t pt-5">
+							<h3 class="text-sm font-semibold tracking-tight text-foreground">Content Preferences</h3>
+							<div class="mt-3 rounded-xl border border-border/80 bg-muted/20 p-4 transition-colors">
+								<label class="flex cursor-pointer items-start gap-3.5">
+									<input
+										type="checkbox"
+										checked={showAdultContent}
+										onchange={handleAdultToggle}
+										class="accent-primary mt-0.5 h-4 w-4 rounded"
+									/>
+									<div class="space-y-1">
+										<div class="flex items-center gap-2">
+											<span class="text-sm font-semibold text-foreground">Enable 18+ Content</span>
+											{#if showAdultContent}
+												<span class="rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold text-rose-500 border border-rose-500/30">18+ Active in Header</span>
+											{/if}
+										</div>
+										<p class="text-muted-foreground text-xs leading-relaxed">
+											Unlocks the header toggle to switch between General (Safe) and 18+ mature content across search, feed, and recommendations. When disabled, the site remains strictly in safe mode with no adult content or toggles.
+										</p>
+									</div>
+								</label>
+							</div>
 						</div>
 
 						<div class="flex justify-end pt-2 sm:pt-4">

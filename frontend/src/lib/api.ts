@@ -1,4 +1,5 @@
 import { PUBLIC_API_URL } from '$app/env/public';
+import { contentModeState } from '#lib/consent.svelte';
 
 export const API_URL = PUBLIC_API_URL || '/api';
 
@@ -10,7 +11,13 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
 		(headers as Record<string, string>)['Content-Type'] = 'application/json';
 	}
 
-	const res = await fetch(`${API_URL}${endpoint}`, {
+	let finalEndpoint = endpoint;
+	if (contentModeState.isAdult && !finalEndpoint.includes('adult=')) {
+		const separator = finalEndpoint.includes('?') ? '&' : '?';
+		finalEndpoint += `${separator}adult=true`;
+	}
+
+	const res = await fetch(`${API_URL}${finalEndpoint}`, {
 		...options,
 		headers,
 		credentials: 'include'

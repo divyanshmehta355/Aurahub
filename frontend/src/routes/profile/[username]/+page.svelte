@@ -7,13 +7,14 @@
 	import { createQuery, createMutation } from '@tanstack/svelte-query';
 	import { Skeleton } from '#lib/components/ui/skeleton';
 	import { Button } from '#lib/components/ui/button';
+	import { contentModeState } from '#lib/consent.svelte';
 
 	let username = $derived(page.params.username);
 
 	let currentPage = $state(1);
 
 	let profileQuery = createQuery(() => ({
-		queryKey: ['profile', username, currentPage],
+		queryKey: ['profile', username, currentPage, contentModeState.isAdult],
 		queryFn: async () => {
 			const data = await fetchApi(`/users/profile/${username}?page=${currentPage}&limit=10`);
 			return data;

@@ -18,19 +18,22 @@
 		Video,
 		BarChart,
 		Bell,
-		ShieldAlert
+		ShieldAlert,
+		ShieldCheck
 	} from 'lucide-svelte';
 	import { fetchApi } from '#lib/api';
 	import { userState, setUser, clearUser } from '#lib/user.svelte';
-	import { initAdultConsent } from '#lib/consent.svelte';
+	import { contentModeState, initContentMode, toggleContentMode, setContentMode } from '#lib/consent.svelte';
 	import NotificationBell from '#lib/components/NotificationBell.svelte';
 	import SearchAutocomplete from '#lib/components/SearchAutocomplete.svelte';
+	import AdultConsentModal from '#lib/components/AdultConsentModal.svelte';
 
 	import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
 
 	let { children } = $props();
 	let isDark = $state(false);
 	let isSidebarOpen = $state(false);
+	let isConsentModalOpen = $state(false);
 
 	let isMobileSearchOpen = $state(false);
 
@@ -55,13 +58,28 @@
 			document.documentElement.classList.remove('dark');
 		}
 
-		initAdultConsent();
+		initContentMode();
 
 		try {
 			const data = await fetchApi('/auth/me');
 			setUser(data);
+			if (!data?.showAdultContent && contentModeState.isAdult) {
+				setContentMode(false);
+			}
 		} catch (err) {
 			clearUser();
+			if (contentModeState.isAdult) {
+				setContentMode(false);
+			}
+		}
+	});
+
+	$effect(() => {
+		if (userState.isLoaded) {
+			const canUseAdult = !!userState.user?.showAdultContent;
+			if (!canUseAdult && contentModeState.isAdult) {
+				setContentMode(false);
+			}
 		}
 	});
 
@@ -74,6 +92,18 @@
 			document.documentElement.classList.remove('dark');
 			localStorage.theme = 'light';
 		}
+	}
+
+	function handleToggleContentMode() {
+		toggleContentMode(() => {
+			isConsentModalOpen = true;
+		});
+		queryClient.invalidateQueries();
+	}
+
+	function onConsentConfirmed() {
+		setContentMode(true);
+		queryClient.invalidateQueries();
 	}
 
 	function toggleSidebar() {
@@ -166,6 +196,28 @@
 								<Moon class="h-5 w-5" />
 							{/if}
 						</button>
+
+						<!-- Content Mode Toggle (General Safe vs 18+ Adult) - Only visible when enabled on /profile -->
+						{#if userState.isLoaded && userState.user?.showAdultContent}
+							<button
+								onclick={handleToggleContentMode}
+								class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-all duration-200 select-none {contentModeState.isAdult
+									? 'border-rose-500/50 bg-rose-500/15 text-rose-500 shadow-sm shadow-rose-500/20 hover:bg-rose-500/25'
+									: 'border-border/80 bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground'}"
+								title={contentModeState.isAdult
+									? 'Adult Mode Active (18+) - Click to switch to General Content'
+									: 'General Safe Mode - Click to switch to 18+ Content'}
+								aria-label="Toggle content mode"
+							>
+								{#if contentModeState.isAdult}
+									<span class="inline-block h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
+									<span>18+</span>
+								{:else}
+									<ShieldCheck class="h-3.5 w-3.5 text-emerald-500" />
+									<span class="hidden sm:inline">Safe</span>
+								{/if}
+							</button>
+						{/if}
 
 						{#if userState.isLoaded}
 							{#if userState.user}
@@ -294,20 +346,6 @@
 						class="hover:bg-muted flex items-center gap-3 rounded-lg px-3 py-2 transition-colors"
 						><BarChart class="h-5 w-5" /> Analytics</a
 					>
-
-					<div class="my-4 border-t"></div>
-					<h3 class="text-muted-foreground mb-2 px-3 text-xs font-semibold uppercase tracking-wider">Mature Content</h3>
-					<a
-						href="/adult"
-						onclick={() => (isSidebarOpen = false)}
-						class="hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-between rounded-lg px-3 py-2 transition-colors"
-					>
-						<span class="flex items-center gap-3">
-							<ShieldAlert class="h-5 w-5" />
-							<span>18+ Adult Hub</span>
-						</span>
-						<span class="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">18+</span>
-					</a>
 				</nav>
 			</aside>
 
@@ -377,4 +415,9 @@
 			{/if}
 		</nav>
 	</div>
+
+	<AdultConsentModal
+		bind:isOpen={isConsentModalOpen}
+		onConsent={onConsentConfirmed}
+	/>
 </QueryClientProvider>

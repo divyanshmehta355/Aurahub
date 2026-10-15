@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { fetchApi } from '#lib/api';
-	import { Search, Film, User as UserIcon, ArrowRight, ShieldAlert } from 'lucide-svelte';
+	import { Search, Film, User as UserIcon, ArrowRight } from 'lucide-svelte';
 
 	interface AutocompleteVideo {
 		id: string;
@@ -33,7 +33,6 @@
 	let isLoading = $state(false);
 	let videos = $state<AutocompleteVideo[]>([]);
 	let users = $state<AutocompleteUser[]>([]);
-	let adultHidden = $state(false);
 	let selectedIndex = $state(-1);
 	let containerRef = $state<HTMLDivElement | null>(null);
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -50,7 +49,6 @@
 		if (query.trim().length < 2) {
 			videos = [];
 			users = [];
-			adultHidden = false;
 			isOpen = false;
 			return;
 		}
@@ -61,8 +59,7 @@
 				const res = await fetchApi(`/search/autocomplete?q=${encodeURIComponent(query.trim())}`);
 				videos = res.videos || [];
 				users = res.users || [];
-				adultHidden = !!res.adultHidden;
-				isOpen = videos.length > 0 || users.length > 0 || adultHidden;
+				isOpen = videos.length > 0 || users.length > 0;
 			} catch (err) {
 				console.error('Autocomplete fetch error:', err);
 			} finally {
@@ -105,7 +102,7 @@
 			closeDropdown();
 		} else if (index < videos.length + users.length) {
 			const user = users[index - videos.length];
-			goto(`/user/${user.username}`);
+			goto(`/profile/${user.username}`);
 			closeDropdown();
 		} else {
 			submitSearch();
@@ -149,7 +146,7 @@
 			oninput={handleInput}
 			onkeydown={handleKeydown}
 			onfocus={() => {
-				if (videos.length > 0 || users.length > 0 || adultHidden) isOpen = true;
+				if (videos.length > 0 || users.length > 0) isOpen = true;
 			}}
 			{placeholder}
 			{autofocus}
@@ -215,7 +212,7 @@
 							type="button"
 							class="hover:bg-accent/80 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors {selectedIndex === userIdx ? 'bg-accent text-accent-foreground' : ''}"
 							onclick={() => {
-								goto(`/user/${user.username}`);
+								goto(`/profile/${user.username}`);
 								closeDropdown();
 							}}
 						>
@@ -232,13 +229,7 @@
 				</div>
 			{/if}
 
-			<!-- 18+ content hidden hint -->
-			{#if adultHidden}
-				<div class="bg-amber-500/10 border-border/40 text-amber-300 flex items-center gap-2 border-t px-4 py-2 text-[11px]">
-					<ShieldAlert class="h-3.5 w-3.5 shrink-0 text-amber-400" />
-					<span>18+ results available with adult filter enabled.</span>
-				</div>
-			{/if}
+
 
 			<!-- Full search button row -->
 			{#if query.trim()}

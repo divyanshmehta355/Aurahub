@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { fetchApi } from '#lib/api';
+	import { contentModeState } from '#lib/consent.svelte';
 	import { getFallbackThumbnailUrl } from '#lib/thumbnailSvg';
 	import VideoThumbnail from '#lib/components/VideoThumbnail.svelte';
 	import WatchLaterButton from '#lib/components/WatchLaterButton.svelte';
@@ -17,7 +18,7 @@
 
 	let query = createQuery(
 		() => ({
-			queryKey: ['videos', currentPage, limit],
+			queryKey: ['videos', currentPage, limit, contentModeState.isAdult],
 			queryFn: async () => {
 				const res = await fetchApi(`/videos?type=standard&page=${currentPage}&limit=${limit}`);
 				return res;
@@ -78,12 +79,19 @@
 </script>
 
 <svelte:head>
-	<title>Aurahub - Feed</title>
+	<title>{contentModeState.isAdult ? 'Aurahub - 18+ Adult Feed' : 'Aurahub - Feed'}</title>
 </svelte:head>
 
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
-		<h1 class="text-2xl font-bold tracking-tight">Recommended for you</h1>
+		<div class="flex items-center gap-2">
+			<h1 class="text-2xl font-bold tracking-tight">
+				{contentModeState.isAdult ? '18+ Adult Videos' : 'Recommended for you'}
+			</h1>
+			{#if contentModeState.isAdult}
+				<span class="rounded bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 text-xs font-bold text-rose-500">18+</span>
+			{/if}
+		</div>
 	</div>
 
 	{#if query.isPending}

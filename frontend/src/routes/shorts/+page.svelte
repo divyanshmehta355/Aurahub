@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { fetchApi } from '#lib/api';
+	import { contentModeState } from '#lib/consent.svelte';
 	import { Play } from 'lucide-svelte';
 	import confetti from 'canvas-confetti';
 	import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
@@ -13,7 +14,7 @@
 
 	const shortsQuery = createInfiniteQuery(
 		() => ({
-			queryKey: ['shorts'],
+			queryKey: ['shorts', contentModeState.isAdult],
 			queryFn: async ({ pageParam = 1 }) => {
 				const res = await fetchApi(`/videos?type=short&limit=10&page=${pageParam}`);
 				return {

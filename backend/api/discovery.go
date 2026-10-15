@@ -44,6 +44,7 @@ func (s *Server) SuggestionsHandler(c *fiber.Ctx) error {
 	page, limit := pageLimit(c, 10, 100)
 	offset := int32((page - 1) * limit)
 	ctx := context.Background()
+	showAdult := c.Query("adult") == "true"
 	excludeID := pgtype.UUID{}
 	var videos []db.Video
 	var total int64
@@ -58,12 +59,11 @@ func (s *Server) SuggestionsHandler(c *fiber.Ctx) error {
 		if err == nil {
 			excludeID = current.ID
 			var queryErr error
-			isCurrentAdult := current.IsAdult.Valid && current.IsAdult.Bool
-			videos, queryErr = s.Repository.ListSuggestedVideos(ctx, current.ID, current.Category.String, []string(current.Tags), isCurrentAdult, int32(limit), offset)
+			videos, queryErr = s.Repository.ListSuggestedVideos(ctx, current.ID, current.Category.String, []string(current.Tags), showAdult, int32(limit), offset)
 			if queryErr != nil {
 				return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch suggestions"})
 			}
-			total, queryErr = s.Repository.CountSuggestedVideos(ctx, current.ID, isCurrentAdult)
+			total, queryErr = s.Repository.CountSuggestedVideos(ctx, current.ID, showAdult)
 			if queryErr != nil {
 				return c.Status(500).JSON(fiber.Map{"message": "Failed to count suggestions"})
 			}
@@ -72,7 +72,6 @@ func (s *Server) SuggestionsHandler(c *fiber.Ctx) error {
 
 	if !excludeID.Valid {
 		var queryErr error
-		showAdult := c.Query("adult") == "true"
 		videos, queryErr = s.Repository.ListPublicVideos(ctx, "", pgtype.Bool{Bool: false, Valid: true}, showAdult, "trending", int32(limit), offset)
 		if queryErr != nil {
 			return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch suggestions"})

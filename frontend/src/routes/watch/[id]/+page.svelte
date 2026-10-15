@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 	import { fetchApi } from '#lib/api';
 	import { userState } from '#lib/user.svelte';
-	import { consentState, initAdultConsent, grantAdultConsent } from '#lib/consent.svelte';
+	import { contentModeState, initContentMode, setContentMode } from '#lib/consent.svelte';
 	import { ThumbsUp, Share2, MessageSquare, Play, ListPlus, Loader2, Trash2, ShieldAlert } from 'lucide-svelte';
 	import VideoThumbnail from '#lib/components/VideoThumbnail.svelte';
 	import WatchLaterButton from '#lib/components/WatchLaterButton.svelte';
@@ -28,7 +28,7 @@
 	let newCommentText = $state('');
 
 	onMount(() => {
-		initAdultConsent();
+		initContentMode();
 	});
 
 	// Queries
@@ -92,7 +92,7 @@
 
 	const suggestionsQuery = createInfiniteQuery(
 		() => ({
-			queryKey: ['suggestions', videoId],
+			queryKey: ['suggestions', videoId, contentModeState.isAdult],
 			queryFn: async ({ pageParam = 1 }) => {
 				const res = await fetchApi(
 					`/videos/suggestions?exclude=${videoId}&limit=10&page=${pageParam}`
@@ -290,7 +290,7 @@
 			<div
 				class="relative aspect-video w-full overflow-hidden rounded-xl border border-border/50 bg-black shadow-lg flex items-center justify-center"
 			>
-				{#if videoQuery.data.isAdult && !consentState.hasConsent}
+				{#if videoQuery.data.isAdult && !contentModeState.isAdult}
 					<div class="flex flex-col items-center justify-center p-6 text-center max-w-md">
 						<div class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-500 border border-amber-500/30">
 							<ShieldAlert class="h-8 w-8" />
@@ -300,7 +300,11 @@
 						</div>
 						<h2 class="text-xl font-bold text-white mb-2">Mature Content Warning</h2>
 						<p class="text-xs text-zinc-300 mb-6 leading-relaxed">
-							This video contains adult and sexually explicit material. You must confirm that you are at least 18 years old to watch this content.
+							{#if userState.user?.showAdultContent}
+								This video contains mature material. Switch to 18+ mode using the header toggle or confirm below to watch.
+							{:else}
+								This video contains mature material. You must enable 18+ content in your profile settings before accessing this content.
+							{/if}
 						</p>
 						<div class="flex flex-col sm:flex-row gap-3 w-full justify-center">
 							<Button
@@ -311,13 +315,26 @@
 							>
 								Return to Safety
 							</Button>
-							<Button
-								size="sm"
-								class="rounded-full bg-amber-600 hover:bg-amber-700 text-white font-semibold"
-								onclick={() => grantAdultConsent()}
-							>
-								I am 18+ — Watch Video
-							</Button>
+							{#if userState.user?.showAdultContent}
+								<Button
+									size="sm"
+									class="rounded-full bg-amber-600 hover:bg-amber-700 text-white font-semibold"
+									onclick={() => {
+										setContentMode(true);
+										queryClient.invalidateQueries();
+									}}
+								>
+									I am 18+ — Watch Video
+								</Button>
+							{:else}
+								<Button
+									size="sm"
+									class="rounded-full bg-amber-600 hover:bg-amber-700 text-white font-semibold"
+									onclick={() => goto('/profile')}
+								>
+									Enable 18+ in Settings
+								</Button>
+							{/if}
 						</div>
 					</div>
 				{:else}
