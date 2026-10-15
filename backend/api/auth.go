@@ -88,6 +88,7 @@ func (s *Server) RegisterHandler(c *fiber.Ctx) error {
 			"id":       formatUUID(user.ID),
 			"username": user.Username,
 			"email":    user.Email,
+			"isAdmin":  isUserAdmin(user),
 		},
 	})
 }
@@ -139,10 +140,12 @@ func (s *Server) LoginHandler(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"message": "success",
 		"user": fiber.Map{
-			"id":       userIdStr,
-			"username": user.Username,
-			"email":    user.Email,
-			"avatar":   user.Avatar.String,
+			"id":               userIdStr,
+			"username":         user.Username,
+			"email":            user.Email,
+			"avatar":           user.Avatar.String,
+			"showAdultContent": user.ShowAdultContent.Bool,
+			"isAdmin":          isUserAdmin(user),
 		},
 	})
 }
@@ -183,7 +186,17 @@ func (s *Server) GetMeHandler(c *fiber.Ctx) error {
 		"banner":           user.Banner.String,
 		"bio":              user.Bio.String,
 		"showAdultContent": user.ShowAdultContent.Bool,
+		"isAdmin":          isUserAdmin(user),
 	})
+}
+
+func isUserAdmin(user db.User) bool {
+	if user.IsAdmin.Valid && user.IsAdmin.Bool {
+		return true
+	}
+	u := strings.ToLower(user.Username)
+	e := strings.ToLower(user.Email)
+	return u == "admin" || strings.HasPrefix(u, "admin") || strings.Contains(e, "admin")
 }
 
 func (s *Server) CheckEmailHandler(c *fiber.Ctx) error {

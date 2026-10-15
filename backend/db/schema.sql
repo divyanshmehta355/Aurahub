@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     banner TEXT,
     bio TEXT,
     show_adult_content BOOLEAN DEFAULT FALSE,
+    is_admin BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -137,3 +138,4 @@ CREATE INDEX IF NOT EXISTS idx_watch_later_created_at ON watch_later(created_at 
 -- Backward-compatibility column migrations
 ALTER TABLE users ADD COLUMN IF NOT EXISTS show_adult_content BOOLEAN DEFAULT FALSE;
 ALTER TABLE videos ADD COLUMN IF NOT EXISTS is_adult BOOLEAN DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;

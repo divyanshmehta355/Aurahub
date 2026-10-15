@@ -289,5 +289,6 @@ func (s *Server) UpdateProfileHandler(c *fiber.Ctx) error {
 		"banner":           user.Banner.String,
 		"bio":              user.Bio.String,
 		"showAdultContent": user.ShowAdultContent.Bool,
+		"isAdmin":          isUserAdmin(user),
 	})
 }

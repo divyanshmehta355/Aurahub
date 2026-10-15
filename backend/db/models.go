@@ -232,6 +232,7 @@ type User struct {
 	Banner    pgtype.Text        `gorm:"type:text"`
 	Bio              pgtype.Text        `gorm:"type:text"`
 	ShowAdultContent pgtype.Bool        `gorm:"default:false"`
+	IsAdmin          pgtype.Bool        `gorm:"default:false"`
 	CreatedAt        pgtype.Timestamptz `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 	UpdatedAt        pgtype.Timestamptz `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 }

@@ -22,3 +22,8 @@ func NewRepository(database *gorm.DB) *Repository {
 type Repository struct {
 	orm *gorm.DB
 }
+
+func (r *Repository) GetORM() *gorm.DB {
+	return r.orm
+}
+

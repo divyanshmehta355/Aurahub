@@ -143,4 +143,16 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 	creator.Put("/videos/bulk-adult", s.BulkUpdateVideoAdultHandler)
 	creator.Put("/videos/bulk/adult", s.BulkUpdateVideoAdultHandler)
 	creator.Delete("/videos/bulk", s.BulkDeleteVideosHandler)
+
+	// Admin routes
+	admin := api.Group("/admin", middleware.AuthRequired(), s.AdminAuthRequired())
+	admin.Get("/stats", s.AdminStatsHandler)
+	admin.Get("/videos", s.AdminListVideosHandler)
+	admin.Put("/videos/:id", s.AdminUpdateVideoHandler)
+	admin.Delete("/videos/:id", s.AdminDeleteVideoHandler)
+	admin.Get("/users", s.AdminListUsersHandler)
+	admin.Put("/users/:id/role", s.AdminUpdateUserRoleHandler)
+	admin.Delete("/users/:id", s.AdminDeleteUserHandler)
+	admin.Post("/actions/refresh-cycle", s.AdminTriggerRefreshHandler)
+	admin.Post("/actions/flush-cache", s.AdminFlushCacheHandler)
 }
