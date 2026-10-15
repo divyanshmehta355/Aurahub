@@ -128,9 +128,16 @@ func (s *Server) CreatorAnalyticsHandler(c *fiber.Ctx) error {
 	topVideoResults := make([]fiber.Map, 0, len(topVideos))
 	for _, video := range topVideos {
 		topVideoResults = append(topVideoResults, fiber.Map{
-			"_id": formatUUID(video.ID), "id": formatUUID(video.ID), "title": video.Title,
-			"category": video.Category, "views": video.Views, "likesCount": video.LikesCount,
+			"_id":          formatUUID(video.ID),
+			"id":           formatUUID(video.ID),
+			"fileId":       video.FileID,
+			"thumbnailUrl": video.ThumbnailUrl,
+			"title":        video.Title,
+			"category":     video.Category,
+			"views":        video.Views,
+			"likesCount":   video.LikesCount,
 			"commentCount": video.CommentCount,
+			"createdAt":    video.CreatedAt,
 		})
 	}
 	categoryResults := make([]fiber.Map, 0, len(categories))
@@ -140,14 +147,29 @@ func (s *Server) CreatorAnalyticsHandler(c *fiber.Ctx) error {
 		})
 	}
 
+	var avgViewsPerVideo float64
+	if stats.TotalVideos > 0 {
+		avgViewsPerVideo = float64(stats.TotalViews) / float64(stats.TotalVideos)
+	}
+	var overallEngagementRate float64
+	if stats.TotalViews > 0 {
+		overallEngagementRate = float64(stats.TotalLikes+stats.TotalComments) / float64(stats.TotalViews) * 100
+	}
+
 	return c.JSON(fiber.Map{
 		"lifetimeStats": fiber.Map{
-			"views":       stats.TotalViews,
-			"likes":       stats.TotalLikes,
-			"comments":    stats.TotalComments,
-			"videos":      stats.TotalVideos,
-			"subscribers": subscribersCount,
+			"views":                  stats.TotalViews,
+			"likes":                  stats.TotalLikes,
+			"comments":               stats.TotalComments,
+			"videos":                 stats.TotalVideos,
+			"subscribers":            subscribersCount,
+			"avgViewsPerVideo":       avgViewsPerVideo,
+			"overallEngagementRate":  overallEngagementRate,
 		},
+		"total_views":    stats.TotalViews,
+		"total_likes":    stats.TotalLikes,
+		"total_comments": stats.TotalComments,
+		"total_videos":   stats.TotalVideos,
 		"user": fiber.Map{
 			"id":       formatUUID(user.ID),
 			"username": user.Username,

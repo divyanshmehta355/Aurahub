@@ -57,19 +57,22 @@ type CreatorActivityDay struct {
 
 type CreatorTopVideo struct {
 	ID           pgtype.UUID
+	FileID       string
+	ThumbnailUrl string
 	Title        string
 	Category     string
 	Views        int32
 	LikesCount   int64
 	CommentCount int64
+	CreatedAt    time.Time
 }
 
 func (q *Repository) GetCreatorActivity(ctx context.Context, uploaderID pgtype.UUID, start time.Time) ([]CreatorActivityDay, error) {
 	var activities []CreatorActivityDay
 	err := q.orm.WithContext(ctx).Table("user_activities AS ua").
-		Select("(ua.created_at AT TIME ZONE 'UTC')::date AS date, ua.interaction_type::text AS type, COUNT(*) AS count").
+		Select("(COALESCE(ua.updated_at, ua.created_at) AT TIME ZONE 'UTC')::date AS date, ua.interaction_type::text AS type, COUNT(*) AS count").
 		Joins("JOIN videos v ON v.id = ua.video_id").
-		Where("v.uploader_id = ? AND ua.created_at >= ?", uploaderID, start).
+		Where("v.uploader_id = ? AND COALESCE(ua.updated_at, ua.created_at) >= ?", uploaderID, start).
 		Group("date, type").Order("date, type").Scan(&activities).Error
 	return activities, err
 }
@@ -77,7 +80,7 @@ func (q *Repository) GetCreatorActivity(ctx context.Context, uploaderID pgtype.U
 func (q *Repository) GetCreatorTopVideos(ctx context.Context, uploaderID pgtype.UUID) ([]CreatorTopVideo, error) {
 	var videos []CreatorTopVideo
 	err := q.orm.WithContext(ctx).Model(&Video{}).
-		Select(`videos.id, videos.title, COALESCE(videos.category, 'Other') AS category, videos.views,
+		Select(`videos.id, videos.file_id, COALESCE(videos.thumbnail_url, '') AS thumbnail_url, videos.title, COALESCE(videos.category, 'Other') AS category, videos.views, videos.created_at,
 			(SELECT COUNT(*) FROM user_activities ua WHERE ua.video_id = videos.id AND ua.interaction_type = ?) AS likes_count,
 			(SELECT COUNT(*) FROM comments c WHERE c.video_id = videos.id) AS comment_count`, InteractionTypeLike).
 		Where("videos.uploader_id = ?", uploaderID).
