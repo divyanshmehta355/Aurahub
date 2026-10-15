@@ -48,12 +48,35 @@
 
 	let isUploading = $state(false);
 	let uploadProgress = $state(0);
+	let uploadedBytes = $state(0);
+	let totalBytes = $state(0);
+	let uploadSpeed = $state(0); // bytes/sec
+	let etaSeconds = $state<number | null>(null);
 	let error = $state('');
 	let success = $state(false);
 	let fileId = $state('');
 	let statusMessage = $state('');
 
-	const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
+	function formatBytes(bytes: number): string {
+		if (bytes <= 0) return '0 B';
+		const k = 1024;
+		const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+	}
+
+	function formatSpeed(bytesPerSec: number): string {
+		if (bytesPerSec <= 0) return '0 KB/s';
+		return `${formatBytes(bytesPerSec)}/s`;
+	}
+
+	function formatEta(seconds: number | null): string {
+		if (seconds === null || !isFinite(seconds) || seconds <= 0) return '--';
+		if (seconds < 60) return `${Math.ceil(seconds)}s left`;
+		const mins = Math.floor(seconds / 60);
+		const secs = Math.ceil(seconds % 60);
+		return `${mins}m ${secs}s left`;
+	}
 
 	function handleFileSelect(e: Event) {
 		const target = e.target as HTMLInputElement;
@@ -74,34 +97,101 @@
 		isUploading = true;
 		error = '';
 		uploadProgress = 0;
-		statusMessage = 'Uploading chunks...';
+		uploadedBytes = 0;
+		totalBytes = file.size;
+		uploadSpeed = 0;
+		etaSeconds = null;
+		statusMessage = 'Requesting direct upload URL...';
 
 		try {
+			// 1. Get the direct upload URL from the Aura API
 			const initRes = await fetchApi('/videos/get-upload-url');
-			const serverFileId = initRes.fileId;
-			const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-
-			let finalVideoId = '';
-			for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-				const start = chunkIndex * CHUNK_SIZE;
-				const end = Math.min(start + CHUNK_SIZE, file.size);
-				const chunk = file.slice(start, end);
-
-				const formData = new FormData();
-				formData.append('uploadId', serverFileId);
-				formData.append('chunkIndex', chunkIndex.toString());
-				formData.append('totalChunks', totalChunks.toString());
-				formData.append('fileName', file.name);
-				formData.append('chunk', chunk);
-
-				const res = await fetchApi('/videos/upload-chunk', { method: 'POST', body: formData });
-				if (res && res.completed) {
-					finalVideoId = res.videoId;
-				}
-				uploadProgress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
+			const targetUploadUrl = initRes?.url || initRes?.result?.url || initRes?.uploadUrl;
+			if (!targetUploadUrl) {
+				throw new Error('Failed to obtain direct upload URL from service.');
 			}
 
-			statusMessage = 'Creating record...';
+			// 2. Directly upload the video file to the upload URL with real-time progress & speed
+			statusMessage = 'Uploading video...';
+			const uploadResult = await new Promise<any>((resolve, reject) => {
+				const xhr = new XMLHttpRequest();
+				xhr.open('POST', targetUploadUrl);
+
+				let lastLoaded = 0;
+				let lastTime = performance.now();
+				const speedSamples: number[] = [];
+
+				xhr.upload.onloadstart = (event) => {
+					lastTime = performance.now();
+					lastLoaded = 0;
+					uploadedBytes = 0;
+					totalBytes = event.total || file!.size;
+				};
+
+				xhr.upload.onprogress = (event) => {
+					if (event.lengthComputable) {
+						const now = performance.now();
+						uploadedBytes = event.loaded;
+						totalBytes = event.total;
+						uploadProgress = Math.round((event.loaded / event.total) * 100);
+
+						const timeDiff = (now - lastTime) / 1000;
+						if (timeDiff >= 0.2) {
+							const bytesDiff = event.loaded - lastLoaded;
+							const currentSpeed = bytesDiff / timeDiff;
+
+							speedSamples.push(currentSpeed);
+							if (speedSamples.length > 5) speedSamples.shift();
+							const avgSpeed = speedSamples.reduce((a, b) => a + b, 0) / speedSamples.length;
+
+							uploadSpeed = avgSpeed;
+							const remainingBytes = Math.max(0, event.total - event.loaded);
+							etaSeconds = avgSpeed > 0 ? remainingBytes / avgSpeed : null;
+
+							lastLoaded = event.loaded;
+							lastTime = now;
+						}
+					}
+				};
+
+				xhr.onload = () => {
+					if (xhr.status >= 200 && xhr.status < 300) {
+						uploadProgress = 100;
+						uploadedBytes = totalBytes;
+						uploadSpeed = 0;
+						etaSeconds = 0;
+						try {
+							const json = JSON.parse(xhr.responseText);
+							resolve(json);
+						} catch {
+							resolve(xhr.responseText);
+						}
+					} else {
+						reject(new Error(`Upload service returned HTTP ${xhr.status}: ${xhr.statusText || 'Error'}`));
+					}
+				};
+
+				xhr.onerror = () => reject(new Error('Network error occurred while uploading video.'));
+				xhr.ontimeout = () => reject(new Error('Upload timed out. Please try again.'));
+
+				const formData = new FormData();
+				formData.append('file', file!);
+				xhr.send(formData);
+			});
+
+			// Extract file ID returned by the upload service
+			const finalVideoId =
+				uploadResult?.result?.id ||
+				uploadResult?.id ||
+				uploadResult?.videoId ||
+				(typeof uploadResult === 'string' && uploadResult.trim());
+
+			if (!finalVideoId) {
+				throw new Error('Upload completed, but no video ID was received from the service.');
+			}
+
+			// 3. Create the record in Aurahub database
+			statusMessage = 'Finalizing video publishing...';
 			const finalData = new FormData();
 			finalData.append('videoId', finalVideoId);
 			finalData.append('title', title);
@@ -116,7 +206,7 @@
 				body: finalData
 			});
 
-			fileId = serverFileId;
+			fileId = finalVideoId;
 			success = true;
 		} catch (err: any) {
 			error = err.message || 'Upload failed.';
@@ -182,8 +272,10 @@
 						const loaded = statusData.bytes_loaded || 0;
 						const total = statusData.bytes_total || 0;
 						if (total > 0) {
+							uploadedBytes = loaded;
+							totalBytes = total;
 							uploadProgress = Math.floor((loaded / total) * 100);
-							statusMessage = `Downloading... ${uploadProgress}%`;
+							statusMessage = `Remote transfer in progress...`;
 						}
 					}
 				}
@@ -205,6 +297,10 @@
 		videoUrl = '';
 		isUploading = false;
 		uploadProgress = 0;
+		uploadedBytes = 0;
+		totalBytes = 0;
+		uploadSpeed = 0;
+		etaSeconds = null;
 		error = '';
 		success = false;
 		fileId = '';
@@ -407,16 +503,54 @@
 					</div>
 
 					{#if isUploading}
-						<div class="bg-muted/30 space-y-2 rounded-xl border p-4">
-							<div class="flex justify-between text-sm font-medium">
-								<span>{statusMessage}</span>
-								<span>{uploadProgress}%</span>
+						<div class="rounded-2xl border border-primary/25 bg-muted/40 p-5 shadow-sm space-y-4">
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-3">
+									<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+										<UploadCloud class="h-5 w-5 animate-bounce" />
+									</div>
+									<div>
+										<p class="text-sm font-bold text-foreground">{statusMessage}</p>
+										<p class="text-xs text-muted-foreground truncate max-w-[220px] sm:max-w-md">
+											{file?.name || videoUrl}
+										</p>
+									</div>
+								</div>
+								<div class="text-right">
+									<span class="font-mono text-2xl font-black text-primary">{uploadProgress}%</span>
+								</div>
 							</div>
-							<div class="bg-secondary h-2 w-full overflow-hidden rounded-full">
+
+							<!-- Smooth animated gradient bar -->
+							<div class="relative h-3 w-full overflow-hidden rounded-full bg-muted">
 								<div
-									class="h-2 bg-primary transition-all duration-300"
+									class="relative h-full rounded-full bg-gradient-to-r from-primary/80 via-primary to-primary transition-all duration-200 ease-out"
 									style="width: {uploadProgress}%"
-								></div>
+								>
+									<div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+								</div>
+							</div>
+
+							<!-- Metrics Grid: Uploaded of Total, Speed, and Estimated Time -->
+							<div class="grid grid-cols-3 gap-2 border-t border-border/60 pt-3 text-xs">
+								<div class="space-y-0.5">
+									<span class="text-muted-foreground block text-[11px] font-medium">Uploaded</span>
+									<span class="font-mono font-bold text-foreground">
+										{formatBytes(uploadedBytes)} / {formatBytes(totalBytes || file?.size || 0)}
+									</span>
+								</div>
+								<div class="space-y-0.5 text-center">
+									<span class="text-muted-foreground block text-[11px] font-medium">Upload Speed</span>
+									<span class="font-mono font-bold text-foreground">
+										{formatSpeed(uploadSpeed)}
+									</span>
+								</div>
+								<div class="space-y-0.5 text-right">
+									<span class="text-muted-foreground block text-[11px] font-medium">Time Remaining</span>
+									<span class="font-mono font-bold text-foreground">
+										{formatEta(etaSeconds)}
+									</span>
+								</div>
 							</div>
 						</div>
 					{/if}

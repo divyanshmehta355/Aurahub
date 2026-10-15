@@ -43,6 +43,16 @@ func (s *Server) GetUploadUrlHandler(c *fiber.Ctx) error {
 	if err := json.Unmarshal(body, &data); err != nil {
 		return c.Status(502).JSON(fiber.Map{"message": "Invalid response from upload service"})
 	}
+
+	// Normalise upload URL so frontend can access data["url"] directly
+	if _, exists := data["url"]; !exists {
+		if res, ok := data["result"].(map[string]interface{}); ok {
+			if u, ok := res["url"].(string); ok {
+				data["url"] = u
+			}
+		}
+	}
+
 	return c.JSON(data)
 }
 
