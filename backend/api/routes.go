@@ -64,7 +64,10 @@ func (s *Server) getJWTSecret() string {
 }
 
 func (s *Server) SetupRoutes(app *fiber.App) {
-	api := app.Group("/api")
+	api := app.Group("/api", s.MaintenanceModeMiddleware())
+
+	// Public System Status & Feature Flags
+	api.Get("/system/status", s.PublicSystemStatusHandler)
 
 	// Health check
 	api.Get("/health", func(c *fiber.Ctx) error {
@@ -100,12 +103,12 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 
 	// Media routes
 	app.Get("/api/avatar/:seed", s.AvatarHandler)
-	app.Post("/api/upload/avatar", middleware.AuthRequired(), s.AvatarUploadHandler)
+	app.Post("/api/upload/avatar", middleware.AuthRequired(), s.ResolveAdminStatus(), s.EnforceKillSwitch(SwitchFreezeUploads), s.AvatarUploadHandler)
 	api.Get("/thumbnail/:seed", s.DynamicThumbnailHandler)
 
 	// Auth routes
 	auth := api.Group("/auth")
-	auth.Post("/register", middleware.RegisterLimiter(), s.RegisterHandler)
+	auth.Post("/register", s.EnforceKillSwitch(SwitchFreezeRegistration), middleware.RegisterLimiter(), s.RegisterHandler)
 	auth.Post("/login", middleware.LoginLimiter(), s.LoginHandler)
 	auth.Post("/logout", s.LogoutHandler)
 	auth.Post("/check-email", middleware.CheckAvailabilityLimiter(), s.CheckEmailHandler)
@@ -119,8 +122,8 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 	videos.Get("/suggestions", s.SuggestionsHandler)
 	videos.Get("/stream/:id", s.StreamVideoHandler)
 	videos.Get("/remote-upload/status", s.RemoteUploadStatusHandler)
-	videos.Post("/remote-upload/start", middleware.AuthRequired(), s.ResolveAdminStatus(), middleware.RemoteUploadLimiter(), s.RemoteUploadStartHandler)
-	videos.Post("/remote-upload/batch", middleware.AuthRequired(), s.ResolveAdminStatus(), middleware.RemoteUploadLimiter(), s.BatchRemoteUploadHandler)
+	videos.Post("/remote-upload/start", middleware.AuthRequired(), s.ResolveAdminStatus(), s.EnforceKillSwitch(SwitchFreezeUploads), middleware.RemoteUploadLimiter(), s.RemoteUploadStartHandler)
+	videos.Post("/remote-upload/batch", middleware.AuthRequired(), s.ResolveAdminStatus(), s.EnforceKillSwitch(SwitchFreezeUploads), middleware.RemoteUploadLimiter(), s.BatchRemoteUploadHandler)
 	videos.Post("/refresh-expired", middleware.AuthRequired(), s.TriggerRefreshExpiredHandler)
 	videos.Put("/bulk", middleware.AuthRequired(), s.BulkUpdateVideoVisibilityHandler)
 	videos.Put("/bulk-adult", middleware.AuthRequired(), s.BulkUpdateVideoAdultHandler)
@@ -128,9 +131,9 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 
 	// Protected video routes
 	videos.Get("/feed/subscriptions", middleware.AuthRequired(), s.SubscriptionFeedHandler)
-	videos.Get("/get-upload-url", middleware.AuthRequired(), s.GetUploadUrlHandler)
-	videos.Post("/upload-chunk", middleware.AuthRequired(), s.UploadChunkHandler)
-	videos.Post("/create-record", middleware.AuthRequired(), s.CreateRecordHandler)
+	videos.Get("/get-upload-url", middleware.AuthRequired(), s.ResolveAdminStatus(), s.EnforceKillSwitch(SwitchFreezeUploads), s.GetUploadUrlHandler)
+	videos.Post("/upload-chunk", middleware.AuthRequired(), s.ResolveAdminStatus(), s.EnforceKillSwitch(SwitchFreezeUploads), s.UploadChunkHandler)
+	videos.Post("/create-record", middleware.AuthRequired(), s.ResolveAdminStatus(), s.EnforceKillSwitch(SwitchFreezeUploads), s.CreateRecordHandler)
 
 	// Dynamic ID routes should come last
 	videos.Get("/:id/thumbnail", s.GetVideoThumbnailHandler)
@@ -149,15 +152,15 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 	users.Put("/me", middleware.AuthRequired(), s.UpdateUserHandler)
 	users.Put("/profile", middleware.AuthRequired(), s.UpdateProfileHandler)
 	users.Put("/security", middleware.AuthRequired(), s.UpdateProfileHandler)
-	users.Post("/profile/image", middleware.AuthRequired(), s.AvatarUploadHandler)
+	users.Post("/profile/image", middleware.AuthRequired(), s.ResolveAdminStatus(), s.EnforceKillSwitch(SwitchFreezeUploads), s.AvatarUploadHandler)
 
 	// Comments routes
 	comments := api.Group("/comments")
 	comments.Get("/:videoId", s.ListCommentsHandler)
-	comments.Post("/", middleware.AuthRequired(), s.ResolveAdminStatus(), middleware.CommentsLimiter(), s.CreateCommentHandler)
+	comments.Post("/", middleware.AuthRequired(), s.ResolveAdminStatus(), s.EnforceKillSwitch(SwitchFreezeComments), middleware.CommentsLimiter(), s.CreateCommentHandler)
 	comments.Get("/:id/replies", s.ListCommentRepliesHandler)
 	api.Get("/search/autocomplete", middleware.SearchLimiter(), s.AutocompleteHandler)
-	comments.Put("/:id", middleware.AuthRequired(), s.UpdateCommentHandler)
+	comments.Put("/:id", middleware.AuthRequired(), s.ResolveAdminStatus(), s.EnforceKillSwitch(SwitchFreezeComments), s.UpdateCommentHandler)
 	comments.Delete("/:id", middleware.AuthRequired(), s.DeleteCommentHandler)
 
 	// Notifications routes
@@ -213,4 +216,6 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 	admin.Delete("/users/:id", s.AdminDeleteUserHandler)
 	admin.Post("/actions/refresh-cycle", s.AdminTriggerRefreshHandler)
 	admin.Post("/actions/flush-cache", s.AdminFlushCacheHandler)
+	admin.Get("/kill-switches", s.AdminGetKillSwitchesHandler)
+	admin.Post("/kill-switches", s.AdminToggleKillSwitchHandler)
 }

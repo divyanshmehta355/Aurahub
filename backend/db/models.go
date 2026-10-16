@@ -282,13 +282,22 @@ type WatchLater struct {
 	UpdatedAt pgtype.Timestamptz `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 }
 
+type SystemSetting struct {
+	Key       string             `gorm:"primaryKey;type:varchar(64)" json:"key"`
+	Value     string             `gorm:"type:text;not null" json:"value"`
+	UpdatedAt pgtype.Timestamptz `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP" json:"updatedAt"`
+	UpdatedBy pgtype.UUID        `gorm:"type:uuid" json:"updatedBy"`
+}
+
 func (Comment) TableName() string       { return "comments" }
 func (Notification) TableName() string  { return "notifications" }
 func (Playlist) TableName() string      { return "playlists" }
 func (PlaylistVideo) TableName() string { return "playlist_videos" }
 func (Subscription) TableName() string  { return "subscriptions" }
+func (SystemSetting) TableName() string { return "system_settings" }
 func (User) TableName() string          { return "users" }
 func (UserActivity) TableName() string  { return "user_activities" }
 func (Video) TableName() string         { return "videos" }
 func (WatchHistory) TableName() string  { return "watch_history" }
 func (WatchLater) TableName() string    { return "watch_later" }
+

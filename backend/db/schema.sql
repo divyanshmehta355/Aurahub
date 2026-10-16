@@ -139,3 +139,19 @@ CREATE INDEX IF NOT EXISTS idx_watch_later_created_at ON watch_later(created_at 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS show_adult_content BOOLEAN DEFAULT FALSE;
 ALTER TABLE videos ADD COLUMN IF NOT EXISTS is_adult BOOLEAN DEFAULT FALSE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;
+
+-- System settings & administrative kill switches
+CREATE TABLE IF NOT EXISTS system_settings (
+    key VARCHAR(64) PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES users(id) ON DELETE SET NULL
+);
+
+INSERT INTO system_settings (key, value) VALUES
+    ('maintenance_mode', 'false'),
+    ('freeze_uploads', 'false'),
+    ('freeze_registration', 'false'),
+    ('freeze_comments', 'false')
+ON CONFLICT (key) DO NOTHING;
+

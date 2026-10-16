@@ -40,6 +40,9 @@ func TestUnifiedAPIRoutes(t *testing.T) {
 		"PUT /api/creator/videos/bulk-adult",
 		"GET /api/notifications",
 		"POST /api/notifications/read-all",
+		"GET /api/system/status",
+		"GET /api/admin/kill-switches",
+		"POST /api/admin/kill-switches",
 	}
 	for _, route := range apiRoutes {
 		if !registered[route] {
@@ -53,12 +56,14 @@ func TestUnifiedAPIRoutes(t *testing.T) {
 		status int
 	}{
 		{http.MethodGet, "/api/health", http.StatusOK},
+		{http.MethodGet, "/api/system/status", http.StatusOK},
 		{http.MethodGet, "/api/search/autocomplete?q=a", http.StatusOK},
 		{http.MethodGet, "/api/thumbnail/sample?title=Sample", http.StatusOK},
 		{http.MethodGet, "/api/videos/remote-upload/status", http.StatusBadRequest},
 		{http.MethodGet, "/api/user/watch-later", http.StatusUnauthorized},
 		{http.MethodPost, "/api/videos/sample/like", http.StatusUnauthorized},
 		{http.MethodPost, "/api/videos/remote-upload/start", http.StatusUnauthorized},
+		{http.MethodGet, "/api/admin/kill-switches", http.StatusUnauthorized},
 	}
 
 	for _, test := range tests {

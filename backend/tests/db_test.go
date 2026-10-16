@@ -18,6 +18,7 @@ func TestGormModelsHaveExplicitTableNames(t *testing.T) {
 		{db.Playlist{}, "playlists"},
 		{db.PlaylistVideo{}, "playlist_videos"},
 		{db.Subscription{}, "subscriptions"},
+		{db.SystemSetting{}, "system_settings"},
 		{db.User{}, "users"},
 		{db.UserActivity{}, "user_activities"},
 		{db.Video{}, "videos"},

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '../app.css';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import {
 		Sun,
 		Moon,
@@ -20,7 +20,9 @@
 		Bell,
 		ShieldAlert,
 		ShieldCheck,
-		Shield
+		Shield,
+		AlertOctagon,
+		Zap
 	} from 'lucide-svelte';
 	import { fetchApi } from '#lib/api';
 	import { userState, setUser, clearUser } from '#lib/user.svelte';
@@ -37,6 +39,27 @@
 	let isConsentModalOpen = $state(false);
 
 	let isMobileSearchOpen = $state(false);
+
+	interface SystemStatus {
+		status: string;
+		maintenance_mode: boolean;
+		freeze_uploads: boolean;
+		freeze_registration: boolean;
+		freeze_comments: boolean;
+		timestamp: string;
+	}
+
+	let systemStatus = $state<SystemStatus | null>(null);
+	let statusInterval: ReturnType<typeof setInterval> | null = null;
+
+	async function fetchSystemStatus() {
+		try {
+			const res = await fetchApi('/system/status');
+			systemStatus = res;
+		} catch (e) {
+			// Fail-safe: ignore network errors on background poll
+		}
+	}
 
 	const queryClient = new QueryClient({
 		defaultOptions: {
@@ -60,6 +83,8 @@
 		}
 
 		initContentMode();
+		fetchSystemStatus();
+		statusInterval = setInterval(fetchSystemStatus, 15000);
 
 		try {
 			const data = await fetchApi('/auth/me');
@@ -72,6 +97,12 @@
 			if (contentModeState.isAdult) {
 				setContentMode(false);
 			}
+		}
+	});
+
+	onDestroy(() => {
+		if (statusInterval) {
+			clearInterval(statusInterval);
 		}
 	});
 
@@ -124,6 +155,42 @@
 
 <QueryClientProvider client={queryClient}>
 	<div class="flex min-h-screen flex-col pb-16 md:pb-0">
+		<!-- Emergency Kill Switch Alert Banners -->
+		{#if systemStatus?.maintenance_mode}
+			<div
+				class="relative z-50 flex items-center justify-between border-b border-rose-500/30 bg-gradient-to-r from-rose-950/90 via-amber-950/80 to-rose-950/90 px-4 py-2 text-xs font-semibold text-rose-200 backdrop-blur shadow-md"
+			>
+				<div class="mx-auto flex flex-wrap items-center justify-center gap-2 text-center">
+					<span class="relative flex h-2.5 w-2.5">
+						<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
+						<span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-500"></span>
+					</span>
+					<span class="font-black uppercase tracking-wider text-rose-300">Platform Maintenance Mode:</span>
+					<span>Aurahub is in maintenance. Public modifications are temporarily paused.</span>
+					{#if userState.user?.isAdmin}
+						<span class="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-black uppercase text-amber-300 border border-amber-500/40">
+							Admin Superpower Bypass Active
+						</span>
+					{/if}
+				</div>
+			</div>
+		{:else if systemStatus?.freeze_uploads}
+			<div
+				class="relative z-50 flex items-center justify-between border-b border-amber-500/30 bg-amber-950/80 px-4 py-1.5 text-xs font-semibold text-amber-200 backdrop-blur"
+			>
+				<div class="mx-auto flex flex-wrap items-center justify-center gap-2 text-center">
+					<span class="h-2 w-2 rounded-full bg-amber-400 animate-pulse"></span>
+					<span class="font-bold uppercase tracking-wider text-amber-300">Notice:</span>
+					<span>Video uploads are temporarily frozen for storage optimization. Watching & browsing remain active.</span>
+					{#if userState.user?.isAdmin}
+						<span class="rounded-full bg-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-200 border border-amber-500/40">
+							Admin Bypass
+						</span>
+					{/if}
+				</div>
+			</div>
+		{/if}
+
 		<!-- Header -->
 		<header class="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
 			<div class="flex h-16 items-center justify-between px-4 sm:px-6">

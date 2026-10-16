@@ -27,7 +27,13 @@
 		Loader2,
 		Play,
 		Check,
-		ArrowRight
+		ArrowRight,
+		Zap,
+		Power,
+		Lock,
+		Upload,
+		MessageSquare,
+		AlertOctagon
 	} from 'lucide-svelte';
 	import { Button } from '#lib/components/ui/button';
 	import { Input } from '#lib/components/ui/input';
@@ -36,7 +42,7 @@
 
 	const queryClient = useQueryClient();
 
-	let activeTab = $state<'overview' | 'videos' | 'users' | 'operations'>('overview');
+	let activeTab = $state<'overview' | 'videos' | 'users' | 'operations' | 'killswitches'>('overview');
 
 	// Notification banner state
 	let toastMessage = $state<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -325,6 +331,98 @@
 			day: 'numeric'
 		});
 	}
+
+	function formatDateTime(dateStr: string | undefined): string {
+		if (!dateStr) return 'Default (System Start)';
+		const d = new Date(dateStr);
+		return d.toLocaleString(undefined, {
+			month: 'short',
+			day: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit'
+		});
+	}
+
+	// === Tab 5: Kill Switches & Superpowers ===
+	interface KillSwitch {
+		key: string;
+		name: string;
+		description: string;
+		is_active: boolean;
+		updated_by?: string;
+		updated_at?: string;
+	}
+
+	const killSwitchesQuery = createQuery<Record<string, KillSwitch>>(
+		() => ({
+			queryKey: ['admin', 'kill-switches'],
+			queryFn: async () => {
+				return await fetchApi('/admin/kill-switches');
+			},
+			enabled: !!userState.user?.isAdmin,
+			refetchInterval: 8000
+		}),
+		() => queryClient
+	);
+
+	let togglingKey = $state<string | null>(null);
+
+	async function toggleKillSwitch(key: string, currentState: boolean) {
+		togglingKey = key;
+		const newState = !currentState;
+		try {
+			await fetchApi('/admin/kill-switches', {
+				method: 'POST',
+				body: JSON.stringify({
+					key,
+					is_active: newState
+				})
+			});
+			showToast(`Superpower kill switch "${key}" is now ${newState ? 'ARMED' : 'DISARMED'}.`);
+			queryClient.invalidateQueries({ queryKey: ['admin', 'kill-switches'] });
+		} catch (err: any) {
+			showToast(err.message || 'Failed to update kill switch', 'error');
+		} finally {
+			togglingKey = null;
+		}
+	}
+
+	let isBulkOperating = $state(false);
+	async function bulkSetKillSwitches(activateAll: boolean) {
+		const actionPrompt = activateAll
+			? 'ARE YOU SURE? This will immediately trigger TOTAL PLATFORM LOCKDOWN, freezing all uploads, new registrations, comments, and non-admin interactions.'
+			: 'Are you sure you want to DISARM all kill switches and restore standard platform operations?';
+		if (!confirm(actionPrompt)) {
+			return;
+		}
+		isBulkOperating = true;
+		const keys = ['maintenance_mode', 'freeze_uploads', 'freeze_registration', 'freeze_comments'];
+		try {
+			for (const key of keys) {
+				await fetchApi('/admin/kill-switches', {
+					method: 'POST',
+					body: JSON.stringify({ key, is_active: activateAll })
+				});
+			}
+			showToast(`All kill switches have been ${activateAll ? 'ARMED' : 'DISARMED'} successfully.`);
+			queryClient.invalidateQueries({ queryKey: ['admin', 'kill-switches'] });
+		} catch (err: any) {
+			showToast(err.message || 'Failed bulk kill switch update', 'error');
+		} finally {
+			isBulkOperating = false;
+		}
+	}
+
+	function countActiveKillSwitches(switches: Record<string, KillSwitch> | undefined): number {
+		if (!switches) return 0;
+		return Object.values(switches).filter((s) => s.is_active).length;
+	}
+
+	let maintenance = $derived(killSwitchesQuery.data?.['maintenance_mode']);
+	let uploads = $derived(killSwitchesQuery.data?.['freeze_uploads']);
+	let reg = $derived(killSwitchesQuery.data?.['freeze_registration']);
+	let comments = $derived(killSwitchesQuery.data?.['freeze_comments']);
 </script>
 
 <svelte:head>
@@ -463,6 +561,23 @@
 				{#if statsQuery.data?.streamtape?.needingRefresh > 0}
 					<span class="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-400">
 						{statsQuery.data.streamtape.needingRefresh} due
+					</span>
+				{/if}
+			</button>
+			<button
+				type="button"
+				onclick={() => (activeTab = 'killswitches')}
+				class="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all {activeTab === 'killswitches' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}"
+			>
+				<Zap class="h-4 w-4 {countActiveKillSwitches(killSwitchesQuery.data) > 0 ? 'text-amber-400 fill-amber-400 animate-pulse' : ''}" />
+				<span>Kill Switches & Superpowers</span>
+				{#if countActiveKillSwitches(killSwitchesQuery.data) > 0}
+					<span class="rounded-full bg-destructive/30 border border-destructive/50 px-2 py-0.5 text-xs font-bold text-destructive">
+						{countActiveKillSwitches(killSwitchesQuery.data)} ARMED
+					</span>
+				{:else}
+					<span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-400">
+						NORMAL
 					</span>
 				{/if}
 			</button>
@@ -1215,6 +1330,325 @@
 						</div>
 					</div>
 				</div>
+			</div>
+		{/if}
+
+		<!-- ================= TAB 5: KILL SWITCHES & SUPERPOWERS ================= -->
+		{#if activeTab === 'killswitches'}
+			<div class="space-y-6">
+				<!-- Threat & Posture Header Banner -->
+				<div
+					class="relative overflow-hidden rounded-3xl border p-6 shadow-xl transition-all duration-300 md:p-8 {countActiveKillSwitches(killSwitchesQuery.data) > 0 ? 'border-destructive/40 bg-gradient-to-r from-destructive/15 via-background to-amber-500/10' : 'border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-background to-cyan-500/10'}"
+				>
+					<div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+						<div class="space-y-2">
+							<div
+								class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-black tracking-wider uppercase {countActiveKillSwitches(killSwitchesQuery.data) > 0 ? 'border-destructive/40 bg-destructive/20 text-destructive animate-pulse' : 'border-emerald-500/40 bg-emerald-500/15 text-emerald-400'}"
+							>
+								<Zap class="h-3.5 w-3.5" />
+								<span>{countActiveKillSwitches(killSwitchesQuery.data) > 0 ? 'Emergency Lockdown State' : 'Normal Operational Posture'}</span>
+							</div>
+							<h2 class="text-2xl font-black tracking-tight text-foreground md:text-3xl">
+								System Kill Switches & Superpowers
+							</h2>
+							<p class="max-w-2xl text-xs text-muted-foreground leading-relaxed md:text-sm">
+								Zero-latency Valkey/Redis emergency enforcement synchronized with durable PostgreSQL persistence. Administrators automatically bypass all restrictions.
+							</p>
+						</div>
+
+						<!-- Quick Bulk Action Controls -->
+						<div class="flex flex-wrap items-center gap-2.5">
+							<Button
+								variant="outline"
+								size="sm"
+								disabled={isBulkOperating || countActiveKillSwitches(killSwitchesQuery.data) === 0}
+								onclick={() => bulkSetKillSwitches(false)}
+								class="rounded-xl border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/15 text-xs font-bold gap-2"
+							>
+								{#if isBulkOperating}
+									<Loader2 class="h-3.5 w-3.5 animate-spin" />
+								{:else}
+									<CheckCircle2 class="h-3.5 w-3.5" />
+								{/if}
+								<span>Disarm All (Normalize)</span>
+							</Button>
+							<Button
+								variant="destructive"
+								size="sm"
+								disabled={isBulkOperating}
+								onclick={() => bulkSetKillSwitches(true)}
+								class="rounded-xl text-xs font-bold gap-2 shadow-lg shadow-destructive/20"
+							>
+								{#if isBulkOperating}
+									<Loader2 class="h-3.5 w-3.5 animate-spin" />
+								{:else}
+									<AlertOctagon class="h-3.5 w-3.5" />
+								{/if}
+								<span>Emergency Total Lockdown</span>
+							</Button>
+						</div>
+					</div>
+				</div>
+
+				<!-- Kill Switch Cards Grid -->
+				{#if killSwitchesQuery.isPending}
+					<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+						{#each Array(4) as _}
+							<Skeleton class="h-64 rounded-3xl" />
+						{/each}
+					</div>
+				{:else if killSwitchesQuery.isError}
+					<div class="rounded-3xl border border-destructive/30 bg-destructive/10 p-6 text-center">
+						<AlertTriangle class="mx-auto h-8 w-8 text-destructive mb-2" />
+						<p class="text-sm font-bold text-destructive">Failed to load system kill switches</p>
+						<Button
+							variant="outline"
+							size="sm"
+							class="mt-3 rounded-full text-xs"
+							onclick={() => killSwitchesQuery.refetch()}
+						>
+							Retry
+						</Button>
+					</div>
+				{:else}
+					<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+						<!-- Switch 1: Platform Maintenance Mode -->
+						<div
+							class="relative overflow-hidden rounded-3xl border p-6 shadow-md transition-all duration-300 {maintenance?.is_active ? 'border-destructive/60 bg-destructive/10 shadow-destructive/10' : 'border-border/80 bg-card'}"
+						>
+							<div class="flex items-start justify-between gap-4">
+								<div class="flex items-center gap-3.5">
+									<div class="rounded-2xl p-3 {maintenance?.is_active ? 'bg-destructive/20 text-destructive' : 'bg-muted text-muted-foreground'}">
+										<Power class="h-6 w-6" />
+									</div>
+									<div>
+										<div class="flex items-center gap-2">
+											<h3 class="text-base font-bold text-foreground">Platform Maintenance Mode</h3>
+											<span class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider {maintenance?.is_active ? 'bg-destructive/30 text-destructive border border-destructive/50 animate-pulse' : 'bg-muted text-muted-foreground'}">
+												{maintenance?.is_active ? 'Armed (503)' : 'Standby'}
+											</span>
+										</div>
+										<p class="text-xs text-muted-foreground">Key: <code class="text-[11px] font-mono text-primary font-bold">maintenance_mode</code></p>
+									</div>
+								</div>
+
+								<!-- Custom Animated Switch Button -->
+								<button
+									type="button"
+									role="switch"
+									aria-checked={maintenance?.is_active}
+									disabled={togglingKey === 'maintenance_mode'}
+									onclick={() => toggleKillSwitch('maintenance_mode', !!maintenance?.is_active)}
+									class="relative inline-flex h-8 w-16 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {maintenance?.is_active ? 'bg-destructive shadow-md shadow-destructive/40' : 'bg-muted-foreground/30'}"
+								>
+									{#if togglingKey === 'maintenance_mode'}
+										<Loader2 class="mx-auto h-4 w-4 animate-spin text-foreground" />
+									{:else}
+										<span
+											class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out {maintenance?.is_active ? 'translate-x-8 bg-destructive-foreground' : 'translate-x-1'}"
+										></span>
+									{/if}
+								</button>
+							</div>
+
+							<p class="mt-4 text-xs leading-relaxed text-muted-foreground">
+								Halts all non-admin mutation requests (POST/PUT/DELETE/PATCH) across the entire platform with an instant HTTP 503 Service Unavailable. Admin accounts retain full unrestricted access.
+							</p>
+
+							<div class="mt-5 space-y-2 rounded-2xl border border-border/50 bg-background/50 p-3.5 text-[11px]">
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground font-medium">Impact Severity:</span>
+									<span class="font-bold text-destructive">CRITICAL • Platform-wide</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground font-medium">Enforcement Layer:</span>
+									<span class="font-mono text-emerald-400 font-semibold">Valkey Microcache &lt;1ms</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground font-medium">Last Modified:</span>
+									<span class="text-foreground font-semibold">{formatDateTime(maintenance?.updated_at)} by {maintenance?.updated_by || 'system'}</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- Switch 2: Emergency Upload Freeze -->
+						<div
+							class="relative overflow-hidden rounded-3xl border p-6 shadow-md transition-all duration-300 {uploads?.is_active ? 'border-amber-500/60 bg-amber-500/10 shadow-amber-500/10' : 'border-border/80 bg-card'}"
+						>
+							<div class="flex items-start justify-between gap-4">
+								<div class="flex items-center gap-3.5">
+									<div class="rounded-2xl p-3 {uploads?.is_active ? 'bg-amber-500/20 text-amber-500' : 'bg-muted text-muted-foreground'}">
+										<Upload class="h-6 w-6" />
+									</div>
+									<div>
+										<div class="flex items-center gap-2">
+											<h3 class="text-base font-bold text-foreground">Emergency Upload Freeze</h3>
+											<span class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider {uploads?.is_active ? 'bg-amber-500/30 text-amber-500 border border-amber-500/50 animate-pulse' : 'bg-muted text-muted-foreground'}">
+												{uploads?.is_active ? 'Frozen' : 'Normal'}
+											</span>
+										</div>
+										<p class="text-xs text-muted-foreground">Key: <code class="text-[11px] font-mono text-primary font-bold">freeze_uploads</code></p>
+									</div>
+								</div>
+
+								<!-- Switch Button -->
+								<button
+									type="button"
+									role="switch"
+									aria-checked={uploads?.is_active}
+									disabled={togglingKey === 'freeze_uploads'}
+									onclick={() => toggleKillSwitch('freeze_uploads', !!uploads?.is_active)}
+									class="relative inline-flex h-8 w-16 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {uploads?.is_active ? 'bg-amber-500 shadow-md shadow-amber-500/40' : 'bg-muted-foreground/30'}"
+								>
+									{#if togglingKey === 'freeze_uploads'}
+										<Loader2 class="mx-auto h-4 w-4 animate-spin text-foreground" />
+									{:else}
+										<span
+											class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out {uploads?.is_active ? 'translate-x-8 bg-amber-950' : 'translate-x-1'}"
+										></span>
+									{/if}
+								</button>
+							</div>
+
+							<p class="mt-4 text-xs leading-relaxed text-muted-foreground">
+								Blocks all chunk-based video uploads, remote URL upload ingestions, and background upload workers immediately. Protects disk space and Streamtape quotas during floods.
+							</p>
+
+							<div class="mt-5 space-y-2 rounded-2xl border border-border/50 bg-background/50 p-3.5 text-[11px]">
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground font-medium">Impact Severity:</span>
+									<span class="font-bold text-amber-400">HIGH • Storage & Ingestion</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground font-medium">Enforcement Layer:</span>
+									<span class="font-mono text-emerald-400 font-semibold">Valkey Microcache &lt;1ms</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground font-medium">Last Modified:</span>
+									<span class="text-foreground font-semibold">{formatDateTime(uploads?.updated_at)} by {uploads?.updated_by || 'system'}</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- Switch 3: Registration Lockdown -->
+						<div
+							class="relative overflow-hidden rounded-3xl border p-6 shadow-md transition-all duration-300 {reg?.is_active ? 'border-cyan-500/60 bg-cyan-500/10 shadow-cyan-500/10' : 'border-border/80 bg-card'}"
+						>
+							<div class="flex items-start justify-between gap-4">
+								<div class="flex items-center gap-3.5">
+									<div class="rounded-2xl p-3 {reg?.is_active ? 'bg-cyan-500/20 text-cyan-500' : 'bg-muted text-muted-foreground'}">
+										<Lock class="h-6 w-6" />
+									</div>
+									<div>
+										<div class="flex items-center gap-2">
+											<h3 class="text-base font-bold text-foreground">Registration Lockdown</h3>
+											<span class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider {reg?.is_active ? 'bg-cyan-500/30 text-cyan-400 border border-cyan-500/50 animate-pulse' : 'bg-muted text-muted-foreground'}">
+												{reg?.is_active ? 'Locked' : 'Open'}
+											</span>
+										</div>
+										<p class="text-xs text-muted-foreground">Key: <code class="text-[11px] font-mono text-primary font-bold">freeze_registration</code></p>
+									</div>
+								</div>
+
+								<!-- Switch Button -->
+								<button
+									type="button"
+									role="switch"
+									aria-checked={reg?.is_active}
+									disabled={togglingKey === 'freeze_registration'}
+									onclick={() => toggleKillSwitch('freeze_registration', !!reg?.is_active)}
+									class="relative inline-flex h-8 w-16 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {reg?.is_active ? 'bg-cyan-500 shadow-md shadow-cyan-500/40' : 'bg-muted-foreground/30'}"
+								>
+									{#if togglingKey === 'freeze_registration'}
+										<Loader2 class="mx-auto h-4 w-4 animate-spin text-foreground" />
+									{:else}
+										<span
+											class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out {reg?.is_active ? 'translate-x-8 bg-cyan-950' : 'translate-x-1'}"
+										></span>
+									{/if}
+								</button>
+							</div>
+
+							<p class="mt-4 text-xs leading-relaxed text-muted-foreground">
+								Closes new account registration routes instantly. Existing accounts can continue to log in and authenticate normally without disruption.
+							</p>
+
+							<div class="mt-5 space-y-2 rounded-2xl border border-border/50 bg-background/50 p-3.5 text-[11px]">
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground font-medium">Impact Severity:</span>
+									<span class="font-bold text-cyan-400">MODERATE • User Onboarding</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground font-medium">Enforcement Layer:</span>
+									<span class="font-mono text-emerald-400 font-semibold">Valkey Microcache &lt;1ms</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground font-medium">Last Modified:</span>
+									<span class="text-foreground font-semibold">{formatDateTime(reg?.updated_at)} by {reg?.updated_by || 'system'}</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- Switch 4: Commenting Freeze -->
+						<div
+							class="relative overflow-hidden rounded-3xl border p-6 shadow-md transition-all duration-300 {comments?.is_active ? 'border-purple-500/60 bg-purple-500/10 shadow-purple-500/10' : 'border-border/80 bg-card'}"
+						>
+							<div class="flex items-start justify-between gap-4">
+								<div class="flex items-center gap-3.5">
+									<div class="rounded-2xl p-3 {comments?.is_active ? 'bg-purple-500/20 text-purple-400' : 'bg-muted text-muted-foreground'}">
+										<MessageSquare class="h-6 w-6" />
+									</div>
+									<div>
+										<div class="flex items-center gap-2">
+											<h3 class="text-base font-bold text-foreground">Commenting Freeze</h3>
+											<span class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider {comments?.is_active ? 'bg-purple-500/30 text-purple-400 border border-purple-500/50 animate-pulse' : 'bg-muted text-muted-foreground'}">
+												{comments?.is_active ? 'Frozen' : 'Active'}
+											</span>
+										</div>
+										<p class="text-xs text-muted-foreground">Key: <code class="text-[11px] font-mono text-primary font-bold">freeze_comments</code></p>
+									</div>
+								</div>
+
+								<!-- Switch Button -->
+								<button
+									type="button"
+									role="switch"
+									aria-checked={comments?.is_active}
+									disabled={togglingKey === 'freeze_comments'}
+									onclick={() => toggleKillSwitch('freeze_comments', !!comments?.is_active)}
+									class="relative inline-flex h-8 w-16 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {comments?.is_active ? 'bg-purple-500 shadow-md shadow-purple-500/40' : 'bg-muted-foreground/30'}"
+								>
+									{#if togglingKey === 'freeze_comments'}
+										<Loader2 class="mx-auto h-4 w-4 animate-spin text-foreground" />
+									{:else}
+										<span
+											class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out {comments?.is_active ? 'translate-x-8 bg-purple-950' : 'translate-x-1'}"
+										></span>
+									{/if}
+								</button>
+							</div>
+
+							<p class="mt-4 text-xs leading-relaxed text-muted-foreground">
+								Temporarily disables adding new comments or replies across all videos. Existing comments remain visible. Used to neutralize bot raids or targeted harassment spikes.
+							</p>
+
+							<div class="mt-5 space-y-2 rounded-2xl border border-border/50 bg-background/50 p-3.5 text-[11px]">
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground font-medium">Impact Severity:</span>
+									<span class="font-bold text-purple-400">MODERATE • Community Interactivity</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground font-medium">Enforcement Layer:</span>
+									<span class="font-mono text-emerald-400 font-semibold">Valkey Microcache &lt;1ms</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground font-medium">Last Modified:</span>
+									<span class="text-foreground font-semibold">{formatDateTime(comments?.updated_at)} by {comments?.updated_by || 'system'}</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</div>
