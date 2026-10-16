@@ -152,6 +152,7 @@ INSERT INTO system_settings (key, value) VALUES
     ('maintenance_mode', 'false'),
     ('freeze_uploads', 'false'),
     ('freeze_registration', 'false'),
-    ('freeze_comments', 'false')
+    ('freeze_comments', 'false'),
+    ('freeze_streaming', 'false')
 ON CONFLICT (key) DO NOTHING;
 

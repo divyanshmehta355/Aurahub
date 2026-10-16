@@ -12,7 +12,9 @@
 		ShieldAlert,
 		Hash,
 		Tv,
-		Minimize2
+		Minimize2,
+		AlertOctagon,
+		Zap
 	} from 'lucide-svelte';
 	import SaveToPlaylistModal from '#lib/components/SaveToPlaylistModal.svelte';
 	import WatchComments from '#lib/components/WatchComments.svelte';
@@ -69,6 +71,21 @@
 	});
 
 	// Queries
+	const systemStatusQuery = createQuery(
+		() => ({
+			queryKey: ['system', 'status'],
+			queryFn: async () => {
+				return await fetchApi('/system/status');
+			},
+			refetchInterval: 12000
+		}),
+		() => queryClient
+	);
+
+	let isPlaybackFrozen = $derived(
+		!!(systemStatusQuery.data?.freeze_streaming || systemStatusQuery.data?.freezeStreaming)
+	);
+
 	const videoQuery = createQuery(
 		() => ({
 			queryKey: ['video', videoId],
@@ -310,7 +327,43 @@
 							{/if}
 						</div>
 					</div>
+				{:else if isPlaybackFrozen && !userState.user?.isAdmin}
+					<!-- Emergency Playback Freeze (Content Blackout) Screen -->
+					<div
+						class="relative z-10 flex h-full max-w-lg flex-col items-center justify-center p-6 text-center"
+					>
+						<div
+							class="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl border border-rose-500/40 bg-rose-500/15 text-rose-400 shadow-lg shadow-rose-950/50"
+						>
+							<AlertOctagon class="h-8 w-8 animate-pulse" />
+						</div>
+						<div
+							class="mb-3 inline-flex items-center gap-1.5 rounded-full border border-rose-500/40 bg-rose-500/20 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-rose-300"
+						>
+							Playback Blackout Active
+						</div>
+						<h2 class="mb-2 text-xl font-black text-white">Video Playback Temporarily Frozen</h2>
+						<p class="mb-6 text-xs leading-relaxed text-zinc-300">
+							Platform video streaming has been paused by Aurahub administration under an emergency kill switch. Video metadata, descriptions, and comments remain visible.
+						</p>
+						<Button
+							variant="outline"
+							size="sm"
+							class="rounded-full border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 text-xs"
+							onclick={() => goto('/')}
+						>
+							Browse Platform Feed
+						</Button>
+					</div>
 				{:else if embedUrl}
+					{#if isPlaybackFrozen && userState.user?.isAdmin}
+						<div
+							class="absolute top-3 left-3 z-30 flex items-center gap-1.5 rounded-full border border-amber-500/50 bg-amber-950/85 px-3 py-1 text-[11px] font-bold text-amber-300 backdrop-blur shadow-md"
+						>
+							<Zap class="h-3.5 w-3.5 fill-amber-300 animate-pulse" />
+							<span>Admin Playback Bypass Active</span>
+						</div>
+					{/if}
 					<iframe
 						src={embedUrl}
 						class="h-full w-full border-0"

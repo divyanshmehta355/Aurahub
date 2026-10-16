@@ -42,11 +42,17 @@
 
 	interface SystemStatus {
 		status: string;
-		maintenance_mode: boolean;
-		freeze_uploads: boolean;
-		freeze_registration: boolean;
-		freeze_comments: boolean;
-		timestamp: string;
+		maintenance_mode?: boolean;
+		maintenanceMode?: boolean;
+		freeze_uploads?: boolean;
+		freezeUploads?: boolean;
+		freeze_registration?: boolean;
+		freezeRegistration?: boolean;
+		freeze_comments?: boolean;
+		freezeComments?: boolean;
+		freeze_streaming?: boolean;
+		freezeStreaming?: boolean;
+		timestamp?: string;
 	}
 
 	let systemStatus = $state<SystemStatus | null>(null);
@@ -174,7 +180,25 @@
 					{/if}
 				</div>
 			</div>
-		{:else if systemStatus?.freeze_uploads}
+		{:else if systemStatus?.freeze_streaming || systemStatus?.freezeStreaming}
+			<div
+				class="relative z-50 flex items-center justify-between border-b border-rose-500/40 bg-rose-950/90 px-4 py-2 text-xs font-semibold text-rose-200 backdrop-blur"
+			>
+				<div class="mx-auto flex flex-wrap items-center justify-center gap-2 text-center">
+					<span class="relative flex h-2 w-2">
+						<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
+						<span class="relative inline-flex h-2 w-2 rounded-full bg-rose-500"></span>
+					</span>
+					<span class="font-black uppercase tracking-wider text-rose-300">Streaming Blackout Active:</span>
+					<span>Video playback has been temporarily halted by administrators. Browsing, search, and accounts remain active.</span>
+					{#if userState.user?.isAdmin}
+						<span class="rounded-full bg-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-200 border border-amber-500/40">
+							Admin Playback Bypass Active
+						</span>
+					{/if}
+				</div>
+			</div>
+		{:else if systemStatus?.freeze_uploads || systemStatus?.freezeUploads}
 			<div
 				class="relative z-50 flex items-center justify-between border-b border-amber-500/30 bg-amber-950/80 px-4 py-1.5 text-xs font-semibold text-amber-200 backdrop-blur"
 			>

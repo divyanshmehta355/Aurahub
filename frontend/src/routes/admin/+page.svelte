@@ -347,21 +347,25 @@
 	// === Tab 5: Kill Switches & Superpowers ===
 	interface KillSwitch {
 		key: string;
-		name: string;
-		description: string;
-		is_active: boolean;
+		name?: string;
+		description?: string;
+		is_active?: boolean;
+		enabled?: boolean;
 		updated_by?: string;
+		updatedBy?: string;
 		updated_at?: string;
+		updatedAt?: string;
 	}
 
 	const killSwitchesQuery = createQuery<Record<string, KillSwitch>>(
 		() => ({
 			queryKey: ['admin', 'kill-switches'],
 			queryFn: async () => {
-				return await fetchApi('/admin/kill-switches');
+				const res = await fetchApi('/admin/kill-switches');
+				return res?.switches || res || {};
 			},
 			enabled: !!userState.user?.isAdmin,
-			refetchInterval: 8000
+			refetchInterval: 5000
 		}),
 		() => queryClient
 	);
@@ -376,11 +380,13 @@
 				method: 'POST',
 				body: JSON.stringify({
 					key,
+					enabled: newState,
 					is_active: newState
 				})
 			});
 			showToast(`Superpower kill switch "${key}" is now ${newState ? 'ARMED' : 'DISARMED'}.`);
-			queryClient.invalidateQueries({ queryKey: ['admin', 'kill-switches'] });
+			await queryClient.invalidateQueries({ queryKey: ['admin', 'kill-switches'] });
+			await queryClient.refetchQueries({ queryKey: ['admin', 'kill-switches'] });
 		} catch (err: any) {
 			showToast(err.message || 'Failed to update kill switch', 'error');
 		} finally {
@@ -391,22 +397,23 @@
 	let isBulkOperating = $state(false);
 	async function bulkSetKillSwitches(activateAll: boolean) {
 		const actionPrompt = activateAll
-			? 'ARE YOU SURE? This will immediately trigger TOTAL PLATFORM LOCKDOWN, freezing all uploads, new registrations, comments, and non-admin interactions.'
+			? 'ARE YOU SURE? This will immediately trigger TOTAL PLATFORM LOCKDOWN, freezing all uploads, streaming, registrations, and comments.'
 			: 'Are you sure you want to DISARM all kill switches and restore standard platform operations?';
 		if (!confirm(actionPrompt)) {
 			return;
 		}
 		isBulkOperating = true;
-		const keys = ['maintenance_mode', 'freeze_uploads', 'freeze_registration', 'freeze_comments'];
+		const keys = ['maintenance_mode', 'freeze_uploads', 'freeze_streaming', 'freeze_registration', 'freeze_comments'];
 		try {
 			for (const key of keys) {
 				await fetchApi('/admin/kill-switches', {
 					method: 'POST',
-					body: JSON.stringify({ key, is_active: activateAll })
+					body: JSON.stringify({ key, enabled: activateAll, is_active: activateAll })
 				});
 			}
 			showToast(`All kill switches have been ${activateAll ? 'ARMED' : 'DISARMED'} successfully.`);
-			queryClient.invalidateQueries({ queryKey: ['admin', 'kill-switches'] });
+			await queryClient.invalidateQueries({ queryKey: ['admin', 'kill-switches'] });
+			await queryClient.refetchQueries({ queryKey: ['admin', 'kill-switches'] });
 		} catch (err: any) {
 			showToast(err.message || 'Failed bulk kill switch update', 'error');
 		} finally {
@@ -414,15 +421,27 @@
 		}
 	}
 
+	function isSwitchActive(sw: KillSwitch | undefined): boolean {
+		if (!sw) return false;
+		return Boolean(sw.is_active || sw.enabled);
+	}
+
 	function countActiveKillSwitches(switches: Record<string, KillSwitch> | undefined): number {
 		if (!switches) return 0;
-		return Object.values(switches).filter((s) => s.is_active).length;
+		return Object.values(switches).filter((s) => isSwitchActive(s)).length;
 	}
 
 	let maintenance = $derived(killSwitchesQuery.data?.['maintenance_mode']);
 	let uploads = $derived(killSwitchesQuery.data?.['freeze_uploads']);
+	let streaming = $derived(killSwitchesQuery.data?.['freeze_streaming']);
 	let reg = $derived(killSwitchesQuery.data?.['freeze_registration']);
 	let comments = $derived(killSwitchesQuery.data?.['freeze_comments']);
+
+	let isMaintenanceActive = $derived(isSwitchActive(maintenance));
+	let isUploadsActive = $derived(isSwitchActive(uploads));
+	let isStreamingActive = $derived(isSwitchActive(streaming));
+	let isRegistrationActive = $derived(isSwitchActive(reg));
+	let isCommentsActive = $derived(isSwitchActive(comments));
 </script>
 
 <svelte:head>
@@ -1414,18 +1433,18 @@
 					<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 						<!-- Switch 1: Platform Maintenance Mode -->
 						<div
-							class="relative overflow-hidden rounded-3xl border p-6 shadow-md transition-all duration-300 {maintenance?.is_active ? 'border-destructive/60 bg-destructive/10 shadow-destructive/10' : 'border-border/80 bg-card'}"
+							class="relative overflow-hidden rounded-3xl border p-6 shadow-md transition-all duration-300 {isMaintenanceActive ? 'border-destructive/60 bg-destructive/10 shadow-destructive/10' : 'border-border/80 bg-card'}"
 						>
 							<div class="flex items-start justify-between gap-4">
 								<div class="flex items-center gap-3.5">
-									<div class="rounded-2xl p-3 {maintenance?.is_active ? 'bg-destructive/20 text-destructive' : 'bg-muted text-muted-foreground'}">
+									<div class="rounded-2xl p-3 {isMaintenanceActive ? 'bg-destructive/20 text-destructive' : 'bg-muted text-muted-foreground'}">
 										<Power class="h-6 w-6" />
 									</div>
 									<div>
 										<div class="flex items-center gap-2">
 											<h3 class="text-base font-bold text-foreground">Platform Maintenance Mode</h3>
-											<span class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider {maintenance?.is_active ? 'bg-destructive/30 text-destructive border border-destructive/50 animate-pulse' : 'bg-muted text-muted-foreground'}">
-												{maintenance?.is_active ? 'Armed (503)' : 'Standby'}
+											<span class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider {isMaintenanceActive ? 'bg-destructive/30 text-destructive border border-destructive/50 animate-pulse' : 'bg-muted text-muted-foreground'}">
+												{isMaintenanceActive ? 'Armed (503)' : 'Standby'}
 											</span>
 										</div>
 										<p class="text-xs text-muted-foreground">Key: <code class="text-[11px] font-mono text-primary font-bold">maintenance_mode</code></p>
@@ -1436,16 +1455,16 @@
 								<button
 									type="button"
 									role="switch"
-									aria-checked={maintenance?.is_active}
+									aria-checked={isMaintenanceActive}
 									disabled={togglingKey === 'maintenance_mode'}
-									onclick={() => toggleKillSwitch('maintenance_mode', !!maintenance?.is_active)}
-									class="relative inline-flex h-8 w-16 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {maintenance?.is_active ? 'bg-destructive shadow-md shadow-destructive/40' : 'bg-muted-foreground/30'}"
+									onclick={() => toggleKillSwitch('maintenance_mode', isMaintenanceActive)}
+									class="relative inline-flex h-8 w-16 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {isMaintenanceActive ? 'bg-destructive shadow-md shadow-destructive/40' : 'bg-muted-foreground/30'}"
 								>
 									{#if togglingKey === 'maintenance_mode'}
 										<Loader2 class="mx-auto h-4 w-4 animate-spin text-foreground" />
 									{:else}
 										<span
-											class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out {maintenance?.is_active ? 'translate-x-8 bg-destructive-foreground' : 'translate-x-1'}"
+											class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out {isMaintenanceActive ? 'translate-x-8 bg-destructive-foreground' : 'translate-x-1'}"
 										></span>
 									{/if}
 								</button>
@@ -1466,25 +1485,25 @@
 								</div>
 								<div class="flex items-center justify-between">
 									<span class="text-muted-foreground font-medium">Last Modified:</span>
-									<span class="text-foreground font-semibold">{formatDateTime(maintenance?.updated_at)} by {maintenance?.updated_by || 'system'}</span>
+									<span class="text-foreground font-semibold">{formatDateTime(maintenance?.updated_at || maintenance?.updatedAt)} by {maintenance?.updated_by || maintenance?.updatedBy || 'system'}</span>
 								</div>
 							</div>
 						</div>
 
 						<!-- Switch 2: Emergency Upload Freeze -->
 						<div
-							class="relative overflow-hidden rounded-3xl border p-6 shadow-md transition-all duration-300 {uploads?.is_active ? 'border-amber-500/60 bg-amber-500/10 shadow-amber-500/10' : 'border-border/80 bg-card'}"
+							class="relative overflow-hidden rounded-3xl border p-6 shadow-md transition-all duration-300 {isUploadsActive ? 'border-amber-500/60 bg-amber-500/10 shadow-amber-500/10' : 'border-border/80 bg-card'}"
 						>
 							<div class="flex items-start justify-between gap-4">
 								<div class="flex items-center gap-3.5">
-									<div class="rounded-2xl p-3 {uploads?.is_active ? 'bg-amber-500/20 text-amber-500' : 'bg-muted text-muted-foreground'}">
+									<div class="rounded-2xl p-3 {isUploadsActive ? 'bg-amber-500/20 text-amber-500' : 'bg-muted text-muted-foreground'}">
 										<Upload class="h-6 w-6" />
 									</div>
 									<div>
 										<div class="flex items-center gap-2">
 											<h3 class="text-base font-bold text-foreground">Emergency Upload Freeze</h3>
-											<span class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider {uploads?.is_active ? 'bg-amber-500/30 text-amber-500 border border-amber-500/50 animate-pulse' : 'bg-muted text-muted-foreground'}">
-												{uploads?.is_active ? 'Frozen' : 'Normal'}
+											<span class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider {isUploadsActive ? 'bg-amber-500/30 text-amber-500 border border-amber-500/50 animate-pulse' : 'bg-muted text-muted-foreground'}">
+												{isUploadsActive ? 'Frozen' : 'Normal'}
 											</span>
 										</div>
 										<p class="text-xs text-muted-foreground">Key: <code class="text-[11px] font-mono text-primary font-bold">freeze_uploads</code></p>
@@ -1495,16 +1514,16 @@
 								<button
 									type="button"
 									role="switch"
-									aria-checked={uploads?.is_active}
+									aria-checked={isUploadsActive}
 									disabled={togglingKey === 'freeze_uploads'}
-									onclick={() => toggleKillSwitch('freeze_uploads', !!uploads?.is_active)}
-									class="relative inline-flex h-8 w-16 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {uploads?.is_active ? 'bg-amber-500 shadow-md shadow-amber-500/40' : 'bg-muted-foreground/30'}"
+									onclick={() => toggleKillSwitch('freeze_uploads', isUploadsActive)}
+									class="relative inline-flex h-8 w-16 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {isUploadsActive ? 'bg-amber-500 shadow-md shadow-amber-500/40' : 'bg-muted-foreground/30'}"
 								>
 									{#if togglingKey === 'freeze_uploads'}
 										<Loader2 class="mx-auto h-4 w-4 animate-spin text-foreground" />
 									{:else}
 										<span
-											class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out {uploads?.is_active ? 'translate-x-8 bg-amber-950' : 'translate-x-1'}"
+											class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out {isUploadsActive ? 'translate-x-8 bg-amber-950' : 'translate-x-1'}"
 										></span>
 									{/if}
 								</button>
@@ -1525,25 +1544,84 @@
 								</div>
 								<div class="flex items-center justify-between">
 									<span class="text-muted-foreground font-medium">Last Modified:</span>
-									<span class="text-foreground font-semibold">{formatDateTime(uploads?.updated_at)} by {uploads?.updated_by || 'system'}</span>
+									<span class="text-foreground font-semibold">{formatDateTime(uploads?.updated_at || uploads?.updatedAt)} by {uploads?.updated_by || uploads?.updatedBy || 'system'}</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- Switch: Emergency Playback Freeze (Content Blackout) -->
+						<div
+							class="relative overflow-hidden rounded-3xl border p-6 shadow-md transition-all duration-300 {isStreamingActive ? 'border-rose-600/60 bg-rose-600/10 shadow-rose-600/10' : 'border-border/80 bg-card'}"
+						>
+							<div class="flex items-start justify-between gap-4">
+								<div class="flex items-center gap-3.5">
+									<div class="rounded-2xl p-3 {isStreamingActive ? 'bg-rose-600/20 text-rose-500' : 'bg-muted text-muted-foreground'}">
+										<Film class="h-6 w-6" />
+									</div>
+									<div>
+										<div class="flex items-center gap-2">
+											<h3 class="text-base font-bold text-foreground">Emergency Playback Freeze</h3>
+											<span class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider {isStreamingActive ? 'bg-rose-600/30 text-rose-400 border border-rose-600/50 animate-pulse' : 'bg-muted text-muted-foreground'}">
+												{isStreamingActive ? 'Blackout Active' : 'Normal'}
+											</span>
+										</div>
+										<p class="text-xs text-muted-foreground">Key: <code class="text-[11px] font-mono text-primary font-bold">freeze_streaming</code></p>
+									</div>
+								</div>
+
+								<!-- Switch Button -->
+								<button
+									type="button"
+									role="switch"
+									aria-checked={isStreamingActive}
+									disabled={togglingKey === 'freeze_streaming'}
+									onclick={() => toggleKillSwitch('freeze_streaming', isStreamingActive)}
+									class="relative inline-flex h-8 w-16 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {isStreamingActive ? 'bg-rose-600 shadow-md shadow-rose-600/40' : 'bg-muted-foreground/30'}"
+								>
+									{#if togglingKey === 'freeze_streaming'}
+										<Loader2 class="mx-auto h-4 w-4 animate-spin text-foreground" />
+									{:else}
+										<span
+											class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out {isStreamingActive ? 'translate-x-8 bg-rose-950' : 'translate-x-1'}"
+										></span>
+									{/if}
+								</button>
+							</div>
+
+							<p class="mt-4 text-xs leading-relaxed text-muted-foreground">
+								Instantly halts all video stream resolution and embedded player delivery platform-wide. Halts CDN bandwidth and prevents viewing during critical emergencies. Admins retain full playback bypass.
+							</p>
+
+							<div class="mt-5 space-y-2 rounded-2xl border border-border/50 bg-background/50 p-3.5 text-[11px]">
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground font-medium">Impact Severity:</span>
+									<span class="font-bold text-rose-500">CRITICAL • Playback & CDN Stream</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground font-medium">Enforcement Layer:</span>
+									<span class="font-mono text-emerald-400 font-semibold">Valkey Microcache &lt;1ms</span>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="text-muted-foreground font-medium">Last Modified:</span>
+									<span class="text-foreground font-semibold">{formatDateTime(streaming?.updated_at || streaming?.updatedAt)} by {streaming?.updated_by || streaming?.updatedBy || 'system'}</span>
 								</div>
 							</div>
 						</div>
 
 						<!-- Switch 3: Registration Lockdown -->
 						<div
-							class="relative overflow-hidden rounded-3xl border p-6 shadow-md transition-all duration-300 {reg?.is_active ? 'border-cyan-500/60 bg-cyan-500/10 shadow-cyan-500/10' : 'border-border/80 bg-card'}"
+							class="relative overflow-hidden rounded-3xl border p-6 shadow-md transition-all duration-300 {isRegistrationActive ? 'border-cyan-500/60 bg-cyan-500/10 shadow-cyan-500/10' : 'border-border/80 bg-card'}"
 						>
 							<div class="flex items-start justify-between gap-4">
 								<div class="flex items-center gap-3.5">
-									<div class="rounded-2xl p-3 {reg?.is_active ? 'bg-cyan-500/20 text-cyan-500' : 'bg-muted text-muted-foreground'}">
+									<div class="rounded-2xl p-3 {isRegistrationActive ? 'bg-cyan-500/20 text-cyan-500' : 'bg-muted text-muted-foreground'}">
 										<Lock class="h-6 w-6" />
 									</div>
 									<div>
 										<div class="flex items-center gap-2">
 											<h3 class="text-base font-bold text-foreground">Registration Lockdown</h3>
-											<span class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider {reg?.is_active ? 'bg-cyan-500/30 text-cyan-400 border border-cyan-500/50 animate-pulse' : 'bg-muted text-muted-foreground'}">
-												{reg?.is_active ? 'Locked' : 'Open'}
+											<span class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider {isRegistrationActive ? 'bg-cyan-500/30 text-cyan-400 border border-cyan-500/50 animate-pulse' : 'bg-muted text-muted-foreground'}">
+												{isRegistrationActive ? 'Locked' : 'Open'}
 											</span>
 										</div>
 										<p class="text-xs text-muted-foreground">Key: <code class="text-[11px] font-mono text-primary font-bold">freeze_registration</code></p>
@@ -1554,16 +1632,16 @@
 								<button
 									type="button"
 									role="switch"
-									aria-checked={reg?.is_active}
+									aria-checked={isRegistrationActive}
 									disabled={togglingKey === 'freeze_registration'}
-									onclick={() => toggleKillSwitch('freeze_registration', !!reg?.is_active)}
-									class="relative inline-flex h-8 w-16 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {reg?.is_active ? 'bg-cyan-500 shadow-md shadow-cyan-500/40' : 'bg-muted-foreground/30'}"
+									onclick={() => toggleKillSwitch('freeze_registration', isRegistrationActive)}
+									class="relative inline-flex h-8 w-16 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {isRegistrationActive ? 'bg-cyan-500 shadow-md shadow-cyan-500/40' : 'bg-muted-foreground/30'}"
 								>
 									{#if togglingKey === 'freeze_registration'}
 										<Loader2 class="mx-auto h-4 w-4 animate-spin text-foreground" />
 									{:else}
 										<span
-											class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out {reg?.is_active ? 'translate-x-8 bg-cyan-950' : 'translate-x-1'}"
+											class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out {isRegistrationActive ? 'translate-x-8 bg-cyan-950' : 'translate-x-1'}"
 										></span>
 									{/if}
 								</button>
@@ -1579,30 +1657,29 @@
 									<span class="font-bold text-cyan-400">MODERATE • User Onboarding</span>
 								</div>
 								<div class="flex items-center justify-between">
-									<span class="text-muted-foreground font-medium">Enforcement Layer:</span>
-									<span class="font-mono text-emerald-400 font-semibold">Valkey Microcache &lt;1ms</span>
+									<span class="text-muted-foreground font-mono text-emerald-400 font-semibold">Valkey Microcache &lt;1ms</span>
 								</div>
 								<div class="flex items-center justify-between">
 									<span class="text-muted-foreground font-medium">Last Modified:</span>
-									<span class="text-foreground font-semibold">{formatDateTime(reg?.updated_at)} by {reg?.updated_by || 'system'}</span>
+									<span class="text-foreground font-semibold">{formatDateTime(reg?.updated_at || reg?.updatedAt)} by {reg?.updated_by || reg?.updatedBy || 'system'}</span>
 								</div>
 							</div>
 						</div>
 
 						<!-- Switch 4: Commenting Freeze -->
 						<div
-							class="relative overflow-hidden rounded-3xl border p-6 shadow-md transition-all duration-300 {comments?.is_active ? 'border-purple-500/60 bg-purple-500/10 shadow-purple-500/10' : 'border-border/80 bg-card'}"
+							class="relative overflow-hidden rounded-3xl border p-6 shadow-md transition-all duration-300 {isCommentsActive ? 'border-purple-500/60 bg-purple-500/10 shadow-purple-500/10' : 'border-border/80 bg-card'}"
 						>
 							<div class="flex items-start justify-between gap-4">
 								<div class="flex items-center gap-3.5">
-									<div class="rounded-2xl p-3 {comments?.is_active ? 'bg-purple-500/20 text-purple-400' : 'bg-muted text-muted-foreground'}">
+									<div class="rounded-2xl p-3 {isCommentsActive ? 'bg-purple-500/20 text-purple-400' : 'bg-muted text-muted-foreground'}">
 										<MessageSquare class="h-6 w-6" />
 									</div>
 									<div>
 										<div class="flex items-center gap-2">
 											<h3 class="text-base font-bold text-foreground">Commenting Freeze</h3>
-											<span class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider {comments?.is_active ? 'bg-purple-500/30 text-purple-400 border border-purple-500/50 animate-pulse' : 'bg-muted text-muted-foreground'}">
-												{comments?.is_active ? 'Frozen' : 'Active'}
+											<span class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider {isCommentsActive ? 'bg-purple-500/30 text-purple-400 border border-purple-500/50 animate-pulse' : 'bg-muted text-muted-foreground'}">
+												{isCommentsActive ? 'Frozen' : 'Active'}
 											</span>
 										</div>
 										<p class="text-xs text-muted-foreground">Key: <code class="text-[11px] font-mono text-primary font-bold">freeze_comments</code></p>
@@ -1613,16 +1690,16 @@
 								<button
 									type="button"
 									role="switch"
-									aria-checked={comments?.is_active}
+									aria-checked={isCommentsActive}
 									disabled={togglingKey === 'freeze_comments'}
-									onclick={() => toggleKillSwitch('freeze_comments', !!comments?.is_active)}
-									class="relative inline-flex h-8 w-16 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {comments?.is_active ? 'bg-purple-500 shadow-md shadow-purple-500/40' : 'bg-muted-foreground/30'}"
+									onclick={() => toggleKillSwitch('freeze_comments', isCommentsActive)}
+									class="relative inline-flex h-8 w-16 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 {isCommentsActive ? 'bg-purple-500 shadow-md shadow-purple-500/40' : 'bg-muted-foreground/30'}"
 								>
 									{#if togglingKey === 'freeze_comments'}
 										<Loader2 class="mx-auto h-4 w-4 animate-spin text-foreground" />
 									{:else}
 										<span
-											class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out {comments?.is_active ? 'translate-x-8 bg-purple-950' : 'translate-x-1'}"
+											class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out {isCommentsActive ? 'translate-x-8 bg-purple-950' : 'translate-x-1'}"
 										></span>
 									{/if}
 								</button>
@@ -1643,7 +1720,7 @@
 								</div>
 								<div class="flex items-center justify-between">
 									<span class="text-muted-foreground font-medium">Last Modified:</span>
-									<span class="text-foreground font-semibold">{formatDateTime(comments?.updated_at)} by {comments?.updated_by || 'system'}</span>
+									<span class="text-foreground font-semibold">{formatDateTime(comments?.updated_at || comments?.updatedAt)} by {comments?.updated_by || comments?.updatedBy || 'system'}</span>
 								</div>
 							</div>
 						</div>

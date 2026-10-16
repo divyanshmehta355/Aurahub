@@ -81,7 +81,7 @@ func TestPublicSystemStatusHandler(t *testing.T) {
 		t.Fatalf("failed to decode JSON: %v", err)
 	}
 
-	for _, key := range []string{"maintenanceMode", "freezeUploads", "freezeRegistration", "freezeComments"} {
+	for _, key := range []string{"maintenanceMode", "freezeUploads", "freezeRegistration", "freezeComments", "freezeStreaming"} {
 		if _, exists := data[key]; !exists {
 			t.Errorf("missing expected key %q in status response", key)
 		}

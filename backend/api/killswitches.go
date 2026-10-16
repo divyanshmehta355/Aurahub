@@ -17,6 +17,7 @@ const (
 	SwitchFreezeUploads      = "freeze_uploads"
 	SwitchFreezeRegistration = "freeze_registration"
 	SwitchFreezeComments     = "freeze_comments"
+	SwitchFreezeStreaming    = "freeze_streaming"
 )
 
 var AllKillSwitches = []string{
@@ -24,6 +25,7 @@ var AllKillSwitches = []string{
 	SwitchFreezeUploads,
 	SwitchFreezeRegistration,
 	SwitchFreezeComments,
+	SwitchFreezeStreaming,
 }
 
 // IsKillSwitchActive checks if a platform kill switch is currently engaged.
@@ -197,22 +199,34 @@ func (s *Server) AdminGetKillSwitchesHandler(c *fiber.Ctx) error {
 		}
 
 		result[key] = fiber.Map{
-			"key":       key,
-			"enabled":   enabled,
-			"updatedAt": updatedAt,
-			"updatedBy": updatedBy,
+			"key":        key,
+			"enabled":    enabled,
+			"is_active":  enabled,
+			"isActive":   enabled,
+			"updatedAt":  updatedAt,
+			"updated_at": updatedAt,
+			"updatedBy":  updatedBy,
+			"updated_by": updatedBy,
 		}
 	}
 
-	return c.JSON(fiber.Map{
+	resp := fiber.Map{
 		"switches": result,
-	})
+	}
+	for k, v := range result {
+		resp[k] = v
+	}
+
+	return c.JSON(resp)
 }
 
 // AdminToggleKillSwitchRequest represents the payload to engage or disengage a kill switch.
 type AdminToggleKillSwitchRequest struct {
-	Key     string `json:"key"`
-	Enabled bool   `json:"enabled"`
+	Key      string `json:"key"`
+	Enabled  *bool  `json:"enabled"`
+	IsActive *bool  `json:"is_active"`
+	Active   *bool  `json:"active"`
+	Value    *bool  `json:"value"`
 }
 
 // AdminToggleKillSwitchHandler flips a platform kill switch on or off.
@@ -231,20 +245,33 @@ func (s *Server) AdminToggleKillSwitchHandler(c *fiber.Ctx) error {
 		}
 	}
 	if !isValid {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid kill switch identifier"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid kill switch identifier: " + req.Key})
+	}
+
+	targetState := false
+	if req.Enabled != nil {
+		targetState = *req.Enabled
+	} else if req.IsActive != nil {
+		targetState = *req.IsActive
+	} else if req.Active != nil {
+		targetState = *req.Active
+	} else if req.Value != nil {
+		targetState = *req.Value
 	}
 
 	adminUUID, _ := s.requireAuth(c)
-	if err := s.SetKillSwitch(c.UserContext(), req.Key, req.Enabled, adminUUID); err != nil {
+	if err := s.SetKillSwitch(c.UserContext(), req.Key, targetState, adminUUID); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Failed to update kill switch state: " + err.Error(),
 		})
 	}
 
 	return c.JSON(fiber.Map{
-		"message": "Kill switch updated successfully.",
-		"key":     req.Key,
-		"enabled": req.Enabled,
+		"message":   "Kill switch updated successfully.",
+		"key":       req.Key,
+		"enabled":   targetState,
+		"is_active": targetState,
+		"isActive":  targetState,
 	})
 }
 
@@ -252,10 +279,30 @@ func (s *Server) AdminToggleKillSwitchHandler(c *fiber.Ctx) error {
 func (s *Server) PublicSystemStatusHandler(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
+	m := s.IsKillSwitchActive(ctx, SwitchMaintenanceMode)
+	u := s.IsKillSwitchActive(ctx, SwitchFreezeUploads)
+	r := s.IsKillSwitchActive(ctx, SwitchFreezeRegistration)
+	comm := s.IsKillSwitchActive(ctx, SwitchFreezeComments)
+	st := s.IsKillSwitchActive(ctx, SwitchFreezeStreaming)
+
+	status := "operational"
+	if m {
+		status = "maintenance"
+	} else if u || r || comm || st {
+		status = "degraded"
+	}
+
 	return c.JSON(fiber.Map{
-		"maintenanceMode":    s.IsKillSwitchActive(ctx, SwitchMaintenanceMode),
-		"freezeUploads":      s.IsKillSwitchActive(ctx, SwitchFreezeUploads),
-		"freezeRegistration": s.IsKillSwitchActive(ctx, SwitchFreezeRegistration),
-		"freezeComments":     s.IsKillSwitchActive(ctx, SwitchFreezeComments),
+		"status":              status,
+		"maintenanceMode":     m,
+		"maintenance_mode":    m,
+		"freezeUploads":       u,
+		"freeze_uploads":      u,
+		"freezeRegistration":  r,
+		"freeze_registration": r,
+		"freezeComments":      comm,
+		"freeze_comments":     comm,
+		"freezeStreaming":     st,
+		"freeze_streaming":    st,
 	})
 }

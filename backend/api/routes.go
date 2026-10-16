@@ -120,7 +120,7 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 	videos.Get("/search", middleware.SearchLimiter(), s.SearchVideosHandler)
 	videos.Get("/recommendations", s.RecommendationsHandler)
 	videos.Get("/suggestions", s.SuggestionsHandler)
-	videos.Get("/stream/:id", s.StreamVideoHandler)
+	videos.Get("/stream/:id", middleware.OptionalAuth(), s.ResolveAdminStatus(), s.EnforceKillSwitch(SwitchFreezeStreaming), s.StreamVideoHandler)
 	videos.Get("/remote-upload/status", s.RemoteUploadStatusHandler)
 	videos.Post("/remote-upload/start", middleware.AuthRequired(), s.ResolveAdminStatus(), s.EnforceKillSwitch(SwitchFreezeUploads), middleware.RemoteUploadLimiter(), s.RemoteUploadStartHandler)
 	videos.Post("/remote-upload/batch", middleware.AuthRequired(), s.ResolveAdminStatus(), s.EnforceKillSwitch(SwitchFreezeUploads), middleware.RemoteUploadLimiter(), s.BatchRemoteUploadHandler)
