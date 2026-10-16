@@ -49,6 +49,9 @@ func AuthRequired() fiber.Handler {
 		}
 
 		c.Locals("userId", claims["sub"])
+		if adminVal, ok := claims["isAdmin"].(bool); ok && adminVal {
+			c.Locals("isAdmin", true)
+		}
 		return c.Next()
 	}
 }
@@ -76,6 +79,9 @@ func OptionalAuth() fiber.Handler {
 			if err == nil && token.Valid {
 				if claims, ok := token.Claims.(jwt.MapClaims); ok {
 					c.Locals("userId", claims["sub"])
+					if adminVal, ok := claims["isAdmin"].(bool); ok && adminVal {
+						c.Locals("isAdmin", true)
+					}
 				}
 			}
 		}

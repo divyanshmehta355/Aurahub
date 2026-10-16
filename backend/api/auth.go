@@ -117,8 +117,9 @@ func (s *Server) LoginHandler(c *fiber.Ctx) error {
 	userIdStr := formatUUID(user.ID)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": userIdStr,
-		"exp": time.Now().Add(time.Hour * 24 * 7).Unix(), // 7 days
+		"sub":     userIdStr,
+		"isAdmin": isUserAdmin(user),
+		"exp":     time.Now().Add(time.Hour * 24 * 7).Unix(), // 7 days
 	})
 
 	tokenString, err := token.SignedString([]byte(secret))

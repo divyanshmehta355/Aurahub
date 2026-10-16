@@ -208,3 +208,64 @@ func TestRateLimitResponseFormat(t *testing.T) {
 		t.Errorf("retryAfter = %d, want > 0", res.RetryAfter)
 	}
 }
+
+func TestRemoteUploadLimiter_AdminBypass(t *testing.T) {
+	app := fiber.New()
+	app.Post("/upload", func(c *fiber.Ctx) error {
+		c.Locals("userId", "admin-user-id")
+		c.Locals("isAdmin", true)
+		return c.Next()
+	}, middleware.RemoteUploadLimiter(), func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusOK)
+	})
+
+	// Make 25 requests (limit is 15 for regular users)
+	for i := 1; i <= 25; i++ {
+		req := httptest.NewRequest(http.MethodPost, "/upload", nil)
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatalf("request %d failed: %v", i, err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != fiber.StatusOK {
+			t.Fatalf("admin request %d was rate limited with status %d; want 200 OK", i, resp.StatusCode)
+		}
+	}
+}
+
+func TestRemoteUploadLimiter_NonAdminEnforcement(t *testing.T) {
+	app := fiber.New()
+	app.Post("/upload", func(c *fiber.Ctx) error {
+		c.Locals("userId", "regular-user-id")
+		c.Locals("isAdmin", false)
+		return c.Next()
+	}, middleware.RemoteUploadLimiter(), func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusOK)
+	})
+
+	// First 15 requests succeed
+	for i := 1; i <= 15; i++ {
+		req := httptest.NewRequest(http.MethodPost, "/upload", nil)
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatalf("request %d failed: %v", i, err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != fiber.StatusOK {
+			t.Fatalf("request %d got status %d; want 200 OK", i, resp.StatusCode)
+		}
+	}
+
+	// 16th request must be rate limited
+	req := httptest.NewRequest(http.MethodPost, "/upload", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("16th request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != fiber.StatusTooManyRequests {
+		t.Fatalf("expected 429 Too Many Requests on 16th non-admin request, got %d", resp.StatusCode)
+	}
+}
+

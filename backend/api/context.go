@@ -59,3 +59,42 @@ func (s *Server) getOptionalUserID(c *fiber.Ctx) (pgtype.UUID, bool) {
 
 	return uid, true
 }
+
+// ResolveAdminStatus is a middleware that determines whether the authenticated user has
+// administrative rights and sets c.Locals("isAdmin", true) so downstream limiters and
+// handlers can bypass restrictions or grant elevated privileges.
+func (s *Server) ResolveAdminStatus() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// If already resolved by JWT claims, proceed immediately
+		if isAdmin, ok := c.Locals("isAdmin").(bool); ok && isAdmin {
+			return c.Next()
+		}
+
+		if s.Repository == nil {
+			return c.Next()
+		}
+
+		userIdLocal := c.Locals("userId")
+		if userIdLocal == nil {
+			return c.Next()
+		}
+
+		userIdStr, ok := userIdLocal.(string)
+		if !ok || userIdStr == "" {
+			return c.Next()
+		}
+
+		uid, err := parseUUID(userIdStr)
+		if err != nil {
+			return c.Next()
+		}
+
+		user, err := s.Repository.GetUser(c.UserContext(), uid)
+		if err == nil && isUserAdmin(user) {
+			c.Locals("isAdmin", true)
+		}
+
+		return c.Next()
+	}
+}
+
