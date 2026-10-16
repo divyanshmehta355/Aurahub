@@ -431,8 +431,7 @@ Aurahub/
 │   ├── api/                        # HTTP route handlers (Auth, Videos, Uploads, Creator, Playlists, Admin, SSE)
 │   ├── cmd/
 │   │   ├── index-opensearch/       # CLI utility to backfill/re-index videos into OpenSearch
-│   │   ├── initdb/                 # Schema initialization CLI tool
-│   │   └── migrate-mongo/          # Data migration utility from legacy MongoDB
+│   │   └── initdb/                 # Schema initialization CLI tool
 │   ├── config/                     # Environment and configuration loading
 │   ├── db/                         # Database connection, GORM repository, and schema.sql
 │   ├── internal/
