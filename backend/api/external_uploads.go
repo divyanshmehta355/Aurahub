@@ -21,11 +21,21 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// IsProhibitedIP checks if an IP is in loopback, link-local, or private ranges (SSRF defense).
+func IsProhibitedIP(ip net.IP) bool {
+	return isProhibitedIP(ip)
+}
+
 func isProhibitedIP(ip net.IP) bool {
 	if ip == nil {
 		return true
 	}
 	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.String() == "169.254.169.254"
+}
+
+// ValidatePublicVideoURL verifies that a video URL has a valid public scheme and host.
+func ValidatePublicVideoURL(rawURL string) error {
+	return validatePublicVideoURL(rawURL)
 }
 
 func validatePublicVideoURL(rawURL string) error {

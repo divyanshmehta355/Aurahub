@@ -1,4 +1,4 @@
-package httpclient
+package tests
 
 import (
 	"context"
@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/divyanshmehta355/aurahub/backend/internal/httpclient"
 )
 
 func TestDeleteStreamtapeFile(t *testing.T) {
 	// Empty file ID should be a no-op
-	if err := DeleteStreamtapeFile(context.Background(), ""); err != nil {
+	if err := httpclient.DeleteStreamtapeFile(context.Background(), ""); err != nil {
 		t.Errorf("expected no error for empty file ID, got %v", err)
 	}
 
@@ -59,19 +61,19 @@ func TestDeleteStreamtapeFile(t *testing.T) {
 }
 
 func TestResolveStreamtapeDirectURLValidation(t *testing.T) {
-	_, err := ResolveStreamtapeDirectURL(context.Background(), "")
+	_, err := httpclient.ResolveStreamtapeDirectURL(context.Background(), "")
 	if err == nil {
 		t.Errorf("expected error for empty fileID, got nil")
 	}
 }
 
 func TestRemoteUploadHelpersValidation(t *testing.T) {
-	_, err := TriggerRemoteUpload(context.Background(), "", "")
+	_, err := httpclient.TriggerRemoteUpload(context.Background(), "", "")
 	if err == nil {
 		t.Errorf("expected error for empty video URL in TriggerRemoteUpload, got nil")
 	}
 
-	_, err = PollRemoteUpload(context.Background(), "", 0)
+	_, err = httpclient.PollRemoteUpload(context.Background(), "", 0)
 	if err == nil {
 		t.Errorf("expected error for empty remote ID in PollRemoteUpload, got nil")
 	}

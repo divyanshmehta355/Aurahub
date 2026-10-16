@@ -1,14 +1,16 @@
-package opensearch
+package tests
 
 import (
 	"context"
 	"encoding/json"
 	"testing"
 	"time"
+
+	"github.com/divyanshmehta355/aurahub/backend/internal/opensearch"
 )
 
 func TestOpenSearchStandbyMode(t *testing.T) {
-	client, err := NewClient(Config{})
+	client, err := opensearch.NewClient(opensearch.Config{})
 	if err != nil {
 		t.Fatalf("expected no error for empty config, got %v", err)
 	}
@@ -21,7 +23,7 @@ func TestOpenSearchStandbyMode(t *testing.T) {
 		t.Errorf("EnsureIndex in standby should return nil, got %v", err)
 	}
 
-	doc := VideoDocument{
+	doc := opensearch.VideoDocument{
 		ID:        "test-id",
 		Title:     "Test Video",
 		CreatedAt: time.Now(),
@@ -46,7 +48,7 @@ func TestOpenSearchStandbyMode(t *testing.T) {
 }
 
 func TestVideoDocumentJSON(t *testing.T) {
-	doc := VideoDocument{
+	doc := opensearch.VideoDocument{
 		ID:               "abc-123",
 		FileID:           "file-456",
 		Title:            "Golang Full Course",
@@ -68,7 +70,7 @@ func TestVideoDocumentJSON(t *testing.T) {
 		t.Fatalf("failed to marshal VideoDocument: %v", err)
 	}
 
-	var parsed VideoDocument
+	var parsed opensearch.VideoDocument
 	if err := json.Unmarshal(data, &parsed); err != nil {
 		t.Fatalf("failed to unmarshal VideoDocument: %v", err)
 	}
@@ -79,7 +81,7 @@ func TestVideoDocumentJSON(t *testing.T) {
 }
 
 func TestURLWithCredentialsSanitization(t *testing.T) {
-	client, err := NewClient(Config{
+	client, err := opensearch.NewClient(opensearch.Config{
 		Addresses: []string{"https://user:pass@example.com:9200"},
 	})
 	if err != nil {

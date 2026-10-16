@@ -63,6 +63,21 @@ func rateLimitResponse(c *fiber.Ctx, defaultMessage string, expiration time.Dura
 	})
 }
 
+// IsPrivateOrLocalIP checks if an IP belongs to private/loopback/unspecified subnets.
+func IsPrivateOrLocalIP(ipStr string) bool {
+	return isPrivateOrLocalIP(ipStr)
+}
+
+// ClientIP extracts the real client IP, only trusting forwarding headers if the immediate peer is a private proxy/gateway.
+func ClientIP(c *fiber.Ctx) string {
+	return clientIP(c)
+}
+
+// RateLimitResponse formats a standardized 429 response with Retry-After metadata.
+func RateLimitResponse(c *fiber.Ctx, defaultMessage string, expiration time.Duration) error {
+	return rateLimitResponse(c, defaultMessage, expiration)
+}
+
 // RegisterLimiter prevents mass bot account creation (5 accounts / 10 min per IP).
 func RegisterLimiter() fiber.Handler {
 	expiration := 10 * time.Minute

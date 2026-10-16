@@ -1,9 +1,10 @@
-package db
+package tests
 
 import (
 	"sync"
 	"testing"
 
+	"github.com/divyanshmehta355/aurahub/backend/db"
 	"gorm.io/gorm/schema"
 )
 
@@ -12,16 +13,16 @@ func TestGormModelsHaveExplicitTableNames(t *testing.T) {
 		value     interface{}
 		tableName string
 	}{
-		{Comment{}, "comments"},
-		{Notification{}, "notifications"},
-		{Playlist{}, "playlists"},
-		{PlaylistVideo{}, "playlist_videos"},
-		{Subscription{}, "subscriptions"},
-		{User{}, "users"},
-		{UserActivity{}, "user_activities"},
-		{Video{}, "videos"},
-		{WatchHistory{}, "watch_history"},
-		{WatchLater{}, "watch_later"},
+		{db.Comment{}, "comments"},
+		{db.Notification{}, "notifications"},
+		{db.Playlist{}, "playlists"},
+		{db.PlaylistVideo{}, "playlist_videos"},
+		{db.Subscription{}, "subscriptions"},
+		{db.User{}, "users"},
+		{db.UserActivity{}, "user_activities"},
+		{db.Video{}, "videos"},
+		{db.WatchHistory{}, "watch_history"},
+		{db.WatchLater{}, "watch_later"},
 	}
 	for _, model := range models {
 		parsed, err := schema.Parse(model.value, &sync.Map{}, schema.NamingStrategy{})
@@ -44,7 +45,7 @@ CREATE TABLE test_table (
     name TEXT
 );
 `
-	stmts := SplitSQLStatements(testSQL)
+	stmts := db.SplitSQLStatements(testSQL)
 	if len(stmts) != 2 {
 		t.Fatalf("expected 2 statements, got %d", len(stmts))
 	}
@@ -53,11 +54,11 @@ CREATE TABLE test_table (
 		t.Errorf("unexpected statement 0: %q", stmts[0])
 	}
 
-	if len(SchemaSQL) == 0 {
+	if len(db.SchemaSQL) == 0 {
 		t.Fatalf("expected SchemaSQL to be embedded, got empty string")
 	}
 
-	parsedSchema := SplitSQLStatements(SchemaSQL)
+	parsedSchema := db.SplitSQLStatements(db.SchemaSQL)
 	if len(parsedSchema) < 10 {
 		t.Errorf("expected at least 10 statements from SchemaSQL, got %d", len(parsedSchema))
 	}

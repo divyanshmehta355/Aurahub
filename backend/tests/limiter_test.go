@@ -1,4 +1,4 @@
-package middleware
+package tests
 
 import (
 	"encoding/json"
@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/divyanshmehta355/aurahub/backend/middleware"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -28,9 +29,9 @@ func TestIsPrivateOrLocalIP(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := isPrivateOrLocalIP(tt.ip)
+		got := middleware.IsPrivateOrLocalIP(tt.ip)
 		if got != tt.want {
-			t.Errorf("isPrivateOrLocalIP(%q) = %v, want %v", tt.ip, got, tt.want)
+			t.Errorf("IsPrivateOrLocalIP(%q) = %v, want %v", tt.ip, got, tt.want)
 		}
 	}
 }
@@ -39,7 +40,7 @@ func TestClientIPExtraction(t *testing.T) {
 	app := fiber.New()
 	var extractedIP string
 	app.Get("/test-ip", func(c *fiber.Ctx) error {
-		extractedIP = clientIP(c)
+		extractedIP = middleware.ClientIP(c)
 		return c.SendString(extractedIP)
 	})
 
@@ -97,7 +98,7 @@ func TestClientIPExtraction(t *testing.T) {
 			defer resp.Body.Close()
 
 			if extractedIP != tt.wantIP {
-				t.Errorf("clientIP() = %q, want %q", extractedIP, tt.wantIP)
+				t.Errorf("ClientIP() = %q, want %q", extractedIP, tt.wantIP)
 			}
 		})
 	}
@@ -105,7 +106,7 @@ func TestClientIPExtraction(t *testing.T) {
 
 func TestRegisterLimiterEnforcement(t *testing.T) {
 	app := fiber.New()
-	app.Post("/register", RegisterLimiter(), func(c *fiber.Ctx) error {
+	app.Post("/register", middleware.RegisterLimiter(), func(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
@@ -154,7 +155,7 @@ func TestRegisterLimiterEnforcement(t *testing.T) {
 
 func TestSearchLimiter(t *testing.T) {
 	app := fiber.New()
-	app.Get("/search", SearchLimiter(), func(c *fiber.Ctx) error {
+	app.Get("/search", middleware.SearchLimiter(), func(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
@@ -174,7 +175,7 @@ func TestSearchLimiter(t *testing.T) {
 func TestRateLimitResponseFormat(t *testing.T) {
 	app := fiber.New()
 	app.Get("/limited", func(c *fiber.Ctx) error {
-		return rateLimitResponse(c, "Action limit reached.", 30*time.Second)
+		return middleware.RateLimitResponse(c, "Action limit reached.", 30*time.Second)
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/limited", nil)

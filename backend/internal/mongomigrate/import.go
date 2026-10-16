@@ -1061,6 +1061,26 @@ func createdTimestamp(doc bson.M) pgtype.Timestamptz {
 	return pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true}
 }
 
+// MappedUUID maps a MongoDB collection name and ObjectID deterministically to a UUID.
+func MappedUUID(collection string, id primitive.ObjectID) uuid.UUID {
+	return mappedUUID(collection, id)
+}
+
+// PgUUID maps a MongoDB collection name and ObjectID deterministically to a pgtype.UUID.
+func PgUUID(collection string, id primitive.ObjectID) pgtype.UUID {
+	return pgUUID(collection, id)
+}
+
+// SortComments sorts comments so parents precede children, detecting cycles and orphaned comments.
+func SortComments(rows []db.Comment, parents map[primitive.ObjectID]primitive.ObjectID, order []primitive.ObjectID, initiallySkipped map[primitive.ObjectID]struct{}) ([]db.Comment, []primitive.ObjectID, error) {
+	return sortComments(rows, parents, order, initiallySkipped)
+}
+
+// IDArray parses a BSON array of ObjectIDs from a document field.
+func IDArray(doc bson.M, field string) ([]primitive.ObjectID, error) {
+	return idArray(doc, field)
+}
+
 func mappedUUID(collection string, id primitive.ObjectID) uuid.UUID {
 	return uuid.NewSHA1(uuid.NameSpaceOID, []byte("aurahub-mongo-v1:"+collection+":"+id.Hex()))
 }

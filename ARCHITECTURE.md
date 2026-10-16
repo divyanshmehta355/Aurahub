@@ -36,6 +36,7 @@ graph TD
 | `internal/kafka/workers/` | Asynchronous Kafka event consumers (view counters, batch uploads, search index sync, auto-refreshers). | Run as background goroutines managed by `sync.WaitGroup`. |
 | `internal/opensearch/` | OpenSearch client wrapper with fallback standby mode and sanitized credential logging. | Search indexing and querying. |
 | `middleware/` | Fiber HTTP middleware: JWT verification, sliding-window rate limiters, security headers, client IP extraction. | Wrapped around routes in `SetupRoutes()`. |
+| `tests/` | Isolated backend test suite (API routes, security, database models, text array, workers, migrations, OpenSearch, rate limiters). | Keeps all source packages (`api`, `db`, `internal`, `middleware`) strictly focused on production implementations without scattered test files. |
 
 ### Handler Patterns & Rules
 

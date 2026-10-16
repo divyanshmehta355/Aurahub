@@ -1,4 +1,4 @@
-package api
+package tests
 
 import (
 	"net/http"
@@ -6,12 +6,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/divyanshmehta355/aurahub/backend/api"
 	"github.com/gofiber/fiber/v2"
 )
 
 func TestUnifiedAPIRoutes(t *testing.T) {
 	app := fiber.New()
-	NewServer(nil, nil).SetupRoutes(app)
+	api.NewServer(nil, nil).SetupRoutes(app)
 
 	registered := make(map[string]bool)
 	for _, route := range app.GetRoutes() {

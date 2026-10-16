@@ -185,6 +185,11 @@ func (s *Server) GetMeHandler(c *fiber.Ctx) error {
 	})
 }
 
+// IsUserAdmin checks whether a user has verified administrator privileges.
+func IsUserAdmin(user db.User) bool {
+	return isUserAdmin(user)
+}
+
 func isUserAdmin(user db.User) bool {
 	return user.IsAdmin.Valid && user.IsAdmin.Bool
 }

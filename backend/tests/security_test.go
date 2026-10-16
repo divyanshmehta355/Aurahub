@@ -1,9 +1,10 @@
-package api
+package tests
 
 import (
 	"net"
 	"testing"
 
+	"github.com/divyanshmehta355/aurahub/backend/api"
 	"github.com/divyanshmehta355/aurahub/backend/db"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -33,14 +34,14 @@ func TestIsProhibitedIP(t *testing.T) {
 		if parsed == nil {
 			t.Fatalf("failed to parse IP %q", tt.ip)
 		}
-		got := isProhibitedIP(parsed)
+		got := api.IsProhibitedIP(parsed)
 		if got != tt.prohibited {
-			t.Errorf("isProhibitedIP(%s) = %v, want %v", tt.ip, got, tt.prohibited)
+			t.Errorf("IsProhibitedIP(%s) = %v, want %v", tt.ip, got, tt.prohibited)
 		}
 	}
 
-	if !isProhibitedIP(nil) {
-		t.Errorf("isProhibitedIP(nil) must be true (fail closed)")
+	if !api.IsProhibitedIP(nil) {
+		t.Errorf("IsProhibitedIP(nil) must be true (fail closed)")
 	}
 }
 
@@ -70,9 +71,9 @@ func TestValidatePublicVideoURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validatePublicVideoURL(tt.url)
+			err := api.ValidatePublicVideoURL(tt.url)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validatePublicVideoURL(%q) err = %v, wantErr = %v", tt.url, err, tt.wantErr)
+				t.Errorf("ValidatePublicVideoURL(%q) err = %v, wantErr = %v", tt.url, err, tt.wantErr)
 			}
 		})
 	}
@@ -85,7 +86,7 @@ func TestIsUserAdmin(t *testing.T) {
 		Email:    "attacker@example.com",
 		IsAdmin:  pgtype.Bool{Valid: true, Bool: false},
 	}
-	if isUserAdmin(u1) {
+	if api.IsUserAdmin(u1) {
 		t.Errorf("user with 'admin' in username was granted admin privileges!")
 	}
 
@@ -95,7 +96,7 @@ func TestIsUserAdmin(t *testing.T) {
 		Email:    "admin@otherdomain.com",
 		IsAdmin:  pgtype.Bool{Valid: true, Bool: false},
 	}
-	if isUserAdmin(u2) {
+	if api.IsUserAdmin(u2) {
 		t.Errorf("user with 'admin' in email was granted admin privileges!")
 	}
 
@@ -105,7 +106,7 @@ func TestIsUserAdmin(t *testing.T) {
 		Email:    "owner@aurahub.io",
 		IsAdmin:  pgtype.Bool{Valid: true, Bool: true},
 	}
-	if !isUserAdmin(u3) {
+	if !api.IsUserAdmin(u3) {
 		t.Errorf("user with DB IsAdmin=true was not granted admin!")
 	}
 
@@ -115,7 +116,7 @@ func TestIsUserAdmin(t *testing.T) {
 		Email:    "nulladmin@aurahub.io",
 		IsAdmin:  pgtype.Bool{Valid: false, Bool: false},
 	}
-	if isUserAdmin(u4) {
+	if api.IsUserAdmin(u4) {
 		t.Errorf("user with null IsAdmin was granted admin!")
 	}
 }
