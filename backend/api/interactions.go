@@ -29,12 +29,10 @@ func (s *Server) CreateCommentHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Comment text cannot be empty"})
 	}
 
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	authorId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
-
-	authorId, _ := parseUUID(userIdLocal.(string))
 	videoIDValue := req.VideoID
 	if pathVideoID := c.Params("id"); pathVideoID != "" {
 		videoIDValue = pathVideoID
@@ -186,13 +184,9 @@ func (s *Server) ToggleLikeHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid video ID"})
 	}
 
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userId, err := parseUUID(userIdLocal.(string))
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
 
 	action := c.Query("action") // "like" or "unlike"
@@ -309,12 +303,10 @@ func (s *Server) UpdateCommentHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Text is required"})
 	}
 
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
-
-	userId, _ := parseUUID(userIdLocal.(string))
 
 	// Get comment
 	comment, err := s.Repository.GetComment(context.Background(), commentId)
@@ -353,12 +345,10 @@ func (s *Server) DeleteCommentHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid comment ID"})
 	}
 
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
-
-	userId, _ := parseUUID(userIdLocal.(string))
 
 	// Verify ownership (comment author or video uploader)
 	comment, err := s.Repository.GetComment(context.Background(), commentId)

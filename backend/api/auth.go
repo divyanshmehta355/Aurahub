@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -27,11 +26,6 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-// formatUUID converts a pgtype.UUID to a standard string representation
-func formatUUID(id pgtype.UUID) string {
-	b := id.Bytes
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
-}
 
 func (s *Server) RegisterHandler(c *fiber.Ctx) error {
 	var req RegisterRequest
@@ -115,7 +109,7 @@ func (s *Server) LoginHandler(c *fiber.Ctx) error {
 	}
 
 	// Generate JWT
-	secret := os.Getenv("JWT_SECRET")
+	secret := s.getJWTSecret()
 	if secret == "" {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Authentication is not configured"})
 	}
@@ -169,13 +163,9 @@ func (s *Server) LogoutHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) GetMeHandler(c *fiber.Ctx) error {
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userId, err := parseUUID(userIdLocal.(string))
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
 
 	user, err := s.Repository.GetUser(context.Background(), userId)

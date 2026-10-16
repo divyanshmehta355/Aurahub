@@ -29,6 +29,8 @@ type Config struct {
 	OpenSearchUser      string
 	OpenSearchPassword  string
 	OpenSearchInsecure  bool
+	UploadFolderID      string
+	FreeImageAPIKey     string
 }
 
 func LoadConfig() *Config {
@@ -99,5 +101,7 @@ func LoadConfig() *Config {
 		OpenSearchUser:      os.Getenv("OPENSEARCH_USER"),
 		OpenSearchPassword:  os.Getenv("OPENSEARCH_PASSWORD"),
 		OpenSearchInsecure:  os.Getenv("OPENSEARCH_INSECURE_SKIP_VERIFY") == "true" || os.Getenv("OPENSEARCH_INSECURE_SKIP_VERIFY") == "1",
+		UploadFolderID:      os.Getenv("UPLOAD_FOLDER_ID"),
+		FreeImageAPIKey:     os.Getenv("FREEIMAGE_API_KEY"),
 	}
 }

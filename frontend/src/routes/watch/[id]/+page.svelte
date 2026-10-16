@@ -8,28 +8,21 @@
 	import {
 		ThumbsUp,
 		Share2,
-		MessageSquare,
-		Play,
 		ListPlus,
-		Loader2,
-		Trash2,
 		ShieldAlert,
 		Hash,
 		Tv,
-		Minimize2,
-		Maximize2
+		Minimize2
 	} from 'lucide-svelte';
-	import VideoThumbnail from '#lib/components/VideoThumbnail.svelte';
-	import WatchLaterButton from '#lib/components/WatchLaterButton.svelte';
 	import SaveToPlaylistModal from '#lib/components/SaveToPlaylistModal.svelte';
+	import WatchComments from '#lib/components/WatchComments.svelte';
+	import WatchSidebar from '#lib/components/WatchSidebar.svelte';
 	import { Skeleton } from '#lib/components/ui/skeleton';
 	import { Button } from '#lib/components/ui/button';
-	import { Input } from '#lib/components/ui/input';
 
 	import {
 		createQuery,
 		createMutation,
-		createInfiniteQuery,
 		useQueryClient
 	} from '@tanstack/svelte-query';
 
@@ -38,7 +31,6 @@
 	let videoId = $derived(page.params.id);
 	let playlistId = $derived(page.url.searchParams.get('list'));
 	let isSaveModalOpen = $state(false);
-	let newCommentText = $state('');
 	let isTheaterMode = $state(false);
 
 	function toggleTheaterMode() {
@@ -109,69 +101,6 @@
 		uploaderQuery.data?.isSubscribed ?? videoQuery.data?.uploader?.isSubscribed ?? false
 	);
 
-	const playlistQuery = createQuery(
-		() => ({
-			queryKey: ['playlist', playlistId],
-			queryFn: async () => {
-				const res = await fetchApi(`/playlists/${playlistId}`);
-				const p = res.playlist || res;
-				if (res.videos) p.videos = res.videos;
-				return p;
-			},
-			enabled: !!playlistId
-		}),
-		() => queryClient
-	);
-
-	const commentsQuery = createQuery(
-		() => ({
-			queryKey: ['comments', videoId],
-			queryFn: async () => {
-				const idToUse = videoQuery.data?.id || videoId;
-				const res = await fetchApi(`/comments/${idToUse}`);
-				return res.comments || res.data || [];
-			}
-		}),
-		() => queryClient
-	);
-
-	const suggestionsQuery = createInfiniteQuery(
-		() => ({
-			queryKey: ['suggestions', videoId, contentModeState.isAdult],
-			queryFn: async ({ pageParam = 1 }) => {
-				const res = await fetchApi(
-					`/videos/suggestions?exclude=${videoId}&limit=10&page=${pageParam}`
-				);
-				return res;
-			},
-			getNextPageParam: (lastPage: any) => {
-				return lastPage.currentPage < lastPage.totalPages ? lastPage.currentPage + 1 : undefined;
-			},
-			initialPageParam: 1
-		}),
-		() => queryClient
-	);
-
-	// Infinite scroll action
-	function infiniteScroll(node: HTMLElement) {
-		const observer = new IntersectionObserver(
-			(entries) => {
-				if (entries[0].isIntersecting) {
-					if (suggestionsQuery.hasNextPage && !suggestionsQuery.isFetchingNextPage) {
-						suggestionsQuery.fetchNextPage();
-					}
-				}
-			},
-			{ rootMargin: '200px' }
-		);
-		observer.observe(node);
-		return {
-			destroy() {
-				observer.disconnect();
-			}
-		};
-	}
-
 	// Mutations
 	const likeMutation = createMutation(
 		() => ({
@@ -225,48 +154,6 @@
 		() => queryClient
 	);
 
-	const commentMutation = createMutation(
-		() => ({
-			mutationFn: async (content: string) => {
-				const idToUse = videoQuery.data?.id || videoId;
-				return await fetchApi('/comments', {
-					method: 'POST',
-					body: JSON.stringify({ videoId: idToUse, content, text: content })
-				});
-			},
-			onSuccess: () => {
-				newCommentText = '';
-				queryClient.invalidateQueries({ queryKey: ['comments', videoId] });
-				if (videoQuery.data?.id && videoQuery.data.id !== videoId) {
-					queryClient.invalidateQueries({ queryKey: ['comments', videoQuery.data.id] });
-				}
-			}
-		}),
-		() => queryClient
-	);
-
-	const deleteCommentMutation = createMutation(
-		() => ({
-			mutationFn: async (commentId: string) => {
-				return await fetchApi(`/comments/${commentId}`, {
-					method: 'DELETE'
-				});
-			},
-			onSuccess: () => {
-				queryClient.invalidateQueries({ queryKey: ['comments', videoId] });
-				if (videoQuery.data?.id && videoQuery.data.id !== videoId) {
-					queryClient.invalidateQueries({ queryKey: ['comments', videoQuery.data.id] });
-				}
-			}
-		}),
-		() => queryClient
-	);
-
-	function handleDeleteComment(commentId: string) {
-		if (!confirm('Are you sure you want to delete this comment?')) return;
-		deleteCommentMutation.mutate(commentId);
-	}
-
 	// Handlers
 	function handleLike() {
 		if (!userState.user) return (window.location.href = '/login');
@@ -276,11 +163,6 @@
 	function handleSubscribe() {
 		if (!userState.user) return (window.location.href = '/login');
 		subscribeMutation.mutate();
-	}
-
-	function handleCommentSubmit() {
-		if (!newCommentText.trim() || !userState.user) return;
-		commentMutation.mutate(newCommentText.trim());
 	}
 
 	function handleShare() {
@@ -398,32 +280,43 @@
 								<Button
 									size="sm"
 									class="rounded-full bg-amber-600 font-semibold text-white hover:bg-amber-700"
-									onclick={() => {
-										setContentMode(true);
-										queryClient.invalidateQueries();
-									}}
+									onclick={() => setContentMode(true)}
 								>
-									I am 18+ — Watch Video
+									I am 18+ - Watch Video
 								</Button>
 							{:else}
 								<Button
 									size="sm"
 									class="rounded-full bg-amber-600 font-semibold text-white hover:bg-amber-700"
-									onclick={() => goto('/profile')}
+									onclick={() => goto('/settings')}
 								>
 									Enable 18+ in Settings
 								</Button>
 							{/if}
 						</div>
 					</div>
-				{:else}
+				{:else if videoQuery.data.streamtapeUrl}
 					<iframe
-						src={`https://streamtape.com/e/${videoQuery.data.fileId}`}
-						class="h-full w-full border-0 bg-white"
+						src={videoQuery.data.streamtapeUrl}
+						class="h-full w-full border-0"
 						allowfullscreen
-						allow="autoplay"
-						title="Video Player"
+						allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+						title={videoQuery.data.title}
 					></iframe>
+				{:else}
+					<div
+						class="flex aspect-video w-full flex-col items-center justify-center p-6 text-center"
+					>
+						<div
+							class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 text-zinc-400"
+						>
+							<Tv class="h-8 w-8" />
+						</div>
+						<h3 class="text-lg font-semibold text-zinc-200">Video Processing</h3>
+						<p class="mt-1 text-xs text-zinc-400 max-w-sm">
+							This video stream is currently being prepared. Please check back in a few moments.
+						</p>
+					</div>
 				{/if}
 			</div>
 		{/if}
@@ -554,218 +447,25 @@
 				</div>
 			</div>
 
-			<!-- Comments Section -->
-			<div class="mt-6 border-t border-border/50 pt-6">
-				<h3 class="mb-6 flex items-center gap-2 text-xl font-bold tracking-tight">
-					<MessageSquare class="h-5 w-5" />
-					{commentsQuery.data?.length || 0} Comments
-				</h3>
-				<div class="mb-8 flex gap-4">
-					<img
-						src={userState.user?.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=Guest`}
-						alt="Your Avatar"
-						class="bg-muted h-10 w-10 shrink-0 rounded-full"
-					/>
-					<div class="flex-1 space-y-2">
-						<Input
-							type="text"
-							bind:value={newCommentText}
-							placeholder={userState.user ? 'Add a comment...' : 'Log in to add a comment...'}
-							disabled={!userState.user || commentMutation.isPending}
-							class="border-b-only border-muted-foreground/30 rounded-none bg-transparent px-2 py-1 focus-visible:border-primary focus-visible:ring-0"
-						/>
-						{#if newCommentText.length > 0}
-							<div class="mt-2 flex justify-end gap-2">
-								<Button variant="ghost" size="sm" onclick={() => (newCommentText = '')}
-									>Cancel</Button
-								>
-								<Button
-									size="sm"
-									onclick={handleCommentSubmit}
-									disabled={commentMutation.isPending}
-								>
-									{#if commentMutation.isPending}
-										<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-									{/if}
-									Comment
-								</Button>
-							</div>
-						{/if}
-					</div>
-				</div>
-
-				<div class="space-y-6">
-					{#if commentsQuery.isPending}
-						{#each Array(3) as _}
-							<div class="flex animate-pulse gap-4">
-								<Skeleton class="h-10 w-10 rounded-full" />
-								<div class="flex-1 space-y-2">
-									<Skeleton class="h-4 w-1/4 rounded" />
-									<Skeleton class="h-4 w-3/4 rounded" />
-								</div>
-							</div>
-						{/each}
-					{:else if commentsQuery.data}
-						{#each commentsQuery.data as comment}
-							<div class="group flex items-start gap-4">
-								<img
-									src={comment.user?.avatar ||
-										comment.author?.avatar ||
-										`https://api.dicebear.com/7.x/identicon/svg?seed=${comment.user?.username || comment.author?.username || 'user'}`}
-									alt="Avatar"
-									class="bg-muted h-10 w-10 shrink-0 rounded-full object-cover"
-								/>
-								<div class="flex-1 space-y-1">
-									<div class="flex items-baseline justify-between">
-										<div class="flex items-baseline gap-2">
-											<span class="text-sm font-semibold"
-												>{comment.user?.username || comment.author?.username || 'User'}</span
-											>
-											<span class="text-muted-foreground text-xs"
-												>{formatTimeAgo(comment.createdAt || comment.created_at)}</span
-											>
-										</div>
-										{#if userState.user && (userState.user.id === (comment.authorId || comment.author?.id || comment.user?.id || comment.author?._id || comment.user?._id) || userState.user.username === (comment.author?.username || comment.user?.username) || userState.user.id === (videoQuery.data?.uploaderId || videoQuery.data?.uploader?.id || videoQuery.data?.uploader?._id) || userState.user.username === uploaderUsername)}
-											<button
-												type="button"
-												onclick={() => handleDeleteComment(comment.id || comment._id)}
-												disabled={deleteCommentMutation.isPending}
-												class="text-muted-foreground hover:text-destructive rounded p-1 opacity-0 transition-opacity group-hover:opacity-100"
-												title="Delete comment"
-											>
-												<Trash2 class="h-3.5 w-3.5" />
-											</button>
-										{/if}
-									</div>
-									<p class="text-sm leading-relaxed">{comment.content || comment.text}</p>
-								</div>
-							</div>
-						{/each}
-					{/if}
-				</div>
-			</div>
+			<!-- Comments Section Component -->
+			<WatchComments
+				{videoId}
+				resolvedVideoId={videoQuery.data.id}
+				{uploaderUsername}
+				uploaderId={videoQuery.data.uploaderId || videoQuery.data.uploader?.id}
+			/>
 
 			<SaveToPlaylistModal videoId={videoQuery.data.id} bind:isOpen={isSaveModalOpen} />
 		{/if}
 	</div>
 </div>
 
-<!-- Sidebar Recommendations Area -->
-<div
-	class={`col-span-1 flex h-full flex-col space-y-4 transition-all duration-300 ${
-		isTheaterMode
-			? 'lg:col-span-1 lg:col-start-3 lg:row-start-2'
-			: 'lg:col-span-1'
-	}`}
->
-		{#if playlistQuery.isPending && playlistId}
-			<Skeleton class="h-64 rounded-xl" />
-		{:else if playlistQuery.data && playlistQuery.data.videos}
-			<div class="bg-card flex max-h-[500px] flex-col rounded-xl border shadow-sm">
-				<div class="bg-secondary/30 border-b p-4">
-					<h3 class="line-clamp-1 text-lg font-bold">{playlistQuery.data.title}</h3>
-					<p class="text-muted-foreground mt-1 text-xs">
-						{playlistQuery.data.owner?.username || 'Playlist'} - {playlistQuery.data.videos.findIndex(
-							(v: any) => v.fileId === videoId || v.id === videoId
-						) + 1} / {playlistQuery.data.videos.length}
-					</p>
-				</div>
-				<div class="custom-scrollbar flex-1 overflow-y-auto">
-					{#each playlistQuery.data.videos as pv, i}
-						<a
-							href={`/watch/${pv.fileId || pv.id}?list=${playlistId}`}
-							class={`hover:bg-muted/50 flex gap-3 p-3 transition-colors ${pv.fileId === videoId || pv.id === videoId ? 'bg-secondary/50 border-l-2 border-primary' : ''}`}
-						>
-							<div
-								class="text-muted-foreground flex w-5 shrink-0 items-center justify-center text-xs"
-							>
-								{#if pv.fileId === videoId || pv.id === videoId}
-									<Play class="h-3.5 w-3.5 fill-primary text-primary" />
-								{:else}
-									{i + 1}
-								{/if}
-							</div>
-							<VideoThumbnail video={pv} class="h-[72px] w-32 shrink-0 rounded-md" />
-							<div class="flex flex-1 flex-col justify-start overflow-hidden">
-								<h4
-									class={`line-clamp-2 text-sm leading-tight font-semibold ${pv.fileId === videoId || pv.id === videoId ? 'text-primary' : ''}`}
-								>
-									{pv.title}
-								</h4>
-								<span class="text-muted-foreground mt-1 text-xs"
-									>{pv.uploader?.username || 'Unknown'}</span
-								>
-							</div>
-						</a>
-					{/each}
-				</div>
-			</div>
-		{/if}
-
-		<h3 class="mt-2 text-lg font-semibold">Up Next</h3>
-
-		{#if suggestionsQuery.isPending}
-			<div class="flex flex-col gap-4">
-				{#each Array(6) as _}
-					<div class="flex gap-3">
-						<Skeleton class="h-24 w-40 rounded-xl" />
-						<div class="flex-1 space-y-2 py-1">
-							<Skeleton class="h-4 w-full rounded" />
-							<Skeleton class="h-4 w-3/4 rounded" />
-							<Skeleton class="mt-2 h-3 w-1/2 rounded" />
-						</div>
-					</div>
-				{/each}
-			</div>
-		{:else if suggestionsQuery.data}
-			<div class="flex flex-col gap-3">
-				{#each suggestionsQuery.data.pages as page}
-					{#each (page.videos || []).filter((v: any) => !v.isShort) as nextVideo}
-						<a
-							href={`/watch/${nextVideo.fileId || nextVideo.id}`}
-							class="group hover:bg-muted/50 -mx-2 flex items-start gap-3 rounded-xl p-2 transition-colors"
-						>
-							<div
-								class="bg-muted relative aspect-video w-40 shrink-0 overflow-hidden rounded-lg border"
-							>
-								<VideoThumbnail video={nextVideo} class="h-full w-full">
-									<WatchLaterButton videoId={nextVideo.id} />
-								</VideoThumbnail>
-							</div>
-							<div class="flex flex-1 flex-col py-0.5">
-								<h4
-									class="line-clamp-2 text-sm leading-tight font-medium transition-colors group-hover:text-primary"
-									title={nextVideo.title}
-								>
-									{nextVideo.title}
-								</h4>
-								<span class="text-muted-foreground mt-1 text-xs"
-									>{nextVideo.uploader?.username || 'Unknown'}</span
-								>
-								<span class="text-muted-foreground mt-0.5 text-[11px]"
-									>{nextVideo.views || 0} views • {formatTimeAgo(
-										nextVideo.createdAt || nextVideo.created_at || new Date().toISOString()
-									)}</span
-								>
-							</div>
-						</a>
-					{/each}
-				{/each}
-
-				{#if suggestionsQuery.hasNextPage}
-					<div use:infiniteScroll class="flex justify-center py-4">
-						{#if suggestionsQuery.isFetchingNextPage}
-							<Loader2 class="h-6 w-6 animate-spin text-primary" />
-						{/if}
-					</div>
-				{/if}
-			</div>
-		{:else}
-			<div class="border-muted flex gap-2 rounded-xl border-2 border-dashed p-4 text-center">
-				<span class="text-muted-foreground text-sm">No recommendations found.</span>
-			</div>
-		{/if}
-	</div>
+	<!-- Sidebar Recommendations & Playlist Queue Area -->
+	<WatchSidebar
+		{videoId}
+		{playlistId}
+		{isTheaterMode}
+	/>
 </div>
 
 <style>

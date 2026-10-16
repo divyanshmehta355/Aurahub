@@ -1,6 +1,9 @@
 package api
 
 import (
+	"os"
+
+	"github.com/divyanshmehta355/aurahub/backend/config"
 	"github.com/divyanshmehta355/aurahub/backend/db"
 	"github.com/divyanshmehta355/aurahub/backend/internal/kafka"
 	"github.com/divyanshmehta355/aurahub/backend/internal/opensearch"
@@ -10,10 +13,13 @@ import (
 )
 
 type Server struct {
-	Repository *db.Repository
-	Cache      *redis.Client
-	Kafka      *kafka.Producer
-	OpenSearch *opensearch.Client
+	Repository      *db.Repository
+	Cache           *redis.Client
+	Kafka           *kafka.Producer
+	OpenSearch      *opensearch.Client
+	UploadFolderID  string
+	FreeImageAPIKey string
+	JWTSecret       string
 }
 
 func NewServer(repository *db.Repository, cache *redis.Client, options ...any) *Server {
@@ -27,9 +33,34 @@ func NewServer(repository *db.Repository, cache *redis.Client, options ...any) *
 			s.Kafka = v
 		case *opensearch.Client:
 			s.OpenSearch = v
+		case *config.Config:
+			s.UploadFolderID = v.UploadFolderID
+			s.FreeImageAPIKey = v.FreeImageAPIKey
+			s.JWTSecret = v.JWTSecret
 		}
 	}
 	return s
+}
+
+func (s *Server) getUploadFolderID() string {
+	if s != nil && s.UploadFolderID != "" {
+		return s.UploadFolderID
+	}
+	return os.Getenv("UPLOAD_FOLDER_ID")
+}
+
+func (s *Server) getFreeImageAPIKey() string {
+	if s != nil && s.FreeImageAPIKey != "" {
+		return s.FreeImageAPIKey
+	}
+	return os.Getenv("FREEIMAGE_API_KEY")
+}
+
+func (s *Server) getJWTSecret() string {
+	if s != nil && s.JWTSecret != "" {
+		return s.JWTSecret
+	}
+	return os.Getenv("JWT_SECRET")
 }
 
 func (s *Server) SetupRoutes(app *fiber.App) {

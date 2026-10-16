@@ -21,13 +21,9 @@ func (s *Server) CreatePlaylistHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid payload"})
 	}
 
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userId, err := parseUUID(userIdLocal.(string))
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
@@ -57,13 +53,9 @@ func (s *Server) CreatePlaylistHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) ListPlaylistsHandler(c *fiber.Ctx) error {
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userId, err := parseUUID(userIdLocal.(string))
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
 
 	playlists, err := s.Repository.ListUserPlaylists(context.Background(), userId)
@@ -97,9 +89,8 @@ func (s *Server) GetPlaylistHandler(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"message": "Playlist not found"})
 	}
 	if !playlist.IsPublic.Bool {
-		viewerID, _ := c.Locals("userId").(string)
-		viewerUUID, parseErr := parseUUID(viewerID)
-		if parseErr != nil || viewerUUID != playlist.OwnerID {
+		viewerUUID, ok := s.getOptionalUserID(c)
+		if !ok || viewerUUID != playlist.OwnerID {
 			return c.Status(403).JSON(fiber.Map{"message": "This playlist is private"})
 		}
 	}
@@ -147,13 +138,9 @@ func (s *Server) UpdatePlaylistCollectionHandler(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid playlist ID"})
 	}
-	userID, ok := c.Locals("userId").(string)
+	userUUID, ok := s.requireAuth(c)
 	if !ok {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userUUID, err := parseUUID(userID)
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+		return nil
 	}
 	playlist, err := s.Repository.GetPlaylist(context.Background(), playlistID)
 	if err != nil {
@@ -228,14 +215,9 @@ func (s *Server) UpdatePlaylistHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid payload"})
 	}
 
-	userIdLocal := c.Locals("userId")
-	userID, ok := userIdLocal.(string)
+	userId, ok := s.requireAuth(c)
 	if !ok {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userId, err := parseUUID(userID)
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+		return nil
 	}
 
 	playlist, err := s.Repository.GetPlaylist(context.Background(), playlistId)
@@ -275,14 +257,9 @@ func (s *Server) DeletePlaylistHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid playlist ID"})
 	}
 
-	userIdLocal := c.Locals("userId")
-	userID, ok := userIdLocal.(string)
+	userId, ok := s.requireAuth(c)
 	if !ok {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userId, err := parseUUID(userID)
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+		return nil
 	}
 	playlist, err := s.Repository.GetPlaylist(context.Background(), playlistId)
 	if err != nil {
@@ -318,13 +295,9 @@ func (s *Server) TogglePlaylistVideoHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid payload"})
 	}
 
-	userID, ok := c.Locals("userId").(string)
+	userUUID, ok := s.requireAuth(c)
 	if !ok {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userUUID, err := parseUUID(userID)
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+		return nil
 	}
 	playlist, err := s.Repository.GetPlaylist(context.Background(), playlistId)
 	if err != nil {

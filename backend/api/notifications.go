@@ -169,18 +169,11 @@ func (s *Server) PublishSubscribersNewVideo(ctx context.Context, uploaderID pgty
 
 // NotificationStreamHandler establishes a Server-Sent Events (SSE) connection backed by Valkey Pub/Sub.
 func (s *Server) NotificationStreamHandler(c *fiber.Ctx) error {
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userIdStr, ok := userIdLocal.(string)
+	userId, ok := s.requireAuth(c)
 	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})
+		return nil
 	}
-	userId, err := parseUUID(userIdStr)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid user ID"})
-	}
+	userIdStr := formatUUID(userId)
 
 	c.Set("Content-Type", "text/event-stream")
 	c.Set("Cache-Control", "no-cache")
@@ -237,11 +230,10 @@ func (s *Server) NotificationStreamHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) ListNotificationsHandler(c *fiber.Ctx) error {
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
-	userId, _ := parseUUID(userIdLocal.(string))
 
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	limit, _ := strconv.Atoi(c.Query("limit", "20"))
@@ -332,11 +324,10 @@ func (s *Server) ListNotificationsHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) MarkNotificationsReadHandler(c *fiber.Ctx) error {
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
-	userId, _ := parseUUID(userIdLocal.(string))
 
 	err := s.Repository.MarkNotificationsRead(context.Background(), userId)
 	if err != nil {
@@ -352,11 +343,10 @@ func (s *Server) MarkNotificationsReadHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) MarkNotificationReadHandler(c *fiber.Ctx) error {
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
-	userId, _ := parseUUID(userIdLocal.(string))
 
 	notificationId, err := parseUUID(c.Params("id"))
 	if err != nil {
@@ -379,11 +369,10 @@ func (s *Server) MarkNotificationReadHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) DeleteNotificationHandler(c *fiber.Ctx) error {
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
-	userId, _ := parseUUID(userIdLocal.(string))
 
 	notificationId, err := parseUUID(c.Params("id"))
 	if err != nil {
@@ -406,11 +395,10 @@ func (s *Server) DeleteNotificationHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) ClearNotificationsHandler(c *fiber.Ctx) error {
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
-	userId, _ := parseUUID(userIdLocal.(string))
 
 	err := s.Repository.ClearNotifications(context.Background(), userId)
 	if err != nil {

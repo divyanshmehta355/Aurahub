@@ -32,7 +32,9 @@ var (
 
 func (s *Server) GetUploadUrlHandler(c *fiber.Ctx) error {
 	query := url.Values{}
-	query.Set("folder", os.Getenv("UPLOAD_FOLDER_ID"))
+	if folder := s.getUploadFolderID(); folder != "" {
+		query.Set("folder", folder)
+	}
 	body, err := requestAuraAPI(c.UserContext(), http.MethodGet, "/upload/url", query)
 	if err != nil {
 		return c.Status(502).JSON(fiber.Map{"message": "Failed to get upload URL"})
@@ -56,13 +58,11 @@ func (s *Server) GetUploadUrlHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) UploadChunkHandler(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userId").(string)
+	userUUID, ok := s.requireAuth(c)
 	if !ok {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+		return nil
 	}
-	if _, err := parseUUID(userID); err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
+	userID := formatUUID(userUUID)
 
 	form, err := c.MultipartForm()
 	if err != nil {
@@ -120,7 +120,9 @@ func (s *Server) UploadChunkHandler(c *fiber.Ctx) error {
 	if chunkIndex == totalChunks-1 {
 		// Final chunk, upload to aura API
 		query := url.Values{}
-		query.Set("folder", os.Getenv("UPLOAD_FOLDER_ID"))
+		if folder := s.getUploadFolderID(); folder != "" {
+			query.Set("folder", folder)
+		}
 		urlBody, err := requestAuraAPI(c.UserContext(), http.MethodGet, "/upload/url", query)
 		if err != nil {
 			os.Remove(uploadFilePath)
@@ -206,13 +208,9 @@ func (s *Server) UploadChunkHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) CreateRecordHandler(c *fiber.Ctx) error {
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userId, err := parseUUID(userIdLocal.(string))
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
 
 	form, err := c.MultipartForm()

@@ -81,7 +81,9 @@ func (s *Server) RemoteUploadStartHandler(c *fiber.Ctx) error {
 	}
 	query := url.Values{}
 	query.Set("url", strings.TrimSpace(request.VideoURL))
-	query.Set("folder", os.Getenv("UPLOAD_FOLDER_ID"))
+	if folder := s.getUploadFolderID(); folder != "" {
+		query.Set("folder", folder)
+	}
 	response, err := requestAuraAPI(c.UserContext(), http.MethodGet, "/remote/add", query)
 	if err != nil {
 		return c.Status(502).JSON(fiber.Map{"message": "Failed to start remote upload"})
@@ -111,13 +113,9 @@ func requestAuraAPI(ctx context.Context, method, path string, query url.Values) 
 }
 
 func (s *Server) UpdateVideoThumbnailHandler(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userId").(string)
+	userUUID, ok := s.requireAuth(c)
 	if !ok {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userUUID, err := parseUUID(userID)
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+		return nil
 	}
 	videoID, err := parseUUID(c.Params("id"))
 	if err != nil {
@@ -151,7 +149,7 @@ func (s *Server) UpdateVideoThumbnailHandler(c *fiber.Ctx) error {
 	if len(imageBytes) > 10<<20 {
 		return c.Status(413).JSON(fiber.Map{"message": "Thumbnail exceeds the 10 MB limit"})
 	}
-	thumbnailURL, err := uploadImage(imageBytes)
+	thumbnailURL, err := s.uploadImage(imageBytes)
 	if err != nil {
 		return c.Status(502).JSON(fiber.Map{"message": "Failed to upload thumbnail"})
 	}
@@ -166,8 +164,15 @@ func (s *Server) UpdateVideoThumbnailHandler(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"thumbnailUrl": thumbnailURL})
 }
 
+func (s *Server) uploadImage(image []byte) (string, error) {
+	return uploadImageWithKey(image, s.getFreeImageAPIKey())
+}
+
 func uploadImage(image []byte) (string, error) {
-	apiKey := os.Getenv("FREEIMAGE_API_KEY")
+	return uploadImageWithKey(image, os.Getenv("FREEIMAGE_API_KEY"))
+}
+
+func uploadImageWithKey(image []byte, apiKey string) (string, error) {
 	if apiKey == "" {
 		return "", fiber.NewError(fiber.StatusServiceUnavailable, "FREEIMAGE_API_KEY is not configured")
 	}
@@ -230,11 +235,11 @@ type BatchRemoteUploadRequest struct {
 // BatchRemoteUploadHandler queues a playlist batch of remote video downloads to Kafka,
 // freeing the client browser from having to keep the tab open for polling.
 func (s *Server) BatchRemoteUploadHandler(c *fiber.Ctx) error {
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userUUID, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
-	userID := userIdLocal.(string)
+	userID := formatUUID(userUUID)
 
 	var req BatchRemoteUploadRequest
 	if err := c.BodyParser(&req); err != nil {

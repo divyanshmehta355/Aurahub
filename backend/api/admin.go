@@ -19,17 +19,9 @@ import (
 // AdminAuthRequired verifies that the requesting user is authenticated and has administrative rights.
 func (s *Server) AdminAuthRequired() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		userIdLocal := c.Locals("userId")
-		if userIdLocal == nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Authentication required"})
-		}
-		userIdStr, ok := userIdLocal.(string)
-		if !ok || userIdStr == "" {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid session"})
-		}
-		userId, err := parseUUID(userIdStr)
-		if err != nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid user ID"})
+		userId, ok := s.requireAuth(c)
+		if !ok {
+			return nil
 		}
 		user, err := s.Repository.GetUser(context.Background(), userId)
 		if err != nil {

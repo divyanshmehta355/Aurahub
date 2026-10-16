@@ -1,9 +1,14 @@
-export const userState = $state({
-	user: null as any | null,
+import type { User } from './types';
+
+export const userState = $state<{
+	user: User | null;
+	isLoaded: boolean;
+}>({
+	user: null,
 	isLoaded: false
 });
 
-export function setUser(user: any) {
+export function setUser(user: User) {
 	userState.user = user;
 	userState.isLoaded = true;
 	if (typeof window !== 'undefined') {

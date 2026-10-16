@@ -3,7 +3,7 @@ import { contentModeState } from '#lib/consent.svelte';
 
 export const API_URL = PUBLIC_API_URL || '/api';
 
-export async function fetchApi(endpoint: string, options: RequestInit = {}) {
+export async function fetchApi<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
 	const isFormData = options.body instanceof FormData;
 	const headers: HeadersInit = { ...options.headers };
 
@@ -25,8 +25,8 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
 
 	if (!res.ok) {
 		const errorData = await res.json().catch(() => ({ message: 'API Request failed' }));
-		throw new Error(errorData.message || `API Error: ${res.status}`);
+		throw new Error(errorData.message || errorData.error || `API Error: ${res.status}`);
 	}
 
-	return res.json();
+	return res.json() as Promise<T>;
 }

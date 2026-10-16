@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"strconv"
 	"strings"
 
@@ -10,23 +9,22 @@ import (
 )
 
 func (s *Server) GetWatchHistoryHandler(c *fiber.Ctx) error {
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
-	userId, _ := parseUUID(userIdLocal.(string))
 
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	limit, _ := strconv.Atoi(c.Query("limit", "20"))
 	offset := int32((page - 1) * limit)
 
-	videos, err := s.Repository.GetWatchHistory(context.Background(), db.GetWatchHistoryParams{
+	videos, err := s.Repository.GetWatchHistory(c.UserContext(), db.GetWatchHistoryParams{
 		UserID: userId,
 		Limit:  int32(limit),
 		Offset: offset,
 	})
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch history"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to fetch history"})
 	}
 
 	var res []fiber.Map
@@ -44,28 +42,27 @@ func (s *Server) GetWatchHistoryHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) DeleteWatchHistoryHandler(c *fiber.Ctx) error {
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
-	userId, _ := parseUUID(userIdLocal.(string))
 
 	videoIdStr := c.Query("videoId")
 	if videoIdStr == "" {
 		// Clear all
-		err := s.Repository.ClearWatchHistory(context.Background(), userId)
+		err := s.Repository.ClearWatchHistory(c.UserContext(), userId)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"message": "Failed to clear history"})
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to clear history"})
 		}
 	} else {
 		videoId, err := parseUUID(videoIdStr)
 		if err != nil {
-			return c.Status(400).JSON(fiber.Map{"message": "Invalid video ID"})
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid video ID"})
 		}
-		if err := s.Repository.DeleteWatchHistory(context.Background(), db.DeleteWatchHistoryParams{
+		if err := s.Repository.DeleteWatchHistory(c.UserContext(), db.DeleteWatchHistoryParams{
 			UserID: userId, VideoID: videoId,
 		}); err != nil {
-			return c.Status(500).JSON(fiber.Map{"message": "Failed to remove video from history"})
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to remove video from history"})
 		}
 	}
 
@@ -81,23 +78,22 @@ func (s *Server) DeleteWatchHistoryHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) GetWatchLaterHandler(c *fiber.Ctx) error {
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
-	userId, _ := parseUUID(userIdLocal.(string))
 
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	limit, _ := strconv.Atoi(c.Query("limit", "20"))
 	offset := int32((page - 1) * limit)
 
-	videos, err := s.Repository.GetWatchLater(context.Background(), db.GetWatchLaterParams{
+	videos, err := s.Repository.GetWatchLater(c.UserContext(), db.GetWatchLaterParams{
 		UserID: userId,
 		Limit:  int32(limit),
 		Offset: offset,
 	})
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch watch later"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to fetch watch later"})
 	}
 
 	var res []fiber.Map
@@ -115,13 +111,9 @@ func (s *Server) GetWatchLaterHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) ToggleWatchLaterHandler(c *fiber.Ctx) error {
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userId, err := parseUUID(userIdLocal.(string))
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
 
 	var req struct {
@@ -129,11 +121,11 @@ func (s *Server) ToggleWatchLaterHandler(c *fiber.Ctx) error {
 		Action  string `json:"action"` // add, remove
 	}
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"message": "Invalid payload"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid payload"})
 	}
 	videoId, err := parseUUID(req.VideoID)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"message": "Invalid video ID"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid video ID"})
 	}
 
 	action := req.Action
@@ -141,20 +133,20 @@ func (s *Server) ToggleWatchLaterHandler(c *fiber.Ctx) error {
 		action = "add"
 	}
 	if action == "add" {
-		err = s.Repository.AddWatchLater(context.Background(), db.AddWatchLaterParams{
+		err = s.Repository.AddWatchLater(c.UserContext(), db.AddWatchLaterParams{
 			UserID:  userId,
 			VideoID: videoId,
 		})
 	} else if action == "remove" {
-		err = s.Repository.RemoveWatchLater(context.Background(), db.RemoveWatchLaterParams{
+		err = s.Repository.RemoveWatchLater(c.UserContext(), db.RemoveWatchLaterParams{
 			UserID:  userId,
 			VideoID: videoId,
 		})
 	} else {
-		return c.Status(400).JSON(fiber.Map{"message": "Action must be add or remove"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Action must be add or remove"})
 	}
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "Failed to update watch later"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to update watch later"})
 	}
 	message := "Success"
 	if strings.HasPrefix(c.Path(), "/api/user/") && action == "add" {
@@ -164,23 +156,18 @@ func (s *Server) ToggleWatchLaterHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) DeleteWatchLaterHandler(c *fiber.Ctx) error {
-	userIDValue := c.Locals("userId")
-	userID, ok := userIDValue.(string)
+	userUUID, ok := s.requireAuth(c)
 	if !ok {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userUUID, err := parseUUID(userID)
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+		return nil
 	}
 	videoID, err := parseUUID(c.Query("videoId"))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"message": "Invalid video ID"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid video ID"})
 	}
-	if err := s.Repository.RemoveWatchLater(context.Background(), db.RemoveWatchLaterParams{
+	if err := s.Repository.RemoveWatchLater(c.UserContext(), db.RemoveWatchLaterParams{
 		UserID: userUUID, VideoID: videoID,
 	}); err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "Failed to remove video"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "Failed to remove video"})
 	}
 	return c.JSON(fiber.Map{"message": "Removed from Watch Later"})
 }

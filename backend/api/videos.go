@@ -90,11 +90,6 @@ func (s *Server) AutocompleteHandler(c *fiber.Ctx) error {
 	return c.JSON(resMap)
 }
 
-func parseUUID(idStr string) (pgtype.UUID, error) {
-	var u pgtype.UUID
-	err := u.Scan(idStr)
-	return u, err
-}
 
 func (s *Server) resolveVideoUUID(ctx context.Context, idStr string) (pgtype.UUID, error) {
 	if id, err := parseUUID(idStr); err == nil {
@@ -186,11 +181,7 @@ func (s *Server) GetVideoHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Video ID is required"})
 	}
 
-	var viewerUUID pgtype.UUID
-	userIdLocal := c.Locals("userId")
-	if userID, ok := userIdLocal.(string); ok {
-		viewerUUID, _ = parseUUID(userID)
-	}
+	viewerUUID, _ := s.getOptionalUserID(c)
 
 	detail, err := s.Repository.GetVideoDetails(c.UserContext(), idStr, viewerUUID)
 	if err != nil {
@@ -234,9 +225,9 @@ func (s *Server) DeleteVideoHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid video ID."})
 	}
 
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
 
 	video, err := s.Repository.GetVideo(context.Background(), videoId)
@@ -244,7 +235,7 @@ func (s *Server) DeleteVideoHandler(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"message": "Video not found"})
 	}
 
-	if userIdLocal.(string) != formatUUID(video.UploaderID) {
+	if userId != video.UploaderID {
 		return c.Status(403).JSON(fiber.Map{"message": "Not authorized to delete this video"})
 	}
 
@@ -386,20 +377,6 @@ func (s *Server) SearchVideosHandler(c *fiber.Ctx) error {
 	return c.JSON(respMap)
 }
 
-func pageLimit(c *fiber.Ctx, defaultLimit, maxLimit int) (int, int) {
-	page, err := strconv.Atoi(c.Query("page", "1"))
-	if err != nil || page < 1 {
-		page = 1
-	}
-	limit, err := strconv.Atoi(c.Query("limit", strconv.Itoa(defaultLimit)))
-	if err != nil || limit < 1 {
-		limit = defaultLimit
-	}
-	if limit > maxLimit {
-		limit = maxLimit
-	}
-	return page, limit
-}
 
 func (s *Server) RecordVideoViewHandler(c *fiber.Ctx) error {
 	id := c.Params("id")
@@ -420,10 +397,8 @@ func (s *Server) RecordVideoViewHandler(c *fiber.Ctx) error {
 	}
 
 	var userIDStr string
-	if userIDValue := c.Locals("userId"); userIDValue != nil {
-		if uid, ok := userIDValue.(string); ok {
-			userIDStr = uid
-		}
+	if viewerUUID, ok := s.getOptionalUserID(c); ok {
+		userIDStr = formatUUID(viewerUUID)
 	}
 
 	// High-throughput Kafka Stream: emit view event non-blocking and return immediately (< 2ms)
@@ -461,13 +436,9 @@ func (s *Server) RecordVideoViewHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) SubscriptionFeedHandler(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userId").(string)
+	userIDUUID, ok := s.requireAuth(c)
 	if !ok {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userIDUUID, err := parseUUID(userID)
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+		return nil
 	}
 	page, limit := pageLimit(c, 10, 100)
 	ctx := context.Background()
@@ -534,8 +505,10 @@ func (s *Server) UpdateVideoHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid payload"})
 	}
 
-	userIdLocal := c.Locals("userId")
-	userId, _ := parseUUID(userIdLocal.(string))
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
+	}
 
 	video, err := s.Repository.GetVideo(context.Background(), videoId)
 	if err != nil || video.UploaderID != userId {
@@ -612,14 +585,9 @@ func (s *Server) UpdateVideoHandler(c *fiber.Ctx) error {
 
 // TriggerRefreshExpiredHandler allows an admin to trigger a manual pass of the 28-day re-upload cycle.
 func (s *Server) TriggerRefreshExpiredHandler(c *fiber.Ctx) error {
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userIdStr, _ := userIdLocal.(string)
-	userUUID, err := parseUUID(userIdStr)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})
+	userUUID, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
 	user, err := s.Repository.GetUser(context.Background(), userUUID)
 	if err != nil || !isUserAdmin(user) {

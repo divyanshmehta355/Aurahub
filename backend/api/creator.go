@@ -15,13 +15,9 @@ import (
 )
 
 func (s *Server) CreatorDashboardHandler(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userId").(string)
+	userId, ok := s.requireAuth(c)
 	if !ok {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userId, err := parseUUID(userID)
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+		return nil
 	}
 	page, limit := pageLimit(c, 20, 100)
 	offset := int32((page - 1) * limit)
@@ -53,13 +49,9 @@ func (s *Server) CreatorDashboardHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) CreatorAnalyticsHandler(c *fiber.Ctx) error {
-	userID, ok := c.Locals("userId").(string)
+	userId, ok := s.requireAuth(c)
 	if !ok {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userId, err := parseUUID(userID)
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+		return nil
 	}
 
 	stats, err := s.Repository.GetCreatorLifetimeStats(context.Background(), userId)
@@ -195,13 +187,9 @@ func (s *Server) BulkUpdateVideoVisibilityHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid payload"})
 	}
 
-	userID, ok := c.Locals("userId").(string)
+	userId, ok := s.requireAuth(c)
 	if !ok {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userId, err := parseUUID(userID)
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+		return nil
 	}
 
 	var uuids []pgtype.UUID
@@ -226,23 +214,21 @@ func (s *Server) BulkUpdateVideoVisibilityHandler(c *fiber.Ctx) error {
 			return c.Status(400).JSON(fiber.Map{"message": "Invalid visibility"})
 		}
 
-		err = s.Repository.BulkUpdateVideoVisibility(context.Background(), db.BulkUpdateVideoVisibilityParams{
+		if err := s.Repository.BulkUpdateVideoVisibility(context.Background(), db.BulkUpdateVideoVisibilityParams{
 			UploaderID: userId,
 			Column2:    uuids,
 			Visibility: db.NullVideoVisibility{VideoVisibility: visibility, Valid: true},
-		})
-		if err != nil {
+		}); err != nil {
 			return c.Status(500).JSON(fiber.Map{"message": "Failed to update videos"})
 		}
 	}
 
 	if req.IsAdult != nil {
-		err = s.Repository.BulkUpdateVideoAdult(context.Background(), db.BulkUpdateVideoAdultParams{
+		if err := s.Repository.BulkUpdateVideoAdult(context.Background(), db.BulkUpdateVideoAdultParams{
 			UploaderID: userId,
 			Column2:    uuids,
 			IsAdult:    *req.IsAdult,
-		})
-		if err != nil {
+		}); err != nil {
 			return c.Status(500).JSON(fiber.Map{"message": "Failed to update adult status"})
 		}
 	}
@@ -261,13 +247,9 @@ func (s *Server) BulkUpdateVideoAdultHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid payload"})
 	}
 
-	userID, ok := c.Locals("userId").(string)
+	userId, ok := s.requireAuth(c)
 	if !ok {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userId, err := parseUUID(userID)
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+		return nil
 	}
 
 	var uuids []pgtype.UUID
@@ -279,12 +261,11 @@ func (s *Server) BulkUpdateVideoAdultHandler(c *fiber.Ctx) error {
 		uuids = append(uuids, id)
 	}
 
-	err = s.Repository.BulkUpdateVideoAdult(context.Background(), db.BulkUpdateVideoAdultParams{
+	if err := s.Repository.BulkUpdateVideoAdult(context.Background(), db.BulkUpdateVideoAdultParams{
 		UploaderID: userId,
 		Column2:    uuids,
 		IsAdult:    *req.IsAdult,
-	})
-	if err != nil {
+	}); err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to update adult status"})
 	}
 
@@ -301,13 +282,9 @@ func (s *Server) BulkDeleteVideosHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid payload"})
 	}
 
-	userID, ok := c.Locals("userId").(string)
+	userId, ok := s.requireAuth(c)
 	if !ok {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	userId, err := parseUUID(userID)
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+		return nil
 	}
 
 	var uuids []pgtype.UUID

@@ -42,19 +42,15 @@ func (s *Server) GetUserHandler(c *fiber.Ctx) error {
 }
 
 func (s *Server) ToggleSubscriptionHandler(c *fiber.Ctx) error {
-	viewerValue := c.Locals("userId")
-	viewerID, ok := viewerValue.(string)
+	viewerUUID, ok := s.requireAuth(c)
 	if !ok {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-	viewerUUID, err := parseUUID(viewerID)
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
+		return nil
 	}
 
 	identifier := c.Params("identifier")
 	targetUUID, parseErr := parseUUID(identifier)
 	var target db.User
+	var err error
 	if parseErr == nil {
 		target, err = s.Repository.GetUser(context.Background(), targetUUID)
 	} else {
@@ -99,14 +95,9 @@ func (s *Server) UpdateUserHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid payload"})
 	}
 
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-
-	userId, err := parseUUID(userIdLocal.(string))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"message": "Invalid session data"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
 
 	user, err := s.Repository.UpdateUser(context.Background(), db.UpdateUserParams{
@@ -142,16 +133,13 @@ func (s *Server) GetProfileHandler(c *fiber.Ctx) error {
 	}
 
 	var isSubscribed bool
-	userIdLocal := c.Locals("userId")
-	if userIdLocal != nil {
-		if viewerId, err := parseUUID(userIdLocal.(string)); err == nil {
-			isSubscribed, err = s.Repository.IsSubscribed(context.Background(), db.IsSubscribedParams{
-				SubscriberID:   viewerId,
-				SubscribedToID: user.ID,
-			})
-			if err != nil {
-				return c.Status(500).JSON(fiber.Map{"message": "Failed to check subscription"})
-			}
+	if viewerId, ok := s.getOptionalUserID(c); ok {
+		isSubscribed, err = s.Repository.IsSubscribed(context.Background(), db.IsSubscribedParams{
+			SubscriberID:   viewerId,
+			SubscribedToID: user.ID,
+		})
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"message": "Failed to check subscription"})
 		}
 	}
 
@@ -225,14 +213,9 @@ func (s *Server) UpdateProfileHandler(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid payload"})
 	}
 
-	userIdLocal := c.Locals("userId")
-	if userIdLocal == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "Unauthorized"})
-	}
-
-	userId, err := parseUUID(userIdLocal.(string))
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"message": "Invalid session data"})
+	userId, ok := s.requireAuth(c)
+	if !ok {
+		return nil
 	}
 
 	var update db.UpdateUserProfileParams
