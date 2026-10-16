@@ -35,8 +35,9 @@ func NewProducer(brokers []string, auth ...AuthConfig) *Producer {
 	var transport kafkaGo.RoundTripper
 	if mechanism != nil || tlsConfig != nil {
 		transport = &kafkaGo.Transport{
-			TLS:  tlsConfig,
-			SASL: mechanism,
+			TLS:         tlsConfig,
+			SASL:        mechanism,
+			IdleTimeout: 30 * time.Second,
 		}
 	}
 
@@ -47,7 +48,7 @@ func NewProducer(brokers []string, auth ...AuthConfig) *Producer {
 		BatchTimeout:           10 * time.Millisecond,
 		BatchSize:              100,
 		MaxAttempts:            3,
-		WriteTimeout:           5 * time.Second,
+		WriteTimeout:           10 * time.Second,
 		RequiredAcks:           kafkaGo.RequireOne,
 		AllowAutoTopicCreation: true,
 	}

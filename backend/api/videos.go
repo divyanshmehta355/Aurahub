@@ -215,6 +215,8 @@ func (s *Server) GetVideoHandler(c *fiber.Ctx) error {
 		"commentCount":  detail.CommentCount,
 		"isLiked":       detail.IsLiked,
 		"isAdult":       detail.IsAdult.Bool,
+		"category":      detail.Category.String,
+		"tags":          detail.Tags,
 		"uploader": fiber.Map{
 			"id":               formatUUID(detail.UploaderID),
 			"username":         detail.UploaderUsername,
@@ -428,7 +430,7 @@ func (s *Server) RecordVideoViewHandler(c *fiber.Ctx) error {
 	if s.Kafka != nil {
 		videoIDStr := formatUUID(video.ID)
 		go func(vID, uID string) {
-			pubCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			pubCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancel()
 			_ = s.Kafka.Publish(pubCtx, kafka.TopicVideoViews, vID, kafka.VideoViewEvent{
 				VideoID:   vID,
@@ -585,6 +587,14 @@ func (s *Server) UpdateVideoHandler(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"message": "Update failed"})
 	}
 
+	// Sync with OpenSearch if enabled
+	s.indexVideoInOpenSearch(context.Background(), updated)
+
+	// Invalidate cache
+	if s.Cache != nil {
+		_ = s.Cache.FlushDB(context.Background()).Err()
+	}
+
 	return c.JSON(fiber.Map{
 		"id":          formatUUID(updated.ID),
 		"title":       updated.Title,
@@ -592,6 +602,7 @@ func (s *Server) UpdateVideoHandler(c *fiber.Ctx) error {
 		"visibility":  updated.Visibility.VideoVisibility,
 		"category":    updated.Category.String,
 		"tags":        updated.Tags,
+		"isAdult":     updated.IsAdult.Bool,
 	})
 }
 
