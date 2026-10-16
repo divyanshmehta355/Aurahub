@@ -200,7 +200,7 @@
 
 		isRunning = true;
 		abortFlag = false;
-		let targetPlaylistId = null;
+		let targetPlaylistId: string | null = null;
 
 		if (playlistOption === 'create_new') {
 			try {
@@ -348,8 +348,9 @@
 
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 			<div class="space-y-1.5">
-				<label class="text-sm font-medium">Add to Playlist</label>
+				<label for="add-to-playlist-select" class="text-sm font-medium">Add to Playlist</label>
 				<select
+					id="add-to-playlist-select"
 					bind:value={playlistOption}
 					onchange={() =>
 						(selectedPlaylistId =
@@ -370,8 +371,9 @@
 			</div>
 
 			<div class="space-y-1.5">
-				<label class="text-sm font-medium">Category</label>
+				<label for="upload-category-select" class="text-sm font-medium">Category</label>
 				<select
+					id="upload-category-select"
 					bind:value={category}
 					disabled={isRunning}
 					class="h-10 w-full rounded-md border bg-background px-3 text-sm"
@@ -398,8 +400,9 @@
 
 		{#if playlistOption === 'create_new'}
 			<div class="space-y-2 rounded-lg border bg-background p-4">
-				<label class="text-sm font-medium">New Playlist Name *</label>
+				<label for="new-playlist-name-input" class="text-sm font-medium">New Playlist Name *</label>
 				<input
+					id="new-playlist-name-input"
 					type="text"
 					bind:value={newPlaylistTitle}
 					disabled={isRunning}

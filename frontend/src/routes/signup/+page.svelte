@@ -41,8 +41,9 @@
 		const result = signupSchema.safeParse({ username, email, password });
 		if (!result.success) {
 			const errors: Record<string, string> = {};
-			for (const err of result.error.errors) {
-				if (err.path[0]) {
+			const issues = (result.error as any).issues || (result.error as any).errors || [];
+			for (const err of issues) {
+				if (err.path && err.path[0]) {
 					errors[err.path[0].toString()] = err.message;
 				}
 			}

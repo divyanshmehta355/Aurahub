@@ -30,7 +30,7 @@
 	function goToPage(p: number) {
 		const totalPages = query.data?.totalPages || 1;
 		if (p < 1 || p > totalPages) return;
-		const url = new URL(page.url);
+		const url = new URL(page.url.toString());
 		url.searchParams.set('page', p.toString());
 		goto(url.toString());
 	}
@@ -128,7 +128,7 @@
 		</div>
 	{:else}
 		<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-			{#each (query.data.videos || []).filter((v) => !v.isShort) as video}
+			{#each (query.data.videos || []).filter((v: any) => !v.isShort) as video}
 				<a href={`/watch/${video.fileId}`} class="group flex flex-col space-y-3">
 					<!-- Thumbnail -->
 					<VideoThumbnail

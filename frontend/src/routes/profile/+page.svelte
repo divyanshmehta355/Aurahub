@@ -23,6 +23,7 @@
 
 	// Security State
 	let email = $state(userState.user?.email || '');
+	let currentPassword = $state('');
 	let password = $state('');
 	let confirmPassword = $state('');
 
@@ -142,11 +143,22 @@
 	const saveSecurityMutation = createMutation(
 		() => ({
 			mutationFn: async () => {
-				if (password && password !== confirmPassword) {
-					throw new Error('Passwords do not match');
+				if (password) {
+					if (!currentPassword) {
+						throw new Error('Current password is required to set a new password');
+					}
+					if (password.length < 8) {
+						throw new Error('New password must be at least 8 characters');
+					}
+					if (password !== confirmPassword) {
+						throw new Error('Passwords do not match');
+					}
 				}
 				const body: any = { email };
-				if (password) body.password = password;
+				if (password) {
+					body.password = password;
+					body.currentPassword = currentPassword;
+				}
 
 				return await fetchApi('/user/security', {
 					method: 'PUT',
@@ -158,6 +170,7 @@
 					setUser({ ...userState.user, ...res, email });
 				}
 				message = { type: 'success', text: 'Security settings updated successfully!' };
+				currentPassword = '';
 				password = '';
 				confirmPassword = '';
 			},
@@ -410,6 +423,15 @@
 						>
 							Change Password
 						</h3>
+
+						<div class="space-y-1.5">
+							<Label>Current Password</Label>
+							<Input
+								type="password"
+								bind:value={currentPassword}
+								placeholder="Enter current password"
+							/>
+						</div>
 
 						<div class="space-y-1.5">
 							<Label>New Password (Optional)</Label>

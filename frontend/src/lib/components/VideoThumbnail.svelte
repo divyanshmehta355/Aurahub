@@ -2,7 +2,17 @@
 	import { getFallbackThumbnailUrl } from '#lib/thumbnailSvg';
 	import { fetchApi } from '#lib/api';
 
-	let { video, class: className = '', imgClass = '', children } = $props();
+	let {
+		video,
+		class: className = '',
+		imgClass = '',
+		children = undefined
+	}: {
+		video: any;
+		class?: string;
+		imgClass?: string;
+		children?: import('svelte').Snippet;
+	} = $props();
 
 	let fallbackUrl = $derived(
 		getFallbackThumbnailUrl(video.fileId || video.id, video.title, video.category)

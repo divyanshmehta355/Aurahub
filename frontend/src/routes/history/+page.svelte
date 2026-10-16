@@ -185,7 +185,7 @@
 							variant="ghost"
 							size="icon"
 							class="text-muted-foreground hover:text-destructive hover:bg-destructive/10 absolute top-0 right-0 h-8 w-8 opacity-100 transition-opacity group-hover:opacity-100 md:opacity-0"
-							onclick={(e) => handleDelete(e, video.id || video.fileId)}
+							onclick={(e: MouseEvent) => handleDelete(e, video.id || video.fileId)}
 							title="Remove from Watch History"
 						>
 							<Trash2 class="h-4 w-4" />

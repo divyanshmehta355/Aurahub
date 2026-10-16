@@ -1,6 +1,6 @@
 import { generateThumbnailSvg } from '#lib/thumbnailSvg';
 
-export async function GET({ params, url }) {
+export async function GET({ params, url }: { params: { seed: string }; url: URL }) {
 	const { seed } = params;
 	const title = url.searchParams.get('title') || '';
 	const category = url.searchParams.get('category') || '';

@@ -298,8 +298,9 @@
 		</div>
 
 		<!-- Content -->
-		<div
-			class="flex-1 min-w-0 cursor-pointer text-left"
+		<button
+			type="button"
+			class="flex-1 min-w-0 cursor-pointer text-left bg-transparent border-0 p-0"
 			onclick={() => handleNotificationClick(toastNotification)}
 		>
 			<p class="text-xs font-semibold text-foreground truncate">
@@ -328,7 +329,7 @@
 				</p>
 			{/if}
 			<span class="text-[10px] text-primary font-medium mt-1 inline-block">Just now &bull; Click to view</span>
-		</div>
+		</button>
 
 		<!-- Dismiss button -->
 		<button
@@ -449,6 +450,14 @@
 				{:else}
 					{#each filteredNotifications as n (n.id)}
 						<div
+							role="button"
+							tabindex="0"
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									handleNotificationClick(n);
+								}
+							}}
 							onclick={() => handleNotificationClick(n)}
 							class="group flex items-start gap-3 p-3.5 transition-colors cursor-pointer {n.isRead
 								? 'bg-card hover:bg-muted/40'

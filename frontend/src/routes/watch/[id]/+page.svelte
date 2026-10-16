@@ -720,7 +720,7 @@
 		{:else if suggestionsQuery.data}
 			<div class="flex flex-col gap-3">
 				{#each suggestionsQuery.data.pages as page}
-					{#each (page.videos || []).filter((v) => !v.isShort) as nextVideo}
+					{#each (page.videos || []).filter((v: any) => !v.isShort) as nextVideo}
 						<a
 							href={`/watch/${nextVideo.fileId || nextVideo.id}`}
 							class="group hover:bg-muted/50 -mx-2 flex items-start gap-3 rounded-xl p-2 transition-colors"

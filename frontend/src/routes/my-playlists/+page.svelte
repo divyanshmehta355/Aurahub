@@ -189,7 +189,7 @@
 								variant="ghost"
 								size="icon"
 								class="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8"
-								onclick={(e) => handleDelete(e, playlist.id)}
+								onclick={(e: MouseEvent) => handleDelete(e, playlist.id)}
 								title="Delete Playlist"
 							>
 								<Trash2 class="h-4 w-4" />
