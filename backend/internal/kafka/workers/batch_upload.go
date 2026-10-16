@@ -159,7 +159,7 @@ func processUploadJob(ctx context.Context, job kafka.BatchUploadJobEvent, repo *
 		UploaderID:       userUUID,
 		IsShort:          pgtype.Bool{Bool: job.IsShort, Valid: true},
 		IsAdult:          pgtype.Bool{Bool: job.IsAdult, Valid: true},
-		StreamtapeUrl:    pgtype.Text{String: "https://streamtape.com/v/" + finalVideoID + "/", Valid: true},
+		StreamtapeUrl:    pgtype.Text{String: "https://streamtape.com/e/" + finalVideoID + "/", Valid: true},
 		StreamtapeStatus: db.NullStreamtapeStatus{StreamtapeStatus: db.StreamtapeStatusActive, Valid: true},
 	})
 	if err != nil {

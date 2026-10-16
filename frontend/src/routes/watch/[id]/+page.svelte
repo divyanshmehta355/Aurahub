@@ -101,6 +101,21 @@
 		uploaderQuery.data?.isSubscribed ?? videoQuery.data?.uploader?.isSubscribed ?? false
 	);
 
+	let embedUrl = $derived.by(() => {
+		const data = videoQuery.data;
+		if (!data) return '';
+		const fileId =
+			data.fileId ||
+			data.streamtapeUrl?.match(/streamtape\.com\/(?:v|e)\/([A-Za-z0-9_-]+)/)?.[1];
+		if (fileId) {
+			return `https://streamtape.com/e/${fileId}/`;
+		}
+		if (data.streamtapeUrl) {
+			return data.streamtapeUrl.replace('streamtape.com/v/', 'streamtape.com/e/');
+		}
+		return '';
+	});
+
 	// Mutations
 	const likeMutation = createMutation(
 		() => ({
@@ -295,13 +310,13 @@
 							{/if}
 						</div>
 					</div>
-				{:else if videoQuery.data.streamtapeUrl}
+				{:else if embedUrl}
 					<iframe
-						src={videoQuery.data.streamtapeUrl}
+						src={embedUrl}
 						class="h-full w-full border-0"
 						allowfullscreen
 						allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-						title={videoQuery.data.title}
+						title={videoQuery.data?.title || 'Video player'}
 					></iframe>
 				{:else}
 					<div

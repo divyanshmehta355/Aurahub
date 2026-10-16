@@ -296,7 +296,7 @@ func (s *Server) CreateRecordHandler(c *fiber.Ctx) error {
 		UploaderID:       userId,
 		IsShort:          pgtype.Bool{Bool: isShort, Valid: true},
 		IsAdult:          pgtype.Bool{Bool: isAdult, Valid: true},
-		StreamtapeUrl:    pgtype.Text{String: "https://streamtape.com/v/" + videoId + "/", Valid: true},
+		StreamtapeUrl:    pgtype.Text{String: "https://streamtape.com/e/" + videoId + "/", Valid: true},
 		StreamtapeStatus: db.NullStreamtapeStatus{StreamtapeStatus: db.StreamtapeStatusActive, Valid: true},
 	})
 	if err != nil {

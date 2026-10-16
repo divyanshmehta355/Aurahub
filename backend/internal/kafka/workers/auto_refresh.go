@@ -179,7 +179,7 @@ func RefreshSingleVideo(ctx context.Context, repo *db.Repository, cache *redis.C
 		return fmt.Errorf("invalid new file ID received: %q", newFileID)
 	}
 
-	newStreamtapeURL := "https://streamtape.com/v/" + newFileID + "/"
+	newStreamtapeURL := "https://streamtape.com/e/" + newFileID + "/"
 
 	// Step 4: Atomically update database record
 	if err := repo.RefreshVideoFile(ctx, videoUUID, newFileID, newStreamtapeURL); err != nil {

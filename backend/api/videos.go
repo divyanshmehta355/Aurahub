@@ -193,12 +193,19 @@ func (s *Server) GetVideoHandler(c *fiber.Ctx) error {
 		return c.Status(403).JSON(fiber.Map{"message": "This video is private"})
 	}
 
+	streamtapeURL := detail.StreamtapeUrl.String
+	if detail.FileID != "" {
+		streamtapeURL = "https://streamtape.com/e/" + detail.FileID + "/"
+	} else if strings.Contains(streamtapeURL, "streamtape.com/v/") {
+		streamtapeURL = strings.Replace(streamtapeURL, "streamtape.com/v/", "streamtape.com/e/", 1)
+	}
+
 	return c.JSON(fiber.Map{
 		"id":            formatUUID(detail.ID),
 		"title":         detail.Title,
 		"description":   detail.Description.String,
 		"thumbnailUrl":  detail.ThumbnailUrl.String,
-		"streamtapeUrl": detail.StreamtapeUrl.String,
+		"streamtapeUrl": streamtapeURL,
 		"fileId":        detail.FileID,
 		"views":         detail.Views.Int32,
 		"createdAt":     detail.CreatedAt.Time,
