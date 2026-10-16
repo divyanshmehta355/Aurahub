@@ -274,7 +274,11 @@ func (s *Server) AdminUpdateVideoHandler(c *fiber.Ctx) error {
 
 	// Invalidate feed & search caches
 	if s.Cache != nil {
-		_ = s.Cache.FlushDB(ctx).Err()
+		s.InvalidateFeedCache(ctx)
+		_ = s.Cache.Del(ctx, "thumbnail:"+idStr, "stream:"+idStr).Err()
+		if video.FileID != "" {
+			_ = s.Cache.Del(ctx, "thumbnail:"+video.FileID, "stream:"+video.FileID).Err()
+		}
 	}
 
 	return c.JSON(fiber.Map{
@@ -320,7 +324,11 @@ func (s *Server) AdminDeleteVideoHandler(c *fiber.Ctx) error {
 
 	// Clear cache
 	if s.Cache != nil {
-		_ = s.Cache.FlushDB(ctx).Err()
+		s.InvalidateFeedCache(ctx)
+		_ = s.Cache.Del(ctx, "thumbnail:"+idStr, "stream:"+idStr).Err()
+		if video.FileID != "" {
+			_ = s.Cache.Del(ctx, "thumbnail:"+video.FileID, "stream:"+video.FileID).Err()
+		}
 	}
 
 	return c.JSON(fiber.Map{"message": "Video deleted successfully"})

@@ -99,6 +99,11 @@ func (s *Server) LoginHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Invalid request payload"})
 	}
 
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	if req.Email == "" || req.Password == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "Email and password are required"})
+	}
+
 	user, err := s.Repository.GetUserByEmail(context.Background(), req.Email)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Invalid credentials"})
@@ -191,12 +196,7 @@ func (s *Server) GetMeHandler(c *fiber.Ctx) error {
 }
 
 func isUserAdmin(user db.User) bool {
-	if user.IsAdmin.Valid && user.IsAdmin.Bool {
-		return true
-	}
-	u := strings.ToLower(user.Username)
-	e := strings.ToLower(user.Email)
-	return u == "admin" || strings.HasPrefix(u, "admin") || strings.Contains(e, "admin")
+	return user.IsAdmin.Valid && user.IsAdmin.Bool
 }
 
 func (s *Server) CheckEmailHandler(c *fiber.Ctx) error {

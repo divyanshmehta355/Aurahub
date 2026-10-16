@@ -211,6 +211,7 @@ func (s *Server) GetProfileHandler(c *fiber.Ctx) error {
 type FullProfileUpdateRequest struct {
 	Username         string  `json:"username"`
 	Email            string  `json:"email"`
+	CurrentPassword  string  `json:"currentPassword"`
 	Password         string  `json:"password"`
 	Avatar           string  `json:"avatar"`
 	Bio              *string `json:"bio"`
@@ -258,6 +259,19 @@ func (s *Server) UpdateProfileHandler(c *fiber.Ctx) error {
 		update.Email = pgtype.Text{String: email, Valid: true}
 	}
 	if req.Password != "" {
+		if len(req.Password) < 8 || len(req.Password) > 72 {
+			return c.Status(400).JSON(fiber.Map{"message": "New password must be between 8 and 72 characters"})
+		}
+		currentUser, err := s.Repository.GetUser(context.Background(), userId)
+		if err != nil {
+			return c.Status(404).JSON(fiber.Map{"message": "User not found"})
+		}
+		if strings.TrimSpace(req.CurrentPassword) == "" {
+			return c.Status(400).JSON(fiber.Map{"message": "Current password is required to change password"})
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(currentUser.Password), []byte(req.CurrentPassword)); err != nil {
+			return c.Status(401).JSON(fiber.Map{"message": "Incorrect current password"})
+		}
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), 10)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"message": "Failed to update password"})

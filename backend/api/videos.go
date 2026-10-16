@@ -592,7 +592,11 @@ func (s *Server) UpdateVideoHandler(c *fiber.Ctx) error {
 
 	// Invalidate cache
 	if s.Cache != nil {
-		_ = s.Cache.FlushDB(context.Background()).Err()
+		s.InvalidateFeedCache(context.Background())
+		_ = s.Cache.Del(context.Background(), "thumbnail:"+videoIdStr, "stream:"+videoIdStr).Err()
+		if updated.FileID != "" {
+			_ = s.Cache.Del(context.Background(), "thumbnail:"+updated.FileID, "stream:"+updated.FileID).Err()
+		}
 	}
 
 	return c.JSON(fiber.Map{
@@ -606,8 +610,22 @@ func (s *Server) UpdateVideoHandler(c *fiber.Ctx) error {
 	})
 }
 
-// TriggerRefreshExpiredHandler allows an admin/user to trigger a manual pass of the 28-day re-upload cycle.
+// TriggerRefreshExpiredHandler allows an admin to trigger a manual pass of the 28-day re-upload cycle.
 func (s *Server) TriggerRefreshExpiredHandler(c *fiber.Ctx) error {
+	userIdLocal := c.Locals("userId")
+	if userIdLocal == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})
+	}
+	userIdStr, _ := userIdLocal.(string)
+	userUUID, err := parseUUID(userIdStr)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Unauthorized"})
+	}
+	user, err := s.Repository.GetUser(context.Background(), userUUID)
+	if err != nil || !isUserAdmin(user) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"message": "Administrator privileges required"})
+	}
+
 	days := 28
 	if qDays := c.Query("days"); qDays != "" {
 		if d, err := strconv.Atoi(qDays); err == nil && d > 0 {

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -100,7 +99,13 @@ func (s *Server) UploadChunkHandler(c *fiber.Ctx) error {
 	}
 	defer file.Close()
 
-	destFile, err := os.OpenFile(uploadFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	openFlag := os.O_CREATE | os.O_WRONLY
+	if chunkIndex == 0 {
+		openFlag |= os.O_TRUNC
+	} else {
+		openFlag |= os.O_APPEND
+	}
+	destFile, err := os.OpenFile(uploadFilePath, openFlag, 0600)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Error writing chunk"})
 	}
@@ -134,36 +139,44 @@ func (s *Server) UploadChunkHandler(c *fiber.Ctx) error {
 			return c.Status(500).JSON(fiber.Map{"message": "Failed to get URL"})
 		}
 
-		body := &bytes.Buffer{}
-		writer := multipart.NewWriter(body)
-		part, err := writer.CreateFormFile("file", safeFileName)
-		if err != nil {
-			os.Remove(uploadFilePath)
-			return c.Status(500).JSON(fiber.Map{"message": "Failed to prepare upload"})
-		}
+		pipeReader, pipeWriter := io.Pipe()
+		multipartWriter := multipart.NewWriter(pipeWriter)
+		contentType := multipartWriter.FormDataContentType()
 
-		finalFile, err := os.Open(uploadFilePath)
-		if err != nil {
-			os.Remove(uploadFilePath)
-			return c.Status(500).JSON(fiber.Map{"message": "Failed to read completed upload"})
-		}
-		if _, err := io.Copy(part, finalFile); err != nil {
-			finalFile.Close()
-			os.Remove(uploadFilePath)
-			return c.Status(500).JSON(fiber.Map{"message": "Failed to prepare upload"})
-		}
-		finalFile.Close()
-		if err := writer.Close(); err != nil {
-			os.Remove(uploadFilePath)
-			return c.Status(500).JSON(fiber.Map{"message": "Failed to prepare upload"})
-		}
+		go func() {
+			defer pipeWriter.Close()
 
-		req, err := http.NewRequestWithContext(c.UserContext(), http.MethodPost, urlData.Url, body)
+			part, err := multipartWriter.CreateFormFile("file", safeFileName)
+			if err != nil {
+				_ = pipeWriter.CloseWithError(err)
+				return
+			}
+
+			finalFile, err := os.Open(uploadFilePath)
+			if err != nil {
+				_ = pipeWriter.CloseWithError(err)
+				return
+			}
+			defer finalFile.Close()
+
+			if _, err := io.Copy(part, finalFile); err != nil {
+				_ = pipeWriter.CloseWithError(err)
+				return
+			}
+
+			if err := multipartWriter.Close(); err != nil {
+				_ = pipeWriter.CloseWithError(err)
+				return
+			}
+		}()
+
+		req, err := http.NewRequestWithContext(c.UserContext(), http.MethodPost, urlData.Url, pipeReader)
 		if err != nil {
+			_ = pipeReader.Close()
 			os.Remove(uploadFilePath)
 			return c.Status(502).JSON(fiber.Map{"message": "Invalid upload URL"})
 		}
-		req.Header.Set("Content-Type", writer.FormDataContentType())
+		req.Header.Set("Content-Type", contentType)
 
 		uploadResp, err := httpclient.Upload.Do(req)
 		os.Remove(uploadFilePath)

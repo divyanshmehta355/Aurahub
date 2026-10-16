@@ -37,32 +37,59 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 
 	// Health check
 	api.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"status": "ok"})
+		status := "ok"
+		dbStatus := "disabled"
+		if s.Repository != nil {
+			if sqlDB, err := s.Repository.GetORM().DB(); err == nil {
+				if err := sqlDB.PingContext(c.UserContext()); err != nil {
+					return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+						"status": "degraded",
+						"error":  "database ping failed: " + err.Error(),
+					})
+				}
+				dbStatus = "connected"
+			}
+		}
+		cacheStatus := "disabled"
+		if s.Cache != nil {
+			if err := s.Cache.Ping(c.UserContext()).Err(); err != nil {
+				return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+					"status": "degraded",
+					"error":  "cache ping failed: " + err.Error(),
+				})
+			}
+			cacheStatus = "connected"
+		}
+		return c.JSON(fiber.Map{
+			"status":   status,
+			"database": dbStatus,
+			"cache":    cacheStatus,
+		})
 	})
 
 	// Media routes
 	app.Get("/api/avatar/:seed", s.AvatarHandler)
-	app.Post("/api/upload/avatar", s.AvatarUploadHandler)
+	app.Post("/api/upload/avatar", middleware.AuthRequired(), s.AvatarUploadHandler)
 	api.Get("/thumbnail/:seed", s.DynamicThumbnailHandler)
 
 	// Auth routes
 	auth := api.Group("/auth")
-	auth.Post("/register", s.RegisterHandler)
-	auth.Post("/login", s.LoginHandler)
+	auth.Post("/register", middleware.RegisterLimiter(), s.RegisterHandler)
+	auth.Post("/login", middleware.LoginLimiter(), s.LoginHandler)
 	auth.Post("/logout", s.LogoutHandler)
-	auth.Post("/check-email", s.CheckEmailHandler)
-	auth.Post("/check-username", s.CheckUsernameHandler)
+	auth.Post("/check-email", middleware.CheckAvailabilityLimiter(), s.CheckEmailHandler)
+	auth.Post("/check-username", middleware.CheckAvailabilityLimiter(), s.CheckUsernameHandler)
 	auth.Get("/me", middleware.AuthRequired(), s.GetMeHandler)
 
 	videos := api.Group("/videos")
 	videos.Get("/", s.ListVideosHandler)
-	videos.Get("/search", s.SearchVideosHandler)
+	videos.Get("/search", middleware.SearchLimiter(), s.SearchVideosHandler)
 	videos.Get("/recommendations", s.RecommendationsHandler)
 	videos.Get("/suggestions", s.SuggestionsHandler)
 	videos.Get("/stream/:id", s.StreamVideoHandler)
 	videos.Get("/remote-upload/status", s.RemoteUploadStatusHandler)
-	videos.Post("/remote-upload/start", middleware.AuthRequired(), s.RemoteUploadStartHandler)
-	videos.Post("/remote-upload/batch", middleware.AuthRequired(), s.BatchRemoteUploadHandler)
+	videos.Post("/remote-upload/start", middleware.AuthRequired(), middleware.RemoteUploadLimiter(), s.RemoteUploadStartHandler)
+	videos.Post("/remote-upload/batch", middleware.AuthRequired(), middleware.RemoteUploadLimiter(), s.BatchRemoteUploadHandler)
 	videos.Post("/refresh-expired", middleware.AuthRequired(), s.TriggerRefreshExpiredHandler)
 	videos.Put("/bulk", middleware.AuthRequired(), s.BulkUpdateVideoVisibilityHandler)
 	videos.Put("/bulk-adult", middleware.AuthRequired(), s.BulkUpdateVideoAdultHandler)
@@ -96,9 +123,9 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 	// Comments routes
 	comments := api.Group("/comments")
 	comments.Get("/:videoId", s.ListCommentsHandler)
-	comments.Post("/", middleware.AuthRequired(), s.CreateCommentHandler)
+	comments.Post("/", middleware.AuthRequired(), middleware.CommentsLimiter(), s.CreateCommentHandler)
 	comments.Get("/:id/replies", s.ListCommentRepliesHandler)
-	api.Get("/search/autocomplete", s.AutocompleteHandler)
+	api.Get("/search/autocomplete", middleware.SearchLimiter(), s.AutocompleteHandler)
 	comments.Put("/:id", middleware.AuthRequired(), s.UpdateCommentHandler)
 	comments.Delete("/:id", middleware.AuthRequired(), s.DeleteCommentHandler)
 

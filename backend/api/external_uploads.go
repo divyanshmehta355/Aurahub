@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -20,6 +21,54 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+func isProhibitedIP(ip net.IP) bool {
+	if ip == nil {
+		return true
+	}
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.String() == "169.254.169.254"
+}
+
+func validatePublicVideoURL(rawURL string) error {
+	trimmed := strings.TrimSpace(rawURL)
+	if trimmed == "" {
+		return fmt.Errorf("video URL is required")
+	}
+	parsed, err := url.Parse(trimmed)
+	if err != nil {
+		return fmt.Errorf("invalid video URL format")
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return fmt.Errorf("only HTTP and HTTPS URLs are permitted")
+	}
+	hostname := strings.ToLower(parsed.Hostname())
+	if hostname == "" {
+		return fmt.Errorf("URL host cannot be empty")
+	}
+	if hostname == "localhost" || strings.HasSuffix(hostname, ".local") || strings.HasSuffix(hostname, ".internal") {
+		return fmt.Errorf("target host is not allowed")
+	}
+
+	ip := net.ParseIP(hostname)
+	if ip != nil {
+		if isProhibitedIP(ip) {
+			return fmt.Errorf("private and local network targets are prohibited")
+		}
+	} else {
+		// Resolve hostname to protect against DNS rebinding / hostnames pointing to internal IPs
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		ips, err := net.DefaultResolver.LookupIP(ctx, "ip", hostname)
+		if err == nil {
+			for _, resolvedIP := range ips {
+				if isProhibitedIP(resolvedIP) {
+					return fmt.Errorf("private and local network targets are prohibited")
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func (s *Server) RemoteUploadStartHandler(c *fiber.Ctx) error {
 	var request struct {
 		VideoURL string `json:"videoUrl"`
@@ -27,11 +76,11 @@ func (s *Server) RemoteUploadStartHandler(c *fiber.Ctx) error {
 	if err := c.BodyParser(&request); err != nil {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid request payload"})
 	}
-	if strings.TrimSpace(request.VideoURL) == "" {
-		return c.Status(400).JSON(fiber.Map{"message": "Video URL is required"})
+	if err := validatePublicVideoURL(request.VideoURL); err != nil {
+		return c.Status(400).JSON(fiber.Map{"message": err.Error()})
 	}
 	query := url.Values{}
-	query.Set("url", request.VideoURL)
+	query.Set("url", strings.TrimSpace(request.VideoURL))
 	query.Set("folder", os.Getenv("UPLOAD_FOLDER_ID"))
 	response, err := requestAuraAPI(c.UserContext(), http.MethodGet, "/remote/add", query)
 	if err != nil {
@@ -202,7 +251,7 @@ func (s *Server) BatchRemoteUploadHandler(c *fiber.Ctx) error {
 	for _, item := range req.Items {
 		title := strings.TrimSpace(item.Title)
 		videoURL := strings.TrimSpace(item.VideoURL)
-		if title == "" || videoURL == "" {
+		if title == "" || videoURL == "" || validatePublicVideoURL(videoURL) != nil {
 			continue
 		}
 
