@@ -251,16 +251,17 @@
 									/>
 								</th>
 								<th class="p-3 font-medium">Video</th>
+								<th class="p-3 font-medium">Category & Tags</th>
 								<th class="p-3 font-medium">Visibility</th>
 								<th class="p-3 font-medium">Views</th>
 								<th class="p-3 font-medium">Date</th>
-								<th class="p-3"></th>
+								<th class="p-3 text-right font-medium">Actions</th>
 							</tr>
 						</thead>
 						<tbody>
 							{#if dashboardQuery.data.videos.length === 0}
 								<tr>
-									<td colspan="5" class="text-muted-foreground p-8 text-center text-base">
+									<td colspan="7" class="text-muted-foreground p-8 text-center text-base">
 										No videos uploaded yet.
 									</td>
 								</tr>
@@ -282,13 +283,36 @@
 												class="bg-muted h-10 w-16 shrink-0 rounded md:h-12 md:w-20"
 											/>
 											<div class="flex flex-col overflow-hidden">
-												<span class="line-clamp-1 text-sm font-medium md:text-base"
-													>{video.title}</span
-												>
+												<span class="line-clamp-1 text-sm font-semibold md:text-base text-foreground" title={video.title}>
+													{video.title}
+												</span>
 												<span class="text-muted-foreground text-[11px] md:text-xs">
 													{formatDuration(video.duration)}
 												</span>
 											</div>
+										</div>
+									</td>
+									<td class="p-3">
+										<div class="flex flex-col gap-1 max-w-[180px]">
+											<span class="text-xs font-semibold text-foreground">
+												{video.category || 'Other'}
+											</span>
+											{#if video.tags && video.tags.length > 0}
+												<div class="flex flex-wrap gap-1">
+													{#each video.tags.slice(0, 2) as tag}
+														<span class="rounded bg-primary/10 px-1.5 py-0.2 text-[10px] font-medium text-primary">
+															#{tag.replace(/^#+/, '')}
+														</span>
+													{/each}
+													{#if video.tags.length > 2}
+														<span class="text-[10px] text-muted-foreground">
+															+{video.tags.length - 2}
+														</span>
+													{/if}
+												</div>
+											{:else}
+												<span class="text-[11px] text-muted-foreground">No tags</span>
+											{/if}
 										</div>
 									</td>
 									<td class="p-3">
@@ -312,8 +336,15 @@
 										{new Date(video.createdAt || video.created_at || Date.now()).toLocaleDateString()}
 									</td>
 									<td class="p-3 text-right">
-										<Button variant="ghost" size="sm" onclick={() => openEditModal(video)}>
-											<Edit class="h-4 w-4" />
+										<Button
+											variant="outline"
+											size="sm"
+											class="h-8 gap-1.5 rounded-lg border-border/80 px-2.5 text-xs font-semibold hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
+											onclick={() => openEditModal(video)}
+											title="Edit video metadata"
+										>
+											<Edit class="h-3.5 w-3.5" />
+											<span>Edit</span>
 										</Button>
 									</td>
 								</tr>
