@@ -20,10 +20,15 @@ FROM alpine:latest
 
 WORKDIR /app
 
-RUN apk add --no-cache ca-certificates curl
+RUN apk add --no-cache ca-certificates curl && \
+    adduser -D -u 10001 -s /bin/sh appuser
 
 COPY --from=builder /app/aurahub-backend /app/aurahub-backend
 COPY --from=builder /app/db /app/db
+
+RUN chown -R appuser:appuser /app
+
+USER 10001
 
 EXPOSE 8080
 

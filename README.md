@@ -309,11 +309,13 @@ Open your browser to:
 |---|---|---|---|---|
 | **Frontend Web App** | `5173` | `5173` | - | [http://localhost:5173](http://localhost:5173) |
 | **Backend API** | `8080` | `8080` | - | [http://localhost:8080](http://localhost:8080) |
-| **Health Check** | `8080` | `8080` | - | [http://localhost:8080/api/health](http://localhost:8080/api/health) |
-| **PostgreSQL** | `5432` | `5432` | `aurahub` / `aurahub_secret` / db: `aurahub` | Relational database |
-| **Valkey (Redis)** | `6379` | `6379` | No password | Key-value cache |
-| **Kafka Broker** | `29092` | `9092` | PLAINTEXT | Event broker |
-| **OpenSearch** | `9200` | `9200` | Security disabled in dev | Full-text search engine |
+| **Health Check** | `8080` | `8080` | - | [http://localhost:8080/api/health](http://localhost:8080/api/health) (validates DB & cache) |
+| **PostgreSQL** | `127.0.0.1:5432` | `5432` | `aurahub` / `aurahub_secret` / db: `aurahub` | Relational database (bound to loopback) |
+| **Valkey (Redis)** | `127.0.0.1:6379` | `6379` | No password | Key-value cache (bound to loopback) |
+| **Kafka Broker** | `127.0.0.1:29092` | `9092` | PLAINTEXT | Event broker (bound to loopback) |
+| **OpenSearch** | `127.0.0.1:9200` | `9200` | Dev mode (bound to loopback) | Full-text search engine |
+
+> **Security Note**: Internal services (Postgres, Valkey, Kafka, OpenSearch) bind exclusively to `127.0.0.1` on the host to prevent accidental public exposure when deployed on cloud VMs or public IPs. Administrator status is managed directly and securely in PostgreSQL (`users.is_admin`).
 
 ---
 

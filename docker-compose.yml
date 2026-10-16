@@ -5,19 +5,24 @@ services:
     container_name: aurahub-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: aurahub
-      POSTGRES_PASSWORD: aurahub_secret
-      POSTGRES_DB: aurahub
+      POSTGRES_USER: ${POSTGRES_USER:-aurahub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aurahub_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-aurahub}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U aurahub -d aurahub"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aurahub} -d ${POSTGRES_DB:-aurahub}"]
       interval: 5s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1024M
 
   # 2. Valkey (Redis-compatible High-performance Cache)
   valkey:
@@ -25,7 +30,7 @@ services:
     container_name: aurahub-valkey
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - valkey_data:/data
     healthcheck:
@@ -33,6 +38,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
 
   # 3. Apache Kafka (KRaft mode - Zero Zookeeper)
   kafka:
@@ -41,7 +51,7 @@ services:
     restart: unless-stopped
     ports:
       - "9092:9092"
-      - "29092:29092"
+      - "127.0.0.1:29092:29092"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -64,6 +74,11 @@ services:
       timeout: 3s
       retries: 15
       start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1024M
 
   # One-shot topic initializer for Kafka
   kafka-init:
@@ -86,7 +101,7 @@ services:
     container_name: aurahub-opensearch
     restart: unless-stopped
     ports:
-      - "9200:9200"
+      - "127.0.0.1:9200:9200"
     environment:
       discovery.type: single-node
       DISABLE_SECURITY_PLUGIN: "true"
@@ -100,6 +115,11 @@ services:
       timeout: 5s
       retries: 15
       start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1536M
 
   # 5. Aurahub Backend API (Go Fiber)
   backend:
@@ -109,7 +129,7 @@ services:
     container_name: aurahub-backend
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${AURAHUB_PORT:-8080}:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -120,20 +140,27 @@ services:
       opensearch:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://aurahub:aurahub_secret@postgres:5432/aurahub?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:-aurahub}:${POSTGRES_PASSWORD:-aurahub_secret}@postgres:5432/${POSTGRES_DB:-aurahub}?sslmode=disable
       VALKEY_URL: redis://valkey:6379
       KAFKA_BROKERS: kafka:9092
       KAFKA_AUTH_METHOD: plain
       OPENSEARCH_URL: http://opensearch:9200
-      JWT_SECRET: super_secret_aurahub_local_demo_jwt_key_123456789
-      FRONTEND_ORIGINS: http://localhost:5173,http://localhost:3000,http://frontend:5173
+      JWT_SECRET: ${JWT_SECRET:-super_secret_aurahub_local_demo_jwt_key_123456789}
+      FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:5173,http://localhost:3000,http://frontend:5173}
       PORT: 8080
+      UPLOAD_FOLDER_ID: ${UPLOAD_FOLDER_ID:-}
+      FREEIMAGE_API_KEY: ${FREEIMAGE_API_KEY:-}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
       interval: 5s
       timeout: 3s
       retries: 5
       start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
 
   # 6. Aurahub Frontend (SvelteKit)
   frontend:
@@ -143,12 +170,17 @@ services:
     container_name: aurahub-frontend
     restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT:-5173}:5173"
     depends_on:
       backend:
         condition: service_healthy
     environment:
       VITE_BACKEND_URL: http://backend:8080
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
 
 volumes:
   postgres_data:
