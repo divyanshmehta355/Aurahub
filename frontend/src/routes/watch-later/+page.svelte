@@ -135,7 +135,7 @@
 				{@const video = item.video || item}
 				<a
 					href={`/watch/${video.fileId || video.id}`}
-					class="group hover:bg-muted/50 flex flex-col gap-3 rounded-xl transition-colors sm:flex-row sm:p-2 md:gap-4"
+					class="group hover:bg-muted/50 flex flex-col gap-3 rounded-xl transition-colors sm:flex-row sm:p-2 md:gap-4 min-w-0"
 				>
 					<!-- Thumbnail -->
 					<div class="w-full shrink-0 sm:w-64">
@@ -146,10 +146,11 @@
 						/>
 					</div>
 					<!-- Metadata -->
-					<div class="relative flex flex-1 flex-col px-1 py-1 sm:px-0">
-						<div class="pr-8">
+					<div class="relative flex flex-1 flex-col px-1 py-1 sm:px-0 min-w-0 overflow-hidden">
+						<div class="pr-8 min-w-0">
 							<h3
-								class="mb-1 line-clamp-2 text-base leading-tight font-semibold transition-colors group-hover:text-primary md:text-lg"
+								class="mb-1 line-clamp-2 text-base leading-tight font-semibold transition-colors group-hover:text-primary md:text-lg break-words [overflow-wrap:anywhere]"
+								title={video.title}
 							>
 								{video.title}
 							</h3>

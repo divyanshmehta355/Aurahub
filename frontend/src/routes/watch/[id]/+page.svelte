@@ -229,7 +229,7 @@
 	}`}
 >
 	<!-- Primary Column: Contains Player & Video Details/Comments -->
-	<div class={isTheaterMode ? 'contents' : 'space-y-6 lg:col-span-2'}>
+	<div class={isTheaterMode ? 'contents' : 'space-y-6 lg:col-span-2 min-w-0'}>
 		<!-- Video Player Section -->
 		<div
 			class={`transition-all duration-300 ${
@@ -392,7 +392,7 @@
 
 	<!-- Video Info & Comments Section -->
 	<div
-		class={`space-y-6 transition-all duration-300 ${
+		class={`space-y-6 transition-all duration-300 min-w-0 ${
 			isTheaterMode ? 'col-span-1 lg:col-span-2 lg:col-start-1 lg:row-start-2' : ''
 		}`}
 	>
@@ -406,9 +406,9 @@
 			</div>
 		{:else if videoQuery.data}
 			<!-- Video Info -->
-			<div class="space-y-4">
-				<div class="flex items-start gap-2">
-					<h1 class="text-2xl font-bold tracking-tight">{videoQuery.data.title}</h1>
+			<div class="space-y-4 min-w-0">
+				<div class="flex items-start gap-2 min-w-0">
+					<h1 class="text-xl sm:text-2xl font-bold tracking-tight break-words [overflow-wrap:anywhere] min-w-0 flex-1">{videoQuery.data.title}</h1>
 					{#if videoQuery.data.isAdult}
 						<span
 							class="mt-1 shrink-0 rounded bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-500"

@@ -277,13 +277,13 @@
 										/>
 									</td>
 									<td class="p-3">
-										<div class="flex min-w-[200px] items-center gap-3">
+										<div class="flex min-w-[200px] max-w-xs md:max-w-md items-center gap-3">
 											<VideoThumbnail
 												{video}
 												class="bg-muted h-10 w-16 shrink-0 rounded md:h-12 md:w-20"
 											/>
-											<div class="flex flex-col overflow-hidden">
-												<span class="line-clamp-1 text-sm font-semibold md:text-base text-foreground" title={video.title}>
+											<div class="flex flex-col overflow-hidden min-w-0 flex-1">
+												<span class="line-clamp-1 text-sm font-semibold md:text-base text-foreground break-words [overflow-wrap:anywhere] truncate" title={video.title}>
 													{video.title}
 												</span>
 												<span class="text-muted-foreground text-[11px] md:text-xs">

@@ -147,7 +147,7 @@
 			{#each playlistsQuery.data as playlist}
 				<a
 					href={`/playlist/${playlist.id}`}
-					class="group bg-card hover:bg-muted/50 flex flex-col overflow-hidden rounded-xl border shadow-sm transition-colors"
+					class="group bg-card hover:bg-muted/50 flex flex-col overflow-hidden rounded-xl border shadow-sm transition-colors min-w-0"
 				>
 					<div class="bg-muted relative aspect-video w-full overflow-hidden">
 						{#if playlist.thumbnail}
@@ -169,9 +169,10 @@
 							</span>
 						</div>
 					</div>
-					<div class="relative flex flex-1 flex-col p-3 md:p-4">
+					<div class="relative flex flex-1 flex-col p-3 md:p-4 min-w-0 overflow-hidden">
 						<h3
-							class="line-clamp-1 text-base font-semibold transition-colors group-hover:text-primary md:text-lg"
+							class="line-clamp-1 text-base font-semibold transition-colors group-hover:text-primary md:text-lg break-words [overflow-wrap:anywhere]"
+							title={playlist.title}
 						>
 							{playlist.title}
 						</h3>

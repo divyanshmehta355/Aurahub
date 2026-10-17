@@ -6,7 +6,7 @@
 	import { getFallbackThumbnailUrl } from '#lib/thumbnailSvg';
 	import VideoThumbnail from '#lib/components/VideoThumbnail.svelte';
 	import WatchLaterButton from '#lib/components/WatchLaterButton.svelte';
-	import { Clock, Play } from 'lucide-svelte';
+	import { Clock, Play, RotateCw } from 'lucide-svelte';
 	import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 	import { Skeleton } from '#lib/components/ui/skeleton';
 	import { Button } from '#lib/components/ui/button';
@@ -15,12 +15,26 @@
 
 	let currentPage = $derived(Number(page.url.searchParams.get('page')) || 1);
 	const limit = 12;
+	function generateSeed(): string {
+		return Math.random().toString(36).substring(2, 10);
+	}
+
+	let feedSeed = $state<string>(generateSeed());
+
+	function refreshFeed() {
+		feedSeed = generateSeed();
+		queryClient.invalidateQueries({ queryKey: ['videos'] });
+		if (currentPage !== 1) {
+			goToPage(1);
+		}
+	}
 
 	let query = createQuery(
 		() => ({
-			queryKey: ['videos', currentPage, limit, contentModeState.isAdult],
+			queryKey: ['videos', currentPage, limit, contentModeState.isAdult, feedSeed],
 			queryFn: async () => {
-				const res = await fetchApi(`/videos?type=standard&page=${currentPage}&limit=${limit}`);
+				const seedParam = feedSeed ? `&seed=${feedSeed}` : '';
+				const res = await fetchApi(`/videos?type=standard&page=${currentPage}&limit=${limit}&sort=recommended${seedParam}`);
 				return res;
 			}
 		}),
@@ -92,6 +106,17 @@
 				<span class="rounded bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 text-xs font-bold text-rose-500">18+</span>
 			{/if}
 		</div>
+
+		<Button
+			variant="outline"
+			size="sm"
+			class="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+			onclick={refreshFeed}
+			title="Shuffle and explore recommendations"
+		>
+			<RotateCw class="h-3.5 w-3.5 {query.isFetching ? 'animate-spin' : ''}" />
+			<span class="hidden sm:inline">Refresh Feed</span>
+		</Button>
 	</div>
 
 	{#if query.isPending}
@@ -129,7 +154,7 @@
 	{:else}
 		<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 			{#each (query.data.videos || []).filter((v: any) => !v.isShort) as video}
-				<a href={`/watch/${video.fileId}`} class="group flex flex-col space-y-3">
+				<a href={`/watch/${video.fileId}`} class="group flex flex-col space-y-3 min-w-0">
 					<!-- Thumbnail -->
 					<VideoThumbnail
 						{video}
@@ -139,16 +164,17 @@
 						<WatchLaterButton videoId={video.id} />
 					</VideoThumbnail>
 					<!-- Metadata -->
-					<div class="flex gap-3">
+					<div class="flex gap-3 min-w-0">
 						<img
 							src={video.uploader_avatar ||
 								`https://api.dicebear.com/7.x/identicon/svg?seed=${video.uploader_username}`}
 							alt={video.uploader_username}
 							class="bg-muted h-10 w-10 shrink-0 rounded-full object-cover"
 						/>
-						<div class="flex flex-col overflow-hidden">
+						<div class="flex flex-col overflow-hidden min-w-0 flex-1">
 							<h3
-								class="line-clamp-2 text-sm leading-tight font-semibold transition-colors group-hover:text-primary"
+								class="line-clamp-2 text-sm leading-tight font-semibold transition-colors group-hover:text-primary break-words [overflow-wrap:anywhere]"
+								title={video.title}
 							>
 								{video.title}
 							</h3>

@@ -107,7 +107,7 @@
 			{#each (subscriptionsQuery.data.videos || []).filter((v: any) => !v.isShort) as video}
 				<a
 					href={`/watch/${video.fileId || video.id}`}
-					class="group flex flex-col space-y-2 sm:space-y-3"
+					class="group flex flex-col space-y-2 sm:space-y-3 min-w-0"
 				>
 					<!-- Thumbnail -->
 					<VideoThumbnail
@@ -118,7 +118,7 @@
 						<WatchLaterButton videoId={video.id} />
 					</VideoThumbnail>
 					<!-- Metadata -->
-					<div class="flex gap-3 px-1">
+					<div class="flex gap-3 px-1 min-w-0">
 						<div class="h-8 w-8 shrink-0 overflow-hidden rounded-full sm:h-10 sm:w-10">
 							<img
 								src={video.uploader?.avatar ||
@@ -127,9 +127,9 @@
 								class="h-full w-full object-cover transition-transform group-hover:scale-110"
 							/>
 						</div>
-						<div class="flex flex-col">
+						<div class="flex flex-col min-w-0 flex-1 overflow-hidden">
 							<h3
-								class="line-clamp-2 text-sm leading-tight font-semibold transition-colors group-hover:text-primary sm:text-base"
+								class="line-clamp-2 text-sm leading-tight font-semibold transition-colors group-hover:text-primary sm:text-base break-words [overflow-wrap:anywhere]"
 								title={video.title}
 							>
 								{video.title}

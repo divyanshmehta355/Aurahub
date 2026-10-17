@@ -169,8 +169,87 @@ func (q *Repository) CountPublicVideos(ctx context.Context, category string, sho
 	return count, err
 }
 
-func (q *Repository) ListSuggestedVideos(ctx context.Context, excludeID pgtype.UUID, category string, tags []string, showAdult bool, limit, offset int32) ([]Video, error) {
-	score := "(CASE WHEN videos.category = ? AND ? <> '' THEN 20 ELSE 0 END + 15 * (SELECT COUNT(*) FROM unnest(videos.tags) AS video_tag WHERE video_tag = ANY(?::text[]))) DESC"
+func (q *Repository) ListRecommendedVideos(ctx context.Context, viewerUUID pgtype.UUID, category string, shortFilter pgtype.Bool, showAdult bool, seed string, limit, offset int32) ([]Video, error) {
+	if seed == "" {
+		seed = "default_seed"
+	}
+
+	query := q.orm.WithContext(ctx).Model(&Video{}).
+		Where("videos.visibility = ?", VideoVisibilityPublic)
+	if showAdult {
+		query = query.Where("videos.is_adult = ?", true)
+	} else {
+		query = query.Where("videos.is_adult = ?", false)
+	}
+	if category != "" {
+		query = query.Where("videos.category = ?", category)
+	}
+	if shortFilter.Valid {
+		query = query.Where("videos.is_short = ?", shortFilter.Bool)
+	}
+
+	// Dynamic Algorithmic Recommendation Engine (Non-AI):
+	// 1. Freshness Gravity: Exponential time-decay giving newly uploaded videos a discovery window
+	// 2. Engagement Momentum: Logarithmic views velocity
+	// 3. Controlled Exploration: Deterministic pseudo-random rotation per session seed
+	// 4. Soft Downranking of Watched Videos: De-prioritizes videos in user's watch history
+	// 5. Subscription Affinity: Prioritizes creators the viewer is subscribed to
+	scoreSQL := `(
+		(120.0 / POWER(GREATEST(0.1, EXTRACT(EPOCH FROM (NOW() - videos.created_at)) / 3600.0) + 2.0, 1.2))
+		+ (LEAST(35.0, LN(GREATEST(1, videos.views)::double precision + 1.0) * 4.0))
+		+ ((ABS(hashtext(videos.id::text || ?)) % 100) * 0.70)
+		+ (CASE WHEN ? AND EXISTS (
+			SELECT 1 FROM watch_history wh WHERE wh.video_id = videos.id AND wh.user_id = ?
+		) THEN -60.0 ELSE 0.0 END)
+		+ (CASE WHEN ? AND EXISTS (
+			SELECT 1 FROM subscriptions sub WHERE sub.subscribed_to_id = videos.uploader_id AND sub.subscriber_id = ?
+		) THEN 20.0 ELSE 0.0 END)
+	) DESC, videos.created_at DESC`
+
+	isLoggedIn := viewerUUID.Valid
+	var videos []Video
+	err := query.Clauses(clause.OrderBy{
+		Expression: clause.Expr{
+			SQL:  scoreSQL,
+			Vars: []interface{}{seed, isLoggedIn, viewerUUID, isLoggedIn, viewerUUID},
+		},
+	}).
+		Limit(int(limit)).
+		Offset(int(offset)).
+		Find(&videos).Error
+
+	return videos, err
+}
+
+func (q *Repository) ListSuggestedVideos(ctx context.Context, excludeID pgtype.UUID, uploaderID pgtype.UUID, viewerUUID pgtype.UUID, category string, tags []string, showAdult bool, seed string, limit, offset int32) ([]Video, error) {
+	if seed == "" {
+		seed = "default_seed"
+	}
+
+	hasCategory := category != ""
+	hasUploader := uploaderID.Valid
+	isLoggedIn := viewerUUID.Valid
+
+	// Algorithmic Up Next Recommendation Engine (Non-AI):
+	// 1. Topic & Category Relevance (+30 pts)
+	// 2. Shared Tag Overlap (+15 pts per matching tag)
+	// 3. Same Creator Affinity (+25 pts)
+	// 4. Freshness Time-Decay Gravity
+	// 5. Views Velocity Momentum
+	// 6. Session Exploration Rotation per seed
+	// 7. Soft Downranking of Watched Videos (-50 pts)
+	score := `(
+		(CASE WHEN ? AND videos.category = ? THEN 30.0 ELSE 0.0 END)
+		+ (15.0 * (SELECT COUNT(*) FROM unnest(videos.tags) AS video_tag WHERE video_tag = ANY(?::text[])))
+		+ (CASE WHEN ? AND videos.uploader_id = ? THEN 25.0 ELSE 0.0 END)
+		+ (100.0 / POWER(GREATEST(0.1, EXTRACT(EPOCH FROM (NOW() - videos.created_at)) / 3600.0) + 2.0, 1.2))
+		+ (LEAST(30.0, LN(GREATEST(1, videos.views)::double precision + 1.0) * 3.5))
+		+ ((ABS(hashtext(videos.id::text || ?)) % 100) * 0.60)
+		+ (CASE WHEN ? AND EXISTS (
+			SELECT 1 FROM watch_history wh WHERE wh.video_id = videos.id AND wh.user_id = ?
+		) THEN -50.0 ELSE 0.0 END)
+	) DESC, videos.views DESC, videos.created_at DESC`
+
 	var videos []Video
 	query := q.orm.WithContext(ctx).Model(&Video{}).
 		Where("videos.visibility = ? AND videos.id <> ? AND videos.is_short = ?", VideoVisibilityPublic, excludeID, false)
@@ -179,8 +258,19 @@ func (q *Repository) ListSuggestedVideos(ctx context.Context, excludeID pgtype.U
 	} else {
 		query = query.Where("videos.is_adult = ?", false)
 	}
-	err := query.Order(clause.Expr{SQL: score, Vars: []interface{}{category, category, tags}}).
-		Order("videos.views DESC, videos.created_at DESC").
+
+	err := query.Clauses(clause.OrderBy{
+		Expression: clause.Expr{
+			SQL: score,
+			Vars: []interface{}{
+				hasCategory, category,
+				tags,
+				hasUploader, uploaderID,
+				seed,
+				isLoggedIn, viewerUUID,
+			},
+		},
+	}).
 		Limit(int(limit)).Offset(int(offset)).Find(&videos).Error
 	return videos, err
 }

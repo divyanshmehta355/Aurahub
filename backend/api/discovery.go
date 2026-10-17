@@ -1,7 +1,7 @@
 package api
 
 import (
-	"context"
+	"time"
 
 	"github.com/divyanshmehta355/aurahub/backend/db"
 	"github.com/gofiber/fiber/v2"
@@ -9,7 +9,7 @@ import (
 )
 
 func (s *Server) RecommendationsHandler(c *fiber.Ctx) error {
-	page, limit := pageLimit(c, 8, 100)
+	page, limit := pageLimit(c, 12, 100)
 	category := c.Query("category")
 	if category == "All" {
 		category = ""
@@ -21,11 +21,28 @@ func (s *Server) RecommendationsHandler(c *fiber.Ctx) error {
 		shortFilter = pgtype.Bool{Bool: false, Valid: true}
 	}
 
-	ctx := context.Background()
+	ctx := c.UserContext()
 	showAdult := c.Query("adult") == "true"
-	videos, err := s.Repository.ListPublicVideos(ctx, category, shortFilter, showAdult, c.Query("sort", "random"), int32(limit), int32((page-1)*limit))
+	viewerUUID, _ := s.getOptionalUserID(c)
+	seed := c.Query("seed")
+	if seed == "" {
+		seed = time.Now().Format("2006-01-02-15")
+	}
+
+	if s.Repository == nil {
+		return c.JSON(fiber.Map{
+			"videos":           []fiber.Map{},
+			"currentPage":      page,
+			"totalPages":       0,
+			"totalVideos":      0,
+			"seed":             seed,
+			"isAiVectorSearch": false,
+		})
+	}
+
+	videos, err := s.Repository.ListRecommendedVideos(ctx, viewerUUID, category, shortFilter, showAdult, seed, int32(limit), int32((page-1)*limit))
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch videos"})
+		return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch recommendations"})
 	}
 	total, err := s.Repository.CountPublicVideos(ctx, category, shortFilter, showAdult)
 	if err != nil {
@@ -36,6 +53,7 @@ func (s *Server) RecommendationsHandler(c *fiber.Ctx) error {
 		"currentPage":      page,
 		"totalPages":       (total + int64(limit) - 1) / int64(limit),
 		"totalVideos":      total,
+		"seed":             seed,
 		"isAiVectorSearch": false,
 	})
 }
@@ -43,11 +61,26 @@ func (s *Server) RecommendationsHandler(c *fiber.Ctx) error {
 func (s *Server) SuggestionsHandler(c *fiber.Ctx) error {
 	page, limit := pageLimit(c, 10, 100)
 	offset := int32((page - 1) * limit)
-	ctx := context.Background()
+	ctx := c.UserContext()
 	showAdult := c.Query("adult") == "true"
+	viewerUUID, _ := s.getOptionalUserID(c)
+	seed := c.Query("seed")
+	if seed == "" {
+		seed = time.Now().Format("2006-01-02-15")
+	}
 	excludeID := pgtype.UUID{}
 	var videos []db.Video
 	var total int64
+
+	if s.Repository == nil {
+		return c.JSON(fiber.Map{
+			"videos":           []fiber.Map{},
+			"currentPage":      page,
+			"totalPages":       0,
+			"seed":             seed,
+			"isAiVectorSearch": false,
+		})
+	}
 
 	if exclude := c.Query("exclude"); exclude != "" {
 		current, err := s.Repository.GetVideoByFileId(ctx, exclude)
@@ -59,7 +92,7 @@ func (s *Server) SuggestionsHandler(c *fiber.Ctx) error {
 		if err == nil {
 			excludeID = current.ID
 			var queryErr error
-			videos, queryErr = s.Repository.ListSuggestedVideos(ctx, current.ID, current.Category.String, []string(current.Tags), showAdult, int32(limit), offset)
+			videos, queryErr = s.Repository.ListSuggestedVideos(ctx, current.ID, current.UploaderID, viewerUUID, current.Category.String, []string(current.Tags), showAdult, seed, int32(limit), offset)
 			if queryErr != nil {
 				return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch suggestions"})
 			}
@@ -72,7 +105,7 @@ func (s *Server) SuggestionsHandler(c *fiber.Ctx) error {
 
 	if !excludeID.Valid {
 		var queryErr error
-		videos, queryErr = s.Repository.ListPublicVideos(ctx, "", pgtype.Bool{Bool: false, Valid: true}, showAdult, "trending", int32(limit), offset)
+		videos, queryErr = s.Repository.ListRecommendedVideos(ctx, viewerUUID, "", pgtype.Bool{Bool: false, Valid: true}, showAdult, seed, int32(limit), offset)
 		if queryErr != nil {
 			return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch suggestions"})
 		}
@@ -86,6 +119,7 @@ func (s *Server) SuggestionsHandler(c *fiber.Ctx) error {
 		"videos":           toVideoSummaries(videos),
 		"currentPage":      page,
 		"totalPages":       (total + int64(limit) - 1) / int64(limit),
+		"seed":             seed,
 		"isAiVectorSearch": false,
 	})
 }

@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { Play, Loader2 } from 'lucide-svelte';
+	import { Play, Loader2, RotateCw } from 'lucide-svelte';
 	import VideoThumbnail from '#lib/components/VideoThumbnail.svelte';
 	import WatchLaterButton from '#lib/components/WatchLaterButton.svelte';
 	import { Skeleton } from '#lib/components/ui/skeleton';
+	import { Button } from '#lib/components/ui/button';
 	import { fetchApi } from '#lib/api';
 	import { contentModeState } from '#lib/consent.svelte';
 	import { createQuery, createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
@@ -18,6 +19,17 @@
 	} = $props();
 
 	const queryClient = useQueryClient();
+
+	function generateSeed(): string {
+		return Math.random().toString(36).substring(2, 10);
+	}
+
+	let sidebarSeed = $state<string>(generateSeed());
+
+	function refreshSuggestions() {
+		sidebarSeed = generateSeed();
+		queryClient.invalidateQueries({ queryKey: ['suggestions', videoId] });
+	}
 
 	const playlistQuery = createQuery(
 		() => ({
@@ -35,10 +47,10 @@
 
 	const suggestionsQuery = createInfiniteQuery(
 		() => ({
-			queryKey: ['suggestions', videoId, contentModeState.isAdult],
+			queryKey: ['suggestions', videoId, contentModeState.isAdult, sidebarSeed],
 			queryFn: async ({ pageParam = 1 }) => {
 				const res = await fetchApi(
-					`/videos/suggestions?exclude=${videoId}&limit=10&page=${pageParam}`
+					`/videos/suggestions?exclude=${videoId}&limit=10&page=${pageParam}&seed=${sidebarSeed}`
 				);
 				return res;
 			},
@@ -87,16 +99,16 @@
 </script>
 
 <div
-	class={`col-span-1 flex h-full flex-col space-y-4 transition-all duration-300 ${
+	class={`col-span-1 flex h-full flex-col space-y-4 transition-all duration-300 min-w-0 ${
 		isTheaterMode ? 'lg:col-span-1 lg:col-start-3 lg:row-start-2' : 'lg:col-span-1'
 	}`}
 >
 	{#if playlistQuery.isPending && playlistId}
 		<Skeleton class="h-64 rounded-xl" />
 	{:else if playlistQuery.data && playlistQuery.data.videos}
-		<div class="bg-card flex max-h-[500px] flex-col rounded-xl border shadow-sm">
-			<div class="bg-secondary/30 border-b p-4">
-				<h3 class="line-clamp-1 text-lg font-bold">{playlistQuery.data.title}</h3>
+		<div class="bg-card flex max-h-[500px] flex-col rounded-xl border shadow-sm min-w-0">
+			<div class="bg-secondary/30 border-b p-4 min-w-0">
+				<h3 class="line-clamp-1 text-lg font-bold break-words [overflow-wrap:anywhere]">{playlistQuery.data.title}</h3>
 				<p class="text-muted-foreground mt-1 text-xs">
 					{playlistQuery.data.owner?.username || 'Playlist'} - {playlistQuery.data.videos.findIndex(
 						(v: any) => v.fileId === videoId || v.id === videoId
@@ -107,7 +119,7 @@
 				{#each playlistQuery.data.videos as pv, i}
 					<a
 						href={`/watch/${pv.fileId || pv.id}?list=${playlistId}`}
-						class={`hover:bg-muted/50 flex gap-3 p-3 transition-colors ${pv.fileId === videoId || pv.id === videoId ? 'border-primary bg-secondary/50 border-l-2' : ''}`}
+						class={`hover:bg-muted/50 flex gap-3 p-3 transition-colors min-w-0 ${pv.fileId === videoId || pv.id === videoId ? 'border-primary bg-secondary/50 border-l-2' : ''}`}
 					>
 						<div
 							class="text-muted-foreground flex w-5 shrink-0 items-center justify-center text-xs"
@@ -119,9 +131,9 @@
 							{/if}
 						</div>
 						<VideoThumbnail video={pv} class="h-[72px] w-32 shrink-0 rounded-md" />
-						<div class="flex flex-1 flex-col justify-start overflow-hidden">
+						<div class="flex flex-1 flex-col justify-start overflow-hidden min-w-0">
 							<h4
-								class={`line-clamp-2 text-sm leading-tight font-semibold ${pv.fileId === videoId || pv.id === videoId ? 'text-primary' : ''}`}
+								class={`line-clamp-2 text-sm leading-tight font-semibold break-words [overflow-wrap:anywhere] ${pv.fileId === videoId || pv.id === videoId ? 'text-primary' : ''}`}
 							>
 								{pv.title}
 							</h4>
@@ -135,7 +147,18 @@
 		</div>
 	{/if}
 
-	<h3 class="mt-2 text-lg font-semibold">Up Next</h3>
+	<div class="mt-2 flex items-center justify-between">
+		<h3 class="text-lg font-semibold">Up Next</h3>
+		<Button
+			variant="ghost"
+			size="sm"
+			class="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+			onclick={refreshSuggestions}
+			title="Shuffle Up Next recommendations"
+		>
+			<RotateCw class="h-3.5 w-3.5 {suggestionsQuery.isFetching ? 'animate-spin' : ''}" />
+		</Button>
+	</div>
 
 	{#if suggestionsQuery.isPending}
 		<div class="flex flex-col gap-4">
@@ -165,9 +188,9 @@
 								<WatchLaterButton videoId={nextVideo.id} />
 							</VideoThumbnail>
 						</div>
-						<div class="flex flex-1 flex-col py-0.5">
+						<div class="flex flex-1 flex-col py-0.5 min-w-0 overflow-hidden">
 							<h4
-								class="line-clamp-2 text-sm leading-tight font-medium transition-colors group-hover:text-primary"
+								class="line-clamp-2 text-sm leading-tight font-medium transition-colors group-hover:text-primary break-words [overflow-wrap:anywhere]"
 								title={nextVideo.title}
 							>
 								{nextVideo.title}

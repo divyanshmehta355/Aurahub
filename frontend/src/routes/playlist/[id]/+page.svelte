@@ -259,7 +259,7 @@
 					<div class="flex flex-col gap-2 md:gap-3">
 						{#each playlistQuery.data.videos as video, i}
 							<div
-								class="group hover:bg-muted/50 relative flex items-center gap-2 rounded-xl border border-transparent p-2 transition-colors hover:border-border md:gap-4 md:p-3"
+								class="group hover:bg-muted/50 relative flex items-center gap-2 rounded-xl border border-transparent p-2 transition-colors hover:border-border md:gap-4 md:p-3 min-w-0"
 							>
 								<span
 									class="text-muted-foreground w-4 text-center text-xs font-medium md:w-6 md:text-sm"
@@ -268,7 +268,7 @@
 
 								<a
 									href={`/watch/${video.fileId || video.id}?list=${playlistQuery.data.id}`}
-									class="flex flex-1 flex-row gap-3 overflow-hidden md:gap-4"
+									class="flex flex-1 flex-row gap-3 overflow-hidden md:gap-4 min-w-0"
 								>
 									<div class="w-32 shrink-0 md:w-40">
 										<VideoThumbnail {video} class="aspect-video rounded-md md:rounded-lg">
@@ -279,9 +279,10 @@
 											</div>
 										</VideoThumbnail>
 									</div>
-									<div class="flex flex-col justify-center overflow-hidden py-1 pr-6 md:pr-0">
+									<div class="flex flex-col justify-center overflow-hidden py-1 pr-6 md:pr-0 min-w-0 flex-1">
 										<h3
-											class="line-clamp-2 text-sm leading-tight font-semibold transition-colors group-hover:text-primary md:text-base"
+											class="line-clamp-2 text-sm leading-tight font-semibold transition-colors group-hover:text-primary md:text-base break-words [overflow-wrap:anywhere]"
+											title={video.title}
 										>
 											{video.title}
 										</h3>

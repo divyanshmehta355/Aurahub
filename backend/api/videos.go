@@ -110,18 +110,39 @@ func (s *Server) ListVideosHandler(c *fiber.Ctx) error {
 		category = ""
 	}
 	videoType := c.Query("type", "video")
-	sortType := c.Query("sort", "trending")
+	sortType := c.Query("sort", "recommended")
 
-	cacheKey := fmt.Sprintf("feed:videos:cat=%s:type=%s:adult=%t:sort=%s:p=%d:l=%d",
-		category, videoType, showAdult, sortType, page, limit)
+	viewerUUID, _ := s.getOptionalUserID(c)
+	viewerStr := "anon"
+	if viewerUUID.Valid {
+		viewerStr = formatUUID(viewerUUID)
+	}
 
-	// Microcache first 2 pages for 60 seconds
+	seed := c.Query("seed")
+	if seed == "" {
+		seed = time.Now().Format("2006-01-02-15")
+	}
+
+	cacheKey := fmt.Sprintf("feed:videos:u=%s:s=%s:cat=%s:type=%s:adult=%t:sort=%s:p=%d:l=%d",
+		viewerStr, seed, category, videoType, showAdult, sortType, page, limit)
+
+	// Microcache first 2 pages for 30 seconds to provide smooth pagination while preserving variety
 	if s.Cache != nil && page <= 2 {
 		if cached, err := s.Cache.Get(c.UserContext(), cacheKey).Result(); err == nil && cached != "" {
 			c.Set("Content-Type", "application/json")
 			c.Set("X-Cache", "HIT")
 			return c.SendString(cached)
 		}
+	}
+
+	if s.Repository == nil {
+		return c.JSON(fiber.Map{
+			"videos":      []fiber.Map{},
+			"currentPage": page,
+			"totalPages":  0,
+			"totalVideos": 0,
+			"seed":        seed,
+		})
 	}
 
 	var shortFilter pgtype.Bool
@@ -131,11 +152,21 @@ func (s *Server) ListVideosHandler(c *fiber.Ctx) error {
 		// Default to standard videos only; shorts are only served to the shorts section
 		shortFilter = pgtype.Bool{Bool: false, Valid: true}
 	}
-	videos, err := s.Repository.ListPublicVideos(context.Background(), category, shortFilter, showAdult, sortType, int32(limit), int32((page-1)*limit))
+
+	ctx := c.UserContext()
+	var videos []db.Video
+	var err error
+
+	if sortType == "recommended" {
+		videos, err = s.Repository.ListRecommendedVideos(ctx, viewerUUID, category, shortFilter, showAdult, seed, int32(limit), int32((page-1)*limit))
+	} else {
+		videos, err = s.Repository.ListPublicVideos(ctx, category, shortFilter, showAdult, sortType, int32(limit), int32((page-1)*limit))
+	}
+
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to fetch videos"})
 	}
-	total, err := s.Repository.CountPublicVideos(context.Background(), category, shortFilter, showAdult)
+	total, err := s.Repository.CountPublicVideos(ctx, category, shortFilter, showAdult)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Failed to count videos"})
 	}
@@ -163,6 +194,7 @@ func (s *Server) ListVideosHandler(c *fiber.Ctx) error {
 		"limit":       limit,
 		"totalVideos": total,
 		"totalPages":  (total + int64(limit) - 1) / int64(limit),
+		"seed":        seed,
 	}
 
 	if s.Cache != nil && page <= 2 {

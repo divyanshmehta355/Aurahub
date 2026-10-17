@@ -105,7 +105,7 @@
 			{#each searchQuery.data.videos.filter((v: any) => !v.isShort) as video}
 				<a
 					href={`/watch/${video.fileId || video.id}`}
-					class="hover:bg-muted/50 group flex flex-col gap-3 rounded-xl transition-colors sm:flex-row sm:p-2 md:gap-4"
+					class="hover:bg-muted/50 group flex flex-col gap-3 rounded-xl transition-colors sm:flex-row sm:p-2 md:gap-4 min-w-0"
 				>
 					<!-- Thumbnail -->
 					<div class="w-full shrink-0 sm:w-80">
@@ -118,9 +118,10 @@
 						</VideoThumbnail>
 					</div>
 					<!-- Metadata -->
-					<div class="flex flex-1 flex-col px-1 py-1 sm:px-0">
+					<div class="flex flex-1 flex-col px-1 py-1 sm:px-0 min-w-0 overflow-hidden">
 						<h3
-							class="line-clamp-2 text-base leading-tight font-semibold transition-colors group-hover:text-primary md:text-lg mb-1"
+							class="line-clamp-2 text-base leading-tight font-semibold transition-colors group-hover:text-primary md:text-lg mb-1 break-words [overflow-wrap:anywhere]"
+							title={video.title}
 						>
 							{video.title}
 						</h3>

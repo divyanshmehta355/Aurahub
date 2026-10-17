@@ -125,7 +125,7 @@
 				<div
 					class="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pb-20 md:pb-4"
 				>
-					<div class="pointer-events-auto flex-1 pr-12">
+					<div class="pointer-events-auto flex-1 pr-12 min-w-0">
 						<a href={`/profile/${short.uploader?.username}`} class="mb-3 flex items-center gap-2">
 							<img
 								src={short.uploader?.avatar ||
@@ -139,7 +139,8 @@
 						</a>
 						<a href={`/watch/${short.fileId || short.id}`}>
 							<h3
-								class="mb-1 line-clamp-2 text-sm font-medium text-white drop-shadow-md md:text-base"
+								class="mb-1 line-clamp-2 text-sm font-medium text-white drop-shadow-md md:text-base break-words [overflow-wrap:anywhere]"
+								title={short.title}
 							>
 								{short.title}
 							</h3>

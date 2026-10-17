@@ -116,10 +116,10 @@ func (s *Server) SetupRoutes(app *fiber.App) {
 	auth.Get("/me", middleware.AuthRequired(), s.GetMeHandler)
 
 	videos := api.Group("/videos")
-	videos.Get("/", s.ListVideosHandler)
+	videos.Get("/", middleware.OptionalAuth(), s.ListVideosHandler)
 	videos.Get("/search", middleware.SearchLimiter(), s.SearchVideosHandler)
-	videos.Get("/recommendations", s.RecommendationsHandler)
-	videos.Get("/suggestions", s.SuggestionsHandler)
+	videos.Get("/recommendations", middleware.OptionalAuth(), s.RecommendationsHandler)
+	videos.Get("/suggestions", middleware.OptionalAuth(), s.SuggestionsHandler)
 	videos.Get("/stream/:id", middleware.OptionalAuth(), s.ResolveAdminStatus(), s.EnforceKillSwitch(SwitchFreezeStreaming), s.StreamVideoHandler)
 	videos.Get("/remote-upload/status", s.RemoteUploadStatusHandler)
 	videos.Post("/remote-upload/start", middleware.AuthRequired(), s.ResolveAdminStatus(), s.EnforceKillSwitch(SwitchFreezeUploads), middleware.RemoteUploadLimiter(), s.RemoteUploadStartHandler)

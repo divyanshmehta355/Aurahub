@@ -183,7 +183,7 @@
 			>
 				{#if profileQuery.data.videos && profileQuery.data.videos.length > 0}
 					{#each profileQuery.data.videos.filter((v: any) => !v.isShort) as video}
-						<a href={`/watch/${video.fileId || video.id}`} class="group flex flex-col space-y-3">
+						<a href={`/watch/${video.fileId || video.id}`} class="group flex flex-col space-y-3 min-w-0">
 							<!-- Thumbnail -->
 							<VideoThumbnail
 								{video}
@@ -198,10 +198,11 @@
 							</VideoThumbnail>
 
 							<!-- Metadata -->
-							<div class="flex gap-3">
-								<div class="flex flex-col overflow-hidden">
+							<div class="flex gap-3 min-w-0">
+								<div class="flex flex-col overflow-hidden min-w-0 flex-1">
 									<h3
-										class="line-clamp-2 text-sm leading-tight font-semibold transition-colors group-hover:text-primary"
+										class="line-clamp-2 text-sm leading-tight font-semibold transition-colors group-hover:text-primary break-words [overflow-wrap:anywhere]"
+										title={video.title}
 									>
 										{video.title}
 									</h3>
