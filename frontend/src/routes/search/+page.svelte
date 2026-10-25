@@ -50,102 +50,108 @@
 	<title>{queryStr ? `${queryStr} - Search` : 'Search'} - Aurahub</title>
 </svelte:head>
 
-<div class="space-y-4 px-4 md:space-y-6 md:px-0">
-	<div class="border-b pt-2 pb-4 md:pt-0">
-		<h1 class="text-xl font-bold tracking-tight md:text-2xl">
+<div class="space-y-6 px-4 md:space-y-8 md:px-0 max-w-5xl">
+	<div class="border-b border-border/50 pb-4">
+		<h1 class="text-xl font-bold tracking-tight text-foreground md:text-2xl">
 			{#if queryStr}
-				Results for "{queryStr}"
+				Search results for <span class="text-primary font-semibold">"{queryStr}"</span>
 			{:else}
-				Search Videos
+				Explore Aurahub
 			{/if}
 		</h1>
+		{#if queryStr && searchQuery.data}
+			<p class="text-xs text-muted-silver mt-1">Found {searchQuery.data.videos?.length || 0} matching releases</p>
+		{/if}
 	</div>
 
 	{#if searchQuery.isPending && queryStr}
-		<div class="flex max-w-4xl flex-col gap-4">
+		<div class="flex flex-col gap-4">
 			{#each Array(5) as _}
-				<div class="flex animate-pulse flex-col gap-4 sm:flex-row">
-					<Skeleton class="aspect-video w-full shrink-0 rounded-xl sm:w-80" />
+				<div class="flex animate-pulse flex-col gap-4 sm:flex-row p-3 rounded-2xl bg-card/40 border border-border/40">
+					<Skeleton class="aspect-video w-full shrink-0 rounded-2xl sm:w-72" />
 					<div class="flex-1 space-y-3 py-2">
-						<Skeleton class="h-6 w-3/4 rounded" />
-						<Skeleton class="h-4 w-1/4 rounded" />
+						<Skeleton class="h-5 w-3/4 rounded-lg" />
+						<Skeleton class="h-3 w-1/4 rounded-lg" />
 						<div class="mt-4 flex items-center gap-3">
-							<Skeleton class="h-8 w-8 rounded-full" />
-							<Skeleton class="h-4 w-1/3 rounded" />
+							<Skeleton class="h-7 w-7 rounded-full" />
+							<Skeleton class="h-3 w-1/3 rounded-lg" />
 						</div>
 					</div>
 				</div>
 			{/each}
 		</div>
 	{:else if searchQuery.isError}
-		<div class="flex flex-col items-center justify-center py-12 text-center">
-			<div class="bg-destructive/10 text-destructive rounded-xl p-4">
-				<p>{searchQuery.error.message || 'Failed to search videos.'}</p>
-				<Button variant="outline" class="mt-4" onclick={() => searchQuery.refetch()}
+		<div class="flex flex-col items-center justify-center py-16 text-center">
+			<div class="bg-destructive/10 border border-destructive/20 text-destructive rounded-2xl p-6 max-w-md">
+				<p class="font-medium text-sm">{searchQuery.error.message || 'Failed to search videos.'}</p>
+				<Button variant="outline" class="mt-4 rounded-full" onclick={() => searchQuery.refetch()}
 					>Try again</Button
 				>
 			</div>
 		</div>
 	{:else if !queryStr || searchQuery.data?.videos.length === 0}
 		<div
-			class="border-muted-foreground/20 mx-4 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-16 text-center md:mx-0 md:py-24"
+			class="border-border/60 bg-card/40 mx-4 flex flex-col items-center justify-center rounded-3xl border-2 border-dashed py-20 text-center md:mx-0"
 		>
-			<SearchIcon class="text-muted-foreground mb-4 h-12 w-12 opacity-50" />
-			<h2 class="mb-2 text-lg font-semibold md:text-xl">No results found</h2>
-			<p class="text-muted-foreground max-w-sm px-4 text-sm md:text-base">
+			<div class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary border border-border/80 text-primary">
+				<SearchIcon class="h-7 w-7 opacity-75" />
+			</div>
+			<h2 class="mb-2 text-lg font-bold text-foreground md:text-xl">No matching releases found</h2>
+			<p class="text-muted-foreground max-w-sm px-4 text-xs sm:text-sm">
 				{#if queryStr}
-					Try different keywords or check spelling.
+					Try adjusting your keywords, searching for a creator name, or checking for typos.
 				{:else}
-					Enter a search term above to find videos.
+					Enter a title, topic, or creator name above to discover cinema.
 				{/if}
 			</p>
 		</div>
 	{:else if searchQuery.data}
-		<div class="flex max-w-4xl flex-col gap-6 md:gap-4">
+		<div class="flex flex-col gap-4">
 			{#each searchQuery.data.videos.filter((v: any) => !v.isShort) as video}
 				<a
 					href={`/watch/${video.fileId || video.id}`}
-					class="hover:bg-muted/50 group flex flex-col gap-3 rounded-xl transition-colors sm:flex-row sm:p-2 md:gap-4 min-w-0"
+					class="group hover:bg-card flex flex-col gap-4 rounded-2xl p-3 border border-transparent hover:border-border/70 hover:shadow-sm transition-all sm:flex-row min-w-0"
 				>
 					<!-- Thumbnail -->
-					<div class="w-full shrink-0 sm:w-80">
+					<div class="w-full shrink-0 sm:w-72 overflow-hidden rounded-xl border border-border/60 bg-card">
 						<VideoThumbnail
 							{video}
-							class="aspect-video rounded-xl sm:rounded-lg"
-							imgClass="transition-transform duration-300 group-hover:scale-105"
+							class="aspect-video w-full rounded-xl"
+							imgClass="transition-transform duration-500 ease-out group-hover:scale-105"
 						>
 							<WatchLaterButton videoId={video.id} />
 						</VideoThumbnail>
 					</div>
+
 					<!-- Metadata -->
-					<div class="flex flex-1 flex-col px-1 py-1 sm:px-0 min-w-0 overflow-hidden">
+					<div class="flex flex-1 flex-col py-0.5 min-w-0 overflow-hidden justify-center">
 						<h3
-							class="line-clamp-2 text-base leading-tight font-semibold transition-colors group-hover:text-primary md:text-lg mb-1 break-words [overflow-wrap:anywhere]"
+							class="line-clamp-2 text-base leading-snug font-bold text-foreground transition-colors group-hover:text-primary mb-1 break-words [overflow-wrap:anywhere]"
 							title={video.title}
 						>
 							{video.title}
 						</h3>
-						<div class="text-muted-foreground mb-3 text-[11px] md:text-xs lg:text-sm">
+						<div class="text-muted-silver mb-2.5 text-xs flex items-center gap-1.5">
 							<span>{video.views || 0} views</span>
-							<span class="mx-1">•</span>
+							<span>•</span>
 							<span>{formatTimeAgo(video.created_at || video.createdAt)}</span>
 						</div>
 
-						<div class="mb-2 flex items-center gap-2 md:mb-3 md:gap-3">
+						<div class="mb-2 flex items-center gap-2.5">
 							<img
 								src={video.uploader_avatar ||
 									video.uploader?.avatar ||
 									`https://api.dicebear.com/7.x/identicon/svg?seed=${video.uploader_username || video.uploader?.username}`}
 								alt={video.uploader_username || video.uploader?.username}
-								class="bg-muted h-6 w-6 rounded-full object-cover md:h-8 md:w-8"
+								class="h-6 w-6 rounded-full border border-border/80 object-cover"
 							/>
-							<p class="text-[13px] font-medium transition-colors hover:text-primary md:text-sm">
-								{video.uploader_username || video.uploader?.username}
+							<p class="text-xs font-semibold text-foreground transition-colors hover:text-primary">
+								@{video.uploader_username || video.uploader?.username}
 							</p>
 						</div>
 
 						{#if video.description}
-							<p class="text-muted-foreground line-clamp-1 text-[11px] md:line-clamp-2 md:text-xs">
+							<p class="text-muted-foreground line-clamp-2 text-xs leading-relaxed">
 								{video.description}
 							</p>
 						{/if}

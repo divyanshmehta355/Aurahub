@@ -14,14 +14,14 @@ function fnv1a(str: string) {
 }
 
 const PALETTES = [
-	{ from: '#4338ca', to: '#6d28d9', accent: '#a78bfa', name: 'Indigo Purple' },
-	{ from: '#0f172a', to: '#1e1b4b', accent: '#818cf8', name: 'Midnight Nebula' },
-	{ from: '#065f46', to: '#0f766e', accent: '#34d399', name: 'Emerald Teal' },
-	{ from: '#be123c', to: '#7e22ce', accent: '#fb7185', name: 'Crimson Violet' },
-	{ from: '#0369a1', to: '#1d4ed8', accent: '#38bdf8', name: 'Oceanic Blue' },
-	{ from: '#b45309', to: '#b91c1c', accent: '#fbbf24', name: 'Sunset Amber' },
-	{ from: '#18181b', to: '#27272a', accent: '#a5b4fc', name: 'Carbon Slate' },
-	{ from: '#581c87', to: '#831843', accent: '#f472b6', name: 'Neon Cyber' }
+	{ from: '#11131b', to: '#1b1e29', accent: '#b9a7f5', name: 'Midnight Ink' },
+	{ from: '#161426', to: '#241e3d', accent: '#c9bcf8', name: 'Lavender Noir' },
+	{ from: '#0e111a', to: '#1c2236', accent: '#a5b4fc', name: 'Cinema Indigo' },
+	{ from: '#0f1717', to: '#182b2b', accent: '#5eead4', name: 'Emerald Slate' },
+	{ from: '#191216', to: '#311d27', accent: '#f472b6', name: 'Velvet Rose' },
+	{ from: '#1c1511', to: '#33231b', accent: '#fbbf24', name: 'Amber Glow' },
+	{ from: '#131418', to: '#242733', accent: '#e2e8f0', name: 'Graphite Silver' },
+	{ from: '#181528', to: '#2c2248', accent: '#d8b4fe', name: 'Radiant Aura' }
 ];
 
 function escapeXml(unsafe: string) {

@@ -70,36 +70,43 @@
 </svelte:head>
 
 <div class="space-y-4 px-4 md:space-y-6 md:px-0">
-	<div class="flex items-center justify-between border-b pt-2 pb-4 md:pt-0">
+	<div class="flex items-center justify-between border-b border-slate-border/60 pt-2 pb-4 md:pt-0">
 		<div class="flex items-center gap-3">
-			<ListVideo class="h-6 w-6 text-primary" />
-			<h1 class="text-xl font-bold tracking-tight md:text-2xl">My Playlists</h1>
+			<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-aura-lavender/10 text-aura-lavender">
+				<ListVideo class="h-5 w-5" />
+			</div>
+			<div>
+				<h1 class="text-xl font-bold tracking-tight text-soft-ivory md:text-2xl font-serif">My Playlists</h1>
+				<p class="text-xs text-muted-silver md:text-sm">Organize and curate your favorite content collections</p>
+			</div>
 		</div>
-		<Button size="sm" class="rounded-full" onclick={() => (isCreating = !isCreating)}>
-			<Plus class="mr-2 h-4 w-4" /> New Playlist
+		<Button size="sm" class="rounded-full bg-aura-lavender text-midnight-ink font-semibold hover:bg-aura-lavender/90 shadow-sm" onclick={() => (isCreating = !isCreating)}>
+			<Plus class="mr-1.5 h-4 w-4" /> New Playlist
 		</Button>
 	</div>
 
 	{#if isCreating}
-		<div class="bg-card animate-in slide-in-from-top-2 rounded-xl border p-4 shadow-sm">
-			<h3 class="mb-3 font-semibold">Create New Playlist</h3>
+		<div class="animate-in slide-in-from-top-2 rounded-2xl border border-slate-border/80 bg-deep-slate p-5 shadow-xl">
+			<h3 class="mb-3 font-semibold text-soft-ivory">Create New Playlist</h3>
 			<div class="flex flex-col gap-3 sm:flex-row">
 				<Input
 					type="text"
 					bind:value={newPlaylistName}
 					placeholder="Playlist title"
-					class="flex-1"
+					class="flex-1 rounded-xl border-slate-border/80 bg-midnight-ink/60 text-soft-ivory placeholder:text-muted-silver/50 focus-visible:ring-aura-lavender"
 					disabled={createPlaylistMutation.isPending}
 				/>
 				<div class="flex justify-end gap-2">
 					<Button
 						variant="outline"
+						class="rounded-xl border-slate-border text-muted-silver hover:bg-slate-elevated hover:text-soft-ivory"
 						onclick={() => (isCreating = false)}
 						disabled={createPlaylistMutation.isPending}
 					>
 						Cancel
 					</Button>
 					<Button
+						class="rounded-xl bg-aura-lavender text-midnight-ink font-semibold hover:bg-aura-lavender/90"
 						onclick={handleCreate}
 						disabled={!newPlaylistName.trim() || createPlaylistMutation.isPending}
 					>
@@ -113,32 +120,34 @@
 	{#if playlistsQuery.isPending}
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
 			{#each Array(4) as _}
-				<div class="flex animate-pulse flex-col space-y-3">
-					<Skeleton class="aspect-video w-full rounded-xl" />
-					<Skeleton class="h-5 w-3/4 rounded" />
-					<Skeleton class="h-4 w-1/2 rounded" />
+				<div class="flex animate-pulse flex-col space-y-3 rounded-2xl border border-slate-border/30 bg-deep-slate/30 p-3">
+					<Skeleton class="aspect-video w-full rounded-xl bg-slate-elevated" />
+					<Skeleton class="h-5 w-3/4 rounded-lg bg-slate-elevated" />
+					<Skeleton class="h-4 w-1/2 rounded-lg bg-slate-elevated" />
 				</div>
 			{/each}
 		</div>
 	{:else if playlistsQuery.isError}
 		<div class="flex flex-col items-center justify-center py-12 text-center">
-			<div class="bg-destructive/10 text-destructive rounded-xl p-4">
+			<div class="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive">
 				<p>{playlistsQuery.error.message || 'Failed to load playlists.'}</p>
-				<Button variant="outline" class="mt-4" onclick={() => playlistsQuery.refetch()}
+				<Button variant="outline" class="mt-4 rounded-full border-destructive/40" onclick={() => playlistsQuery.refetch()}
 					>Try again</Button
 				>
 			</div>
 		</div>
 	{:else if !playlistsQuery.data || playlistsQuery.data.length === 0}
 		<div
-			class="border-muted-foreground/20 mx-4 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-16 text-center md:mx-0 md:py-24"
+			class="mx-4 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-border/80 bg-deep-slate/20 py-16 text-center md:mx-0 md:py-24"
 		>
-			<ListVideo class="text-muted-foreground mb-4 h-12 w-12 opacity-50" />
-			<h2 class="mb-2 text-lg font-semibold md:text-xl">No playlists yet</h2>
-			<p class="text-muted-foreground max-w-sm px-4 text-sm md:text-base">
+			<div class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-deep-slate text-muted-silver">
+				<ListVideo class="h-7 w-7 opacity-60" />
+			</div>
+			<h2 class="mb-2 text-lg font-bold text-soft-ivory md:text-xl">No playlists yet</h2>
+			<p class="max-w-sm px-4 text-sm text-muted-silver md:text-base">
 				Create a playlist to organize and share your favorite videos.
 			</p>
-			<Button variant="default" class="mt-6 rounded-full" onclick={() => (isCreating = true)}>
+			<Button variant="default" class="mt-6 rounded-full bg-aura-lavender text-midnight-ink font-semibold hover:bg-aura-lavender/90 shadow-md shadow-aura-lavender/20" onclick={() => (isCreating = true)}>
 				<Plus class="mr-2 h-4 w-4" /> Create Playlist
 			</Button>
 		</div>
@@ -147,9 +156,9 @@
 			{#each playlistsQuery.data as playlist}
 				<a
 					href={`/playlist/${playlist.id}`}
-					class="group bg-card hover:bg-muted/50 flex flex-col overflow-hidden rounded-xl border shadow-sm transition-colors min-w-0"
+					class="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-border/40 bg-deep-slate/30 p-2.5 transition-all hover:border-aura-lavender/40 hover:bg-deep-slate/80 shadow-md min-w-0"
 				>
-					<div class="bg-muted relative aspect-video w-full overflow-hidden">
+					<div class="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-elevated">
 						{#if playlist.thumbnail}
 							<img
 								src={playlist.thumbnail}
@@ -157,39 +166,41 @@
 								class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
 							/>
 						{:else}
-							<div class="flex h-full w-full items-center justify-center">
-								<ListVideo class="text-muted-foreground/30 h-12 w-12" />
+							<div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-deep-slate to-slate-elevated">
+								<ListVideo class="h-10 w-10 text-muted-silver/40" />
 							</div>
 						{/if}
 						<div
-							class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 backdrop-blur-[2px] transition-opacity group-hover:opacity-100"
+							class="absolute inset-0 flex items-center justify-center bg-midnight-ink/60 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"
 						>
-							<span class="flex items-center gap-2 font-medium text-white drop-shadow-md">
-								<ListVideo class="h-5 w-5" /> View Full Playlist
+							<span class="flex items-center gap-2 text-xs font-semibold text-soft-ivory drop-shadow-md">
+								<ListVideo class="h-4 w-4 text-aura-lavender" /> View Full Playlist
 							</span>
 						</div>
 					</div>
-					<div class="relative flex flex-1 flex-col p-3 md:p-4 min-w-0 overflow-hidden">
+					<div class="relative flex flex-1 flex-col p-2 pt-3 min-w-0 overflow-hidden">
 						<h3
-							class="line-clamp-1 text-base font-semibold transition-colors group-hover:text-primary md:text-lg break-words [overflow-wrap:anywhere]"
+							class="line-clamp-1 text-base font-semibold text-soft-ivory transition-colors group-hover:text-aura-lavender md:text-lg break-words [overflow-wrap:anywhere]"
 							title={playlist.title}
 						>
 							{playlist.title}
 						</h3>
-						<p class="text-muted-foreground mt-1 text-xs md:text-sm">
+						<p class="mt-1 text-xs text-muted-silver md:text-sm">
 							{playlist.videoCount || playlist.videos?.length || 0} videos
 						</p>
-						<div class="text-muted-foreground mt-2 text-[11px] md:text-xs">
-							{playlist.visibility === 'private' ? 'Private' : 'Public'}
+						<div class="mt-2 flex items-center gap-2">
+							<span class="rounded-full border border-slate-border/60 bg-slate-elevated px-2 py-0.5 text-[10px] font-semibold text-muted-silver">
+								{playlist.visibility === 'private' ? 'Private' : 'Public'}
+							</span>
 						</div>
 
 						<div
-							class="absolute top-3 right-3 flex gap-1 opacity-100 transition-opacity group-hover:opacity-100 md:opacity-0"
+							class="absolute top-3 right-2 flex gap-1 opacity-100 transition-opacity group-hover:opacity-100 md:opacity-0"
 						>
 							<Button
 								variant="ghost"
 								size="icon"
-								class="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8"
+								class="h-8 w-8 rounded-full text-muted-silver hover:bg-destructive/10 hover:text-destructive"
 								onclick={(e: MouseEvent) => handleDelete(e, playlist.id)}
 								title="Delete Playlist"
 							>

@@ -22,7 +22,7 @@
 
 <button
 	onclick={toggleTheme}
-	class="relative flex items-center justify-center rounded-full p-2 text-text-muted transition-colors hover:bg-black/5 hover:text-text-main dark:hover:bg-white/5"
+	class="relative flex items-center justify-center rounded-full p-2 text-muted-silver transition-colors hover:bg-deep-slate hover:text-soft-ivory"
 	aria-label="Toggle theme"
 >
 	{#if isDark}

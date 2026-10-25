@@ -49,13 +49,20 @@
 			isActive = false;
 		};
 	});
+	let isLoaded = $state(false);
 </script>
 
-<div class="bg-muted relative overflow-hidden {className}">
+<div class="relative overflow-hidden bg-slate-surface border border-slate-border/50 {className}">
 	{#if isFetching}
-		<div class="bg-muted h-full w-full animate-pulse"></div>
+		<div class="h-full w-full bg-slate-elevated/60 animate-pulse"></div>
 	{:else}
-		<img src={imageUrl} alt={video.title} class="h-full w-full object-cover {imgClass}" />
+		<img
+			src={imageUrl}
+			alt={video.title}
+			loading="lazy"
+			onload={() => (isLoaded = true)}
+			class="h-full w-full object-cover transition-all duration-300 {isLoaded ? 'opacity-100' : 'opacity-80'} {imgClass}"
+		/>
 	{/if}
 
 	{@render children?.()}

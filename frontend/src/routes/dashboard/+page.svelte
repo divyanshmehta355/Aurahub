@@ -141,20 +141,20 @@
 
 <div class="mx-auto max-w-6xl space-y-6 px-4 py-4 md:px-6 md:py-6">
 	<div
-		class="flex flex-col justify-between gap-4 border-b pb-4 md:flex-row md:items-end md:border-0 md:pb-0"
+		class="flex flex-col justify-between gap-4 border-b border-slate-border/60 pb-4 md:flex-row md:items-end md:border-0 md:pb-0"
 	>
 		<div>
-			<h1 class="text-2xl font-bold tracking-tight md:text-3xl">Creator Studio</h1>
-			<p class="text-muted-foreground mt-1 text-sm md:text-base">
-				Manage your videos and upload content.
+			<h1 class="text-2xl font-bold tracking-tight text-soft-ivory md:text-3xl font-serif">Creator Studio</h1>
+			<p class="mt-1 text-xs text-muted-silver md:text-sm">
+				Manage your video catalog, metadata, and visibility settings.
 			</p>
 		</div>
 		<div class="flex items-center gap-2 md:gap-3">
-			<Button variant="outline" href="/analytics" class="flex-1 md:flex-none">
-				<BarChart class="mr-2 h-4 w-4" />
+			<Button variant="outline" href="/analytics" class="flex-1 md:flex-none rounded-full border-slate-border text-soft-ivory hover:bg-slate-elevated">
+				<BarChart class="mr-2 h-4 w-4 text-aura-lavender" />
 				Analytics
 			</Button>
-			<Button href="/upload" class="flex-1 md:flex-none">
+			<Button href="/upload" class="flex-1 md:flex-none rounded-full bg-aura-lavender text-midnight-ink font-bold hover:bg-aura-lavender/90 shadow-md shadow-aura-lavender/20">
 				<Upload class="mr-2 h-4 w-4" />
 				Upload Video
 			</Button>
@@ -165,14 +165,14 @@
 		{#if dashboardQuery.isPending}
 			<div class="space-y-4">
 				{#each Array(5) as _}
-					<Skeleton class="h-16 w-full rounded-lg" />
+					<Skeleton class="h-16 w-full rounded-2xl bg-deep-slate/40" />
 				{/each}
 			</div>
 		{:else if dashboardQuery.isError}
 			<div class="flex flex-col items-center justify-center py-12 text-center">
-				<div class="bg-destructive/10 text-destructive rounded-xl p-4">
+				<div class="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive">
 					<p>{dashboardQuery.error.message || 'Failed to load dashboard data.'}</p>
-					<Button variant="outline" class="mt-4" onclick={() => dashboardQuery.refetch()}
+					<Button variant="outline" class="mt-4 rounded-full border-destructive/40" onclick={() => dashboardQuery.refetch()}
 						>Try again</Button
 					>
 				</div>
@@ -180,55 +180,58 @@
 		{:else}
 			<div class="space-y-4">
 				{#if selectedVideos.size > 0}
-					<div class="bg-muted/50 flex flex-wrap items-center gap-3 rounded-lg border p-3 md:gap-4">
-						<span class="text-sm font-medium">{selectedVideos.size} selected</span>
-						<div class="hidden h-4 w-[1px] bg-border md:block"></div>
+					<div class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-border/80 bg-deep-slate/90 p-3.5 backdrop-blur-xl shadow-lg md:gap-4">
+						<span class="text-xs font-bold text-soft-ivory">{selectedVideos.size} selected</span>
+						<div class="hidden h-4 w-[1px] bg-slate-border md:block"></div>
 						<div class="flex flex-wrap items-center w-full gap-2 md:w-auto">
 							<Button
-								variant="secondary"
+								variant="outline"
 								size="sm"
+								class="rounded-full border-slate-border text-xs text-soft-ivory hover:bg-slate-elevated"
 								onclick={() => handleBulkVisibility('public')}
 								disabled={bulkVisibilityMutation.isPending || bulkAdultMutation.isPending}
 							>
 								Make Public
 							</Button>
 							<Button
-								variant="secondary"
+								variant="outline"
 								size="sm"
+								class="rounded-full border-slate-border text-xs text-soft-ivory hover:bg-slate-elevated"
 								onclick={() => handleBulkVisibility('private')}
 								disabled={bulkVisibilityMutation.isPending || bulkAdultMutation.isPending}
 							>
 								Make Private
 							</Button>
 
-							<div class="hidden h-4 w-[1px] bg-border md:block"></div>
+							<div class="hidden h-4 w-[1px] bg-slate-border md:block"></div>
 
 							<Button
 								variant="outline"
 								size="sm"
-								class="border-destructive/40 text-destructive hover:bg-destructive/10"
+								class="rounded-full border-destructive/40 text-xs text-destructive hover:bg-destructive/10"
 								onclick={() => handleBulkAdult(true)}
 								disabled={bulkVisibilityMutation.isPending || bulkAdultMutation.isPending}
 							>
 								Mark as 18+
 							</Button>
 							<Button
-								variant="secondary"
+								variant="outline"
 								size="sm"
+								class="rounded-full border-slate-border text-xs text-soft-ivory hover:bg-slate-elevated"
 								onclick={() => handleBulkAdult(false)}
 								disabled={bulkVisibilityMutation.isPending || bulkAdultMutation.isPending}
 							>
-								Mark as General
+								Mark General
 							</Button>
 
 							<Button
 								variant="destructive"
 								size="sm"
-								class="md:ml-auto"
+								class="rounded-full text-xs md:ml-auto"
 								onclick={handleBulkDelete}
 								disabled={bulkDeleteMutation.isPending}
 							>
-								<Trash2 class="h-4 w-4 md:mr-2" />
+								<Trash2 class="h-3.5 w-3.5 md:mr-1.5" />
 								<span class="hidden md:inline">Delete</span>
 							</Button>
 						</div>
@@ -236,42 +239,42 @@
 				{/if}
 
 				<div
-					class="bg-card w-[calc(100vw-2rem)] overflow-x-auto rounded-lg border shadow-sm md:w-full"
+					class="w-[calc(100vw-2rem)] overflow-x-auto rounded-3xl border border-slate-border/70 bg-deep-slate/40 shadow-xl backdrop-blur-xl md:w-full"
 				>
 					<table class="w-full text-left text-sm whitespace-nowrap md:whitespace-normal">
-						<thead class="bg-muted/50 text-muted-foreground border-b">
+						<thead class="bg-midnight-ink/60 text-muted-silver border-b border-slate-border/60 text-xs font-semibold">
 							<tr>
-								<th class="w-12 p-3 text-center">
+								<th class="w-12 p-3.5 text-center">
 									<input
 										type="checkbox"
-										class="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+										class="h-4 w-4 rounded border-slate-border/80 text-aura-lavender focus:ring-aura-lavender bg-midnight-ink"
 										checked={dashboardQuery.data.videos.length > 0 &&
 											selectedVideos.size === dashboardQuery.data.videos.length}
 										onchange={toggleAll}
 									/>
 								</th>
-								<th class="p-3 font-medium">Video</th>
-								<th class="p-3 font-medium">Category & Tags</th>
-								<th class="p-3 font-medium">Visibility</th>
-								<th class="p-3 font-medium">Views</th>
-								<th class="p-3 font-medium">Date</th>
-								<th class="p-3 text-right font-medium">Actions</th>
+								<th class="p-3.5 font-medium">Video</th>
+								<th class="p-3.5 font-medium">Category & Tags</th>
+								<th class="p-3.5 font-medium">Visibility</th>
+								<th class="p-3.5 font-medium">Views</th>
+								<th class="p-3.5 font-medium">Date</th>
+								<th class="p-3.5 text-right font-medium">Actions</th>
 							</tr>
 						</thead>
-						<tbody>
+						<tbody class="divide-y divide-slate-border/30">
 							{#if dashboardQuery.data.videos.length === 0}
 								<tr>
-									<td colspan="7" class="text-muted-foreground p-8 text-center text-base">
+									<td colspan="7" class="p-8 text-center text-base text-muted-silver">
 										No videos uploaded yet.
 									</td>
 								</tr>
 							{/if}
 							{#each dashboardQuery.data.videos as video}
-								<tr class="hover:bg-muted/30 border-b transition-colors last:border-0">
+								<tr class="hover:bg-slate-elevated/40 transition-colors">
 									<td class="p-3 text-center">
 										<input
 											type="checkbox"
-											class="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+											class="h-4 w-4 rounded border-slate-border/80 text-aura-lavender focus:ring-aura-lavender bg-midnight-ink"
 											checked={selectedVideos.has(video.id)}
 											onchange={() => toggleSelection(video.id)}
 										/>
@@ -280,13 +283,13 @@
 										<div class="flex min-w-[200px] max-w-xs md:max-w-md items-center gap-3">
 											<VideoThumbnail
 												{video}
-												class="bg-muted h-10 w-16 shrink-0 rounded md:h-12 md:w-20"
+												class="h-10 w-16 shrink-0 rounded-xl overflow-hidden border border-slate-border/40 md:h-12 md:w-20"
 											/>
 											<div class="flex flex-col overflow-hidden min-w-0 flex-1">
-												<span class="line-clamp-1 text-sm font-semibold md:text-base text-foreground break-words [overflow-wrap:anywhere] truncate" title={video.title}>
+												<span class="line-clamp-1 text-sm font-semibold md:text-base text-soft-ivory break-words [overflow-wrap:anywhere] truncate" title={video.title}>
 													{video.title}
 												</span>
-												<span class="text-muted-foreground text-[11px] md:text-xs">
+												<span class="text-muted-silver/70 text-[11px] font-mono md:text-xs">
 													{formatDuration(video.duration)}
 												</span>
 											</div>
@@ -294,52 +297,52 @@
 									</td>
 									<td class="p-3">
 										<div class="flex flex-col gap-1 max-w-[180px]">
-											<span class="text-xs font-semibold text-foreground">
+											<span class="text-xs font-semibold text-soft-ivory">
 												{video.category || 'Other'}
 											</span>
 											{#if video.tags && video.tags.length > 0}
 												<div class="flex flex-wrap gap-1">
 													{#each video.tags.slice(0, 2) as tag}
-														<span class="rounded bg-primary/10 px-1.5 py-0.2 text-[10px] font-medium text-primary">
+														<span class="rounded-md border border-aura-lavender/30 bg-aura-lavender/10 px-1.5 py-0.5 text-[10px] font-semibold text-aura-lavender">
 															#{tag.replace(/^#+/, '')}
 														</span>
 													{/each}
 													{#if video.tags.length > 2}
-														<span class="text-[10px] text-muted-foreground">
+														<span class="text-[10px] text-muted-silver">
 															+{video.tags.length - 2}
 														</span>
 													{/if}
 												</div>
 											{:else}
-												<span class="text-[11px] text-muted-foreground">No tags</span>
+												<span class="text-[11px] text-muted-silver/60">No tags</span>
 											{/if}
 										</div>
 									</td>
 									<td class="p-3">
 										<div class="flex flex-wrap items-center gap-1.5">
 											<span
-												class="bg-secondary text-secondary-foreground inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium"
+												class="inline-flex items-center rounded-full border border-slate-border/80 bg-slate-elevated px-2 py-0.5 text-xs font-medium text-soft-ivory"
 											>
 												{video.visibility || 'public'}
 											</span>
 											{#if video.isAdult}
 												<span
-													class="inline-flex items-center rounded-md border border-destructive/20 bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold text-destructive"
+													class="inline-flex items-center rounded-full border border-destructive/30 bg-destructive/15 px-2 py-0.5 text-[10px] font-semibold text-destructive"
 												>
 													18+ Adult
 												</span>
 											{/if}
 										</div>
 									</td>
-									<td class="text-muted-foreground p-3">{video.views || 0}</td>
-									<td class="text-muted-foreground p-3 text-xs md:text-sm">
+									<td class="p-3 font-mono text-muted-silver text-xs">{video.views || 0}</td>
+									<td class="p-3 text-xs text-muted-silver md:text-sm">
 										{new Date(video.createdAt || video.created_at || Date.now()).toLocaleDateString()}
 									</td>
 									<td class="p-3 text-right">
 										<Button
 											variant="outline"
 											size="sm"
-											class="h-8 gap-1.5 rounded-lg border-border/80 px-2.5 text-xs font-semibold hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
+											class="h-8 gap-1.5 rounded-full border-slate-border/80 px-3 text-xs font-semibold text-soft-ivory hover:border-aura-lavender/50 hover:bg-aura-lavender/10 hover:text-aura-lavender transition-all shadow-sm"
 											onclick={() => openEditModal(video)}
 											title="Edit video metadata"
 										>
@@ -354,23 +357,23 @@
 				</div>
 
 				<!-- Pagination Controls -->
-				<div class="mt-8 flex items-center justify-between border-t border-border pt-6 pb-4">
+				<div class="mt-8 flex items-center justify-between border-t border-slate-border/60 pt-6 pb-4">
 					<Button
-						variant="secondary"
+						variant="outline"
 						onclick={() => changePage(currentPage - 1)}
 						disabled={currentPage === 1 || dashboardQuery.isFetching}
-						class="rounded-full px-6"
+						class="rounded-full border-slate-border text-soft-ivory px-6 hover:bg-slate-elevated disabled:opacity-40"
 					>
 						Previous
 					</Button>
-					<span class="text-muted-foreground text-sm font-medium">
+					<span class="text-xs font-semibold text-muted-silver">
 						Page {currentPage}
 					</span>
 					<Button
 						variant="default"
 						onclick={() => changePage(currentPage + 1)}
 						disabled={!dashboardQuery.data.hasMore || dashboardQuery.isFetching}
-						class="rounded-full px-6"
+						class="rounded-full bg-aura-lavender text-midnight-ink font-semibold px-6 hover:bg-aura-lavender/90 disabled:opacity-40"
 					>
 						Next
 					</Button>

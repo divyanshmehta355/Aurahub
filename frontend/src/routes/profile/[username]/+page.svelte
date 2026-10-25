@@ -99,7 +99,7 @@
 {:else}
 	<main class="fade-in pb-12">
 		<!-- CHANNEL BANNER -->
-		<div class="bg-muted relative h-48 w-full md:h-72">
+		<div class="bg-slate-surface border-b border-border/60 relative h-52 w-full md:h-80 overflow-hidden">
 			{#if profileQuery.data.user.banner}
 				<img
 					src={profileQuery.data.user.banner}
@@ -107,17 +107,18 @@
 					class="h-full w-full object-cover"
 				/>
 			{:else}
-				<div class="flex h-full w-full flex-col items-center justify-center opacity-40">
-					<ImageIcon size={64} class="text-muted-foreground mb-4" />
-					<span class="text-muted-foreground font-medium">No banner provided</span>
+				<div class="flex h-full w-full flex-col items-center justify-center opacity-40 bg-gradient-to-br from-deep-slate to-midnight-ink">
+					<ImageIcon size={64} class="text-muted-silver mb-3" />
+					<span class="text-muted-silver text-xs font-semibold uppercase tracking-wider">No banner configured</span>
 				</div>
 			{/if}
+			<div class="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent"></div>
 		</div>
 
 		<div class="container mx-auto px-4 sm:px-6">
 			<!-- PROFILE HEADER INFO -->
 			<div
-				class="bg-card relative z-10 -mt-12 mb-10 flex flex-col gap-6 rounded-3xl border border-border p-6 shadow-sm sm:-mt-20 md:flex-row md:items-end md:justify-between"
+				class="bg-card relative z-10 -mt-16 mb-10 flex flex-col gap-6 rounded-3xl border border-border/70 p-6 sm:p-8 shadow-2xl backdrop-blur-xl sm:-mt-20 md:flex-row md:items-end md:justify-between"
 			>
 				<div class="flex w-full flex-col gap-6 md:flex-row md:items-end">
 					<div class="shrink-0">
@@ -125,37 +126,37 @@
 							src={profileQuery.data.user.avatar ||
 								`https://api.dicebear.com/7.x/identicon/svg?seed=${profileQuery.data.user.username}`}
 							alt={profileQuery.data.user.username}
-							class="bg-card h-24 w-24 rounded-full object-cover ring-4 ring-background sm:h-36 sm:w-36"
+							class="h-24 w-24 rounded-full object-cover ring-4 ring-background border border-border/80 sm:h-36 sm:w-36 shadow-lg"
 						/>
 					</div>
 
-					<div class="grow pb-2">
+					<div class="grow pb-1">
 						<h1
-							class="text-foreground font-display text-3xl font-extrabold tracking-tight sm:text-4xl"
+							class="text-foreground text-3xl font-extrabold tracking-tight sm:text-4xl"
 						>
 							{profileQuery.data.user.username}
 						</h1>
-						<p class="text-muted-foreground mt-2 flex items-center gap-2 font-medium">
+						<p class="text-muted-silver mt-2 flex items-center gap-2 text-xs sm:text-sm font-medium">
 							<span class="text-foreground font-bold"
 								>{profileQuery.data.user.subscriberCount || 0}</span
 							>
 							subscribers
 							<span>•</span>
-							<span class="text-foreground font-bold">{profileQuery.data.videos?.length || 0}</span> videos
+							<span class="text-foreground font-bold">{profileQuery.data.videos?.length || 0}</span> releases
 						</p>
 
 						{#if profileQuery.data.user.bio}
 							<p
-								class="text-muted-foreground mt-4 max-w-2xl text-sm whitespace-pre-line sm:text-base"
+								class="text-muted-foreground mt-3 max-w-2xl text-xs sm:text-sm whitespace-pre-line leading-relaxed"
 							>
 								{profileQuery.data.user.bio}
 							</p>
 						{/if}
 					</div>
 
-					<div class="shrink-0 pb-2">
+					<div class="shrink-0 pb-1">
 						{#if isOwnProfile}
-							<Button variant="secondary" href="/profile" class="w-full md:w-auto">
+							<Button variant="secondary" href="/profile" class="w-full md:w-auto rounded-full px-5 font-semibold text-xs border border-border/70">
 								Customize Channel
 							</Button>
 						{:else if userState.user}
@@ -163,10 +164,10 @@
 								variant={profileQuery.data.user.isSubscribed ? 'secondary' : 'default'}
 								disabled={subscribeMutation.isPending}
 								onclick={handleSubscribe}
-								class="w-full md:w-auto"
+								class="w-full md:w-auto rounded-full px-6 font-semibold text-xs shadow-xs"
 							>
 								{#if subscribeMutation.isPending}
-									<Loader2 class="mr-2 -ml-1 h-4 w-4 animate-spin" />
+									<Loader2 class="mr-2 -ml-1 h-3.5 w-3.5 animate-spin" />
 								{/if}
 								{profileQuery.data.user.isSubscribed ? 'Subscribed' : 'Subscribe'}
 							</Button>
@@ -176,43 +177,46 @@
 			</div>
 
 			<!-- UPLOADS SECTION -->
-			<h2 class="text-foreground font-display mb-6 text-2xl font-bold tracking-tight">Uploads</h2>
+			<div class="flex items-center justify-between border-b border-border/50 pb-3 mb-6">
+				<h2 class="text-foreground text-xl font-bold tracking-tight">Releases</h2>
+				<span class="text-xs text-muted-silver">{profileQuery.data.videos?.length || 0} videos</span>
+			</div>
 
 			<div
 				class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
 			>
 				{#if profileQuery.data.videos && profileQuery.data.videos.length > 0}
 					{#each profileQuery.data.videos.filter((v: any) => !v.isShort) as video}
-						<a href={`/watch/${video.fileId || video.id}`} class="group flex flex-col space-y-3 min-w-0">
+						<a href={`/watch/${video.fileId || video.id}`} class="group flex flex-col space-y-3 min-w-0 transition-transform">
 							<!-- Thumbnail -->
-							<VideoThumbnail
-								{video}
-								class="aspect-video rounded-xl"
-								imgClass="transition-transform duration-300 group-hover:scale-105"
-							>
-								<div
-									class="absolute right-2 bottom-2 rounded bg-black/80 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm"
+							<div class="relative overflow-hidden rounded-2xl border border-border/60 bg-card shadow-xs group-hover:border-primary/40 group-hover:shadow-md transition-all">
+								<VideoThumbnail
+									{video}
+									class="aspect-video w-full rounded-2xl"
+									imgClass="transition-transform duration-500 ease-out group-hover:scale-105"
 								>
-									{formatDuration(video.duration)}
-								</div>
-							</VideoThumbnail>
+									{#if video.duration}
+										<div
+											class="absolute right-2 bottom-2 rounded-md bg-black/80 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-md border border-white/10"
+										>
+											{formatDuration(video.duration)}
+										</div>
+									{/if}
+								</VideoThumbnail>
+							</div>
 
 							<!-- Metadata -->
-							<div class="flex gap-3 min-w-0">
-								<div class="flex flex-col overflow-hidden min-w-0 flex-1">
-									<h3
-										class="line-clamp-2 text-sm leading-tight font-semibold transition-colors group-hover:text-primary break-words [overflow-wrap:anywhere]"
-										title={video.title}
-									>
-										{video.title}
-									</h3>
-									<div class="text-muted-foreground mt-1 space-y-0.5 text-xs">
-										<div class="flex items-center gap-1">
-											<span>{video.views || 0} views</span>
-											<span class="text-[10px]">•</span>
-											<span>{new Date(video.created_at).toLocaleDateString()}</span>
-										</div>
-									</div>
+							<div class="flex flex-col overflow-hidden min-w-0 px-0.5">
+								<h3
+									class="line-clamp-2 text-xs sm:text-sm leading-snug font-semibold text-foreground transition-colors group-hover:text-primary break-words [overflow-wrap:anywhere]"
+									title={video.title}
+								>
+									{video.title}
+								</h3>
+								<div class="text-muted-silver mt-1 text-[11px] flex items-center gap-1.5">
+									<span>{video.views || 0} views</span>
+									<span>•</span>
+									<span>{new Date(video.created_at || video.createdAt || Date.now()).toLocaleDateString()}</span>
 								</div>
 							</div>
 						</a>

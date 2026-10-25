@@ -32,12 +32,12 @@
 	<button
 		onclick={toggleWatchLater}
 		title={isSaved ? 'Remove from Watch Later' : 'Watch Later'}
-		class="absolute top-2 right-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white opacity-0 shadow-lg backdrop-blur-md transition-all duration-300 group-hover:opacity-100 hover:scale-110 hover:bg-black/80"
+		class="absolute top-2 right-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-midnight-ink/85 border border-slate-border/60 text-soft-ivory opacity-0 shadow-lg backdrop-blur-md transition-all duration-300 group-hover:opacity-100 hover:scale-110 hover:border-aura-lavender/50"
 	>
 		{#if isSaved}
-			<Check class="h-4 w-4 text-emerald-400" />
+			<Check class="h-4 w-4 text-aura-lavender" />
 		{:else}
-			<Clock class="h-4 w-4" />
+			<Clock class="h-4 w-4 text-muted-silver group-hover:text-soft-ivory" />
 		{/if}
 	</button>
 {/if}

@@ -78,17 +78,22 @@
 </svelte:head>
 
 <div class="space-y-4 px-4 md:space-y-6 md:px-0">
-	<div class="flex items-center justify-between border-b pt-2 pb-4 md:pt-0">
+	<div class="flex items-center justify-between border-b border-slate-border/60 pt-2 pb-4 md:pt-0">
 		<div class="flex items-center gap-3">
-			<Clock class="h-6 w-6 text-primary" />
-			<h1 class="text-xl font-bold tracking-tight md:text-2xl">Watch Later</h1>
+			<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-aura-lavender/10 text-aura-lavender">
+				<Clock class="h-5 w-5" />
+			</div>
+			<div>
+				<h1 class="text-xl font-bold tracking-tight text-soft-ivory md:text-2xl font-serif">Watch Later</h1>
+				<p class="text-xs text-muted-silver md:text-sm">Saved videos queue for later viewing</p>
+			</div>
 		</div>
 
 		{#if watchLaterQuery.data && watchLaterQuery.data.length > 0}
 			<Button
 				variant="outline"
 				size="sm"
-				class="text-destructive hover:bg-destructive/10 hover:text-destructive"
+				class="rounded-full border-slate-border/80 text-muted-silver hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive transition-all"
 				onclick={handleClearAll}
 				disabled={clearAllMutation.isPending}
 			>
@@ -100,48 +105,50 @@
 	{#if watchLaterQuery.isPending}
 		<div class="flex max-w-4xl flex-col gap-4">
 			{#each Array(5) as _}
-				<div class="flex animate-pulse flex-col gap-4 sm:flex-row">
-					<Skeleton class="aspect-video w-full shrink-0 rounded-xl sm:w-64" />
+				<div class="flex animate-pulse flex-col gap-4 rounded-2xl border border-slate-border/30 bg-deep-slate/30 p-3 sm:flex-row">
+					<Skeleton class="aspect-video w-full shrink-0 rounded-xl bg-slate-elevated sm:w-64" />
 					<div class="flex-1 space-y-3 py-2">
-						<Skeleton class="h-5 w-3/4 rounded" />
-						<Skeleton class="h-4 w-1/4 rounded" />
+						<Skeleton class="h-5 w-3/4 rounded-lg bg-slate-elevated" />
+						<Skeleton class="h-4 w-1/4 rounded-lg bg-slate-elevated" />
 					</div>
 				</div>
 			{/each}
 		</div>
 	{:else if watchLaterQuery.isError}
 		<div class="flex flex-col items-center justify-center py-12 text-center">
-			<div class="bg-destructive/10 text-destructive rounded-xl p-4">
+			<div class="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive">
 				<p>{watchLaterQuery.error.message || 'Failed to load Watch Later list.'}</p>
-				<Button variant="outline" class="mt-4" onclick={() => watchLaterQuery.refetch()}
+				<Button variant="outline" class="mt-4 rounded-full border-destructive/40" onclick={() => watchLaterQuery.refetch()}
 					>Try again</Button
 				>
 			</div>
 		</div>
 	{:else if !watchLaterQuery.data || watchLaterQuery.data.length === 0}
 		<div
-			class="border-muted-foreground/20 mx-4 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-16 text-center md:mx-0 md:py-24"
+			class="mx-4 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-border/80 bg-deep-slate/20 py-16 text-center md:mx-0 md:py-24"
 		>
-			<Clock class="text-muted-foreground mb-4 h-12 w-12 opacity-50" />
-			<h2 class="mb-2 text-lg font-semibold md:text-xl">Watch Later is empty</h2>
-			<p class="text-muted-foreground max-w-sm px-4 text-sm md:text-base">
-				Save videos you want to watch later by clicking the clock icon on a video thumbnail.
+			<div class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-deep-slate text-muted-silver">
+				<Clock class="h-7 w-7 opacity-60" />
+			</div>
+			<h2 class="mb-2 text-lg font-bold text-soft-ivory md:text-xl">Watch Later is empty</h2>
+			<p class="max-w-sm px-4 text-sm text-muted-silver md:text-base">
+				Save videos you want to watch later by clicking the clock icon on any video thumbnail.
 			</p>
-			<Button variant="default" class="mt-6 rounded-full" href="/">Discover Videos</Button>
+			<Button variant="default" class="mt-6 rounded-full bg-aura-lavender text-midnight-ink font-semibold hover:bg-aura-lavender/90 shadow-md shadow-aura-lavender/20" href="/">Discover Videos</Button>
 		</div>
 	{:else}
-		<div class="flex max-w-4xl flex-col gap-6 md:gap-4">
+		<div class="flex max-w-4xl flex-col gap-3 md:gap-3">
 			{#each watchLaterQuery.data as item}
 				{@const video = item.video || item}
 				<a
 					href={`/watch/${video.fileId || video.id}`}
-					class="group hover:bg-muted/50 flex flex-col gap-3 rounded-xl transition-colors sm:flex-row sm:p-2 md:gap-4 min-w-0"
+					class="group relative flex flex-col gap-3 rounded-2xl border border-slate-border/30 bg-deep-slate/30 p-2.5 transition-all hover:border-aura-lavender/40 hover:bg-deep-slate/80 sm:flex-row sm:p-3 md:gap-4 min-w-0"
 				>
 					<!-- Thumbnail -->
 					<div class="w-full shrink-0 sm:w-64">
 						<VideoThumbnail
 							{video}
-							class="aspect-video rounded-xl sm:rounded-lg"
+							class="aspect-video rounded-xl overflow-hidden border border-slate-border/40"
 							imgClass="transition-transform duration-300 group-hover:scale-105"
 						/>
 					</div>
@@ -149,21 +156,21 @@
 					<div class="relative flex flex-1 flex-col px-1 py-1 sm:px-0 min-w-0 overflow-hidden">
 						<div class="pr-8 min-w-0">
 							<h3
-								class="mb-1 line-clamp-2 text-base leading-tight font-semibold transition-colors group-hover:text-primary md:text-lg break-words [overflow-wrap:anywhere]"
+								class="mb-1 line-clamp-2 text-base leading-tight font-semibold text-soft-ivory transition-colors group-hover:text-aura-lavender md:text-lg break-words [overflow-wrap:anywhere]"
 								title={video.title}
 							>
 								{video.title}
 							</h3>
 
-							<div class="mb-1 flex items-center gap-2">
-								<p class="text-[13px] font-medium transition-colors hover:text-primary md:text-sm">
+							<div class="mb-1.5 flex items-center gap-2">
+								<p class="text-[13px] font-medium text-muted-silver transition-colors group-hover:text-soft-ivory md:text-sm">
 									{video.uploader_username || video.uploader?.username}
 								</p>
 							</div>
 
-							<div class="text-muted-foreground mb-3 text-[11px] md:text-xs">
+							<div class="mb-3 text-[11px] text-muted-silver/80 md:text-xs">
 								<span>{video.views || 0} views</span>
-								<span class="mx-1">•</span>
+								<span class="mx-1.5">•</span>
 								<span
 									>{formatTimeAgo(
 										video.createdAt || video.created_at || new Date().toISOString()
@@ -173,7 +180,7 @@
 
 							{#if video.description}
 								<p
-									class="text-muted-foreground line-clamp-1 text-[11px] md:line-clamp-2 md:text-xs"
+									class="line-clamp-1 text-[11px] text-muted-silver/70 md:line-clamp-2 md:text-xs"
 								>
 									{video.description}
 								</p>
@@ -183,11 +190,11 @@
 						<Button
 							variant="ghost"
 							size="icon"
-							class="text-muted-foreground hover:text-destructive hover:bg-destructive/10 absolute top-0 right-0 h-8 w-8 opacity-100 transition-opacity group-hover:opacity-100 md:opacity-0"
+							class="text-muted-silver hover:text-destructive hover:bg-destructive/10 absolute top-0 right-0 h-8 w-8 rounded-full opacity-100 transition-all group-hover:opacity-100 md:opacity-0"
 							onclick={(e: MouseEvent) => handleRemove(e, video.id || video.fileId)}
 							title="Remove from Watch Later"
 						>
-							<X class="h-5 w-5" />
+							<X class="h-4 w-4" />
 						</Button>
 					</div>
 				</a>
