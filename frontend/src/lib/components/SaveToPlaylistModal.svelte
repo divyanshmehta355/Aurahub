@@ -108,69 +108,69 @@
 
 {#if isOpen}
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-midnight-ink/80 p-4 backdrop-blur-md"
 		transition:fade={{ duration: 200 }}
 		role="dialog"
 		aria-modal="true"
 	>
 		<div
-			class="bg-card flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border shadow-2xl"
+			class="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-slate-border/80 bg-deep-slate/95 text-soft-ivory shadow-2xl backdrop-blur-2xl"
 			transition:scale={{ duration: 200, start: 0.95 }}
 		>
-			<div class="bg-card sticky top-0 z-10 flex items-center justify-between border-b px-6 py-4">
-				<h2 class="text-xl font-semibold tracking-tight">Save to playlist</h2>
+			<div class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-border/60 bg-midnight-ink/40 px-6 py-4">
+				<h2 class="text-lg font-bold tracking-tight text-soft-ivory font-serif">Save to playlist</h2>
 				<button
 					onclick={() => (isOpen = false)}
-					class="hover:bg-muted text-muted-foreground hover:text-foreground -mr-2 rounded-full p-2 transition-colors"
+					class="text-muted-silver hover:bg-slate-elevated hover:text-soft-ivory -mr-2 rounded-full p-2 transition-colors"
 				>
-					<X class="h-5 w-5" />
+					<X class="h-4 w-4" />
 				</button>
 			</div>
 
 			<div class="custom-scrollbar flex-1 overflow-y-auto p-6">
 				{#if isLoading}
 					<div class="flex items-center justify-center py-8">
-						<Loader2 class="h-8 w-8 animate-spin text-primary" />
+						<Loader2 class="h-8 w-8 animate-spin text-aura-lavender" />
 					</div>
 				{:else if error}
 					<div class="py-8 text-center font-medium text-rose-500">{error}</div>
 				{:else}
-					<div class="mb-6 space-y-2">
+					<div class="mb-4 space-y-1.5">
 						{#each playlists as playlist}
 							<button
 								onclick={() => handleToggle(playlist)}
-								class="hover:bg-muted/50 group flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors"
+								class="group flex w-full items-center justify-between rounded-2xl p-3 text-left transition-colors hover:bg-slate-elevated/70"
 							>
 								<div class="flex items-center gap-3">
 									<div
-										class={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${containsVideo[playlist.id] ? 'border-primary bg-primary' : 'border-muted-foreground/40 group-hover:border-foreground/60'}`}
+										class={`flex h-5 w-5 items-center justify-center rounded-lg border transition-all ${containsVideo[playlist.id] ? 'border-aura-lavender bg-aura-lavender' : 'border-slate-border/80 group-hover:border-aura-lavender/60'}`}
 									>
 										{#if containsVideo[playlist.id]}
-											<Check class="text-primary-foreground h-3.5 w-3.5" />
+											<Check class="text-midnight-ink h-3.5 w-3.5 stroke-[3]" />
 										{/if}
 									</div>
-									<span class="max-w-[200px] truncate font-medium sm:max-w-[260px]"
+									<span class="max-w-[200px] truncate font-medium text-sm text-soft-ivory sm:max-w-[260px]"
 										>{playlist.title}</span
 									>
 								</div>
 
 								{#if savingStatus[playlist.id] === 'saving'}
-									<Loader2 class="text-muted-foreground h-4 w-4 animate-spin" />
+									<Loader2 class="text-muted-silver h-4 w-4 animate-spin" />
 								{:else if savingStatus[playlist.id] === 'error'}
-									<span class="text-xs font-medium text-rose-500">Failed</span>
+									<span class="text-xs font-medium text-rose-400">Failed</span>
 								{/if}
 							</button>
 						{:else}
-							<div class="text-muted-foreground flex flex-col items-center py-6 text-center">
-								<ListVideo class="mb-2 h-8 w-8 opacity-50" />
-								<p>You don't have any playlists yet.</p>
+							<div class="flex flex-col items-center py-6 text-center text-muted-silver">
+								<ListVideo class="mb-2 h-8 w-8 opacity-40 text-muted-silver" />
+								<p class="text-xs">You don't have any playlists yet.</p>
 							</div>
 						{/each}
 					</div>
 				{/if}
 			</div>
 
-			<div class="bg-muted/20 border-t p-6">
+			<div class="border-t border-slate-border/60 bg-midnight-ink/40 p-4 sm:p-5">
 				<form
 					onsubmit={(e) => {
 						e.preventDefault();
@@ -182,13 +182,13 @@
 						type="text"
 						bind:value={newPlaylistTitle}
 						placeholder="New playlist name..."
-						class="flex-1 rounded-xl border border-border bg-background px-4 py-2 text-sm transition-shadow focus:ring-2 focus:ring-primary focus:outline-none"
+						class="flex-1 rounded-xl border border-slate-border/80 bg-midnight-ink/80 px-4 py-2 text-xs sm:text-sm text-soft-ivory placeholder:text-muted-silver/50 transition-shadow focus:ring-2 focus:ring-aura-lavender focus:outline-none"
 						required
 					/>
 					<button
 						type="submit"
 						disabled={isCreating || !newPlaylistTitle.trim()}
-						class="bg-foreground hover:bg-foreground/90 flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-background transition-colors disabled:opacity-50"
+						class="flex shrink-0 items-center gap-1.5 rounded-xl bg-aura-lavender px-4 py-2 text-xs sm:text-sm font-bold text-midnight-ink transition-colors hover:bg-aura-lavender/90 disabled:opacity-50"
 					>
 						{#if isCreating}
 							<Loader2 class="h-4 w-4 animate-spin" />

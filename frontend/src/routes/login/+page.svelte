@@ -50,38 +50,47 @@
 	}
 </script>
 
-<div class="mx-auto mt-12 w-full max-w-md px-4 md:mt-24">
-	<Card.Root class="border-border shadow-sm">
-		<Card.Header class="items-center space-y-1 pb-8">
-			<div class="text-primary-foreground mb-4 rounded-xl bg-primary p-3">
-				<Play class="h-7 w-7 fill-current" />
+<div class="mx-auto mt-10 w-full max-w-md px-4 md:mt-20">
+	<Card.Root class="rounded-3xl border border-border/70 bg-card shadow-2xl shadow-black/40 overflow-hidden">
+		<Card.Header class="items-center space-y-1.5 pb-6 pt-8 text-center">
+			<div class="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
+				<svg viewBox="0 0 24 24" class="h-7 w-7 fill-current" aria-hidden="true">
+					<circle cx="12" cy="12" r="3" />
+					<path
+						d="M12 2v3m0 14v3M2 12h3m14 0h3m-3.5-6.5-2.1 2.1m-8.8 8.8-2.1 2.1m0-13 2.1 2.1m8.8 8.8 2.1 2.1"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						fill="none"
+					/>
+				</svg>
 			</div>
-			<Card.Title class="text-center text-2xl font-bold tracking-tight">Welcome back</Card.Title>
-			<Card.Description class="text-center"
-				>Enter your credentials to access your account</Card.Description
+			<Card.Title class="text-center font-serif text-3xl font-bold tracking-tight text-foreground">Welcome Back</Card.Title>
+			<Card.Description class="text-center text-xs sm:text-sm text-muted-foreground"
+				>Sign in to your Aurahub cinema pass</Card.Description
 			>
 		</Card.Header>
 
-		<Card.Content>
+		<Card.Content class="px-6 pb-6">
 			{#if loginMutation.isError}
 				<div
-					class="bg-destructive/10 text-destructive mb-6 rounded-md p-3 text-center text-sm font-medium"
+					class="bg-destructive/10 border border-destructive/20 text-destructive mb-6 rounded-xl p-3 text-center text-xs font-semibold"
 				>
-					{loginMutation.error.message || 'Login failed. Please try again.'}
+					{loginMutation.error.message || 'Login failed. Please verify credentials.'}
 				</div>
 			{/if}
 
 			<form onsubmit={handleLogin} class="space-y-4">
-				<div class="space-y-2">
-					<Label for="email">Email address</Label>
+				<div class="space-y-1.5">
+					<Label for="email" class="text-xs font-semibold text-foreground">Email Address</Label>
 					<div class="relative">
-						<Mail class="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+						<Mail class="text-muted-foreground absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2" />
 						<Input
 							id="email"
 							type="email"
 							bind:value={email}
 							placeholder="name@example.com"
-							class="pl-10 {validationErrors.email
+							class="pl-10 h-10 rounded-xl bg-secondary/50 border-border/70 focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary/20 text-sm text-foreground {validationErrors.email
 								? 'border-destructive focus-visible:ring-destructive'
 								: ''}"
 						/>
@@ -91,21 +100,21 @@
 					{/if}
 				</div>
 
-				<div class="space-y-2">
+				<div class="space-y-1.5">
 					<div class="flex items-center justify-between">
-						<Label for="password">Password</Label>
+						<Label for="password" class="text-xs font-semibold text-foreground">Password</Label>
 						<a href="/forgot-password" class="text-xs font-medium text-primary hover:underline"
 							>Forgot password?</a
 						>
 					</div>
 					<div class="relative">
-						<Lock class="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+						<Lock class="text-muted-foreground absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2" />
 						<Input
 							id="password"
 							type="password"
 							bind:value={password}
 							placeholder="••••••••"
-							class="pl-10 {validationErrors.password
+							class="pl-10 h-10 rounded-xl bg-secondary/50 border-border/70 focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary/20 text-sm text-foreground {validationErrors.password
 								? 'border-destructive focus-visible:ring-destructive'
 								: ''}"
 						/>
@@ -115,7 +124,7 @@
 					{/if}
 				</div>
 
-				<Button type="submit" disabled={loginMutation.isPending} class="mt-6 w-full">
+				<Button type="submit" disabled={loginMutation.isPending} class="mt-6 w-full h-10 rounded-full font-semibold shadow-md shadow-primary/25">
 					{#if loginMutation.isPending}
 						<Loader2 class="mr-2 -ml-1 h-4 w-4 animate-spin" />
 						Signing in...
@@ -127,10 +136,10 @@
 			</form>
 		</Card.Content>
 
-		<Card.Footer class="flex justify-center border-t p-6">
-			<div class="text-sm">
+		<Card.Footer class="flex justify-center border-t border-border/50 py-5 bg-secondary/20">
+			<div class="text-xs sm:text-sm">
 				<span class="text-muted-foreground">Don't have an account? </span>
-				<a href="/signup" class="font-medium text-primary hover:underline">Sign up now</a>
+				<a href="/signup" class="font-semibold text-primary hover:underline">Create an account</a>
 			</div>
 		</Card.Footer>
 	</Card.Root>

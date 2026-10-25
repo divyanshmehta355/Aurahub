@@ -117,31 +117,33 @@
 	}
 </script>
 
-<div class="mt-6 border-t border-border/50 pt-6">
-	<h3 class="mb-6 flex items-center gap-2 text-xl font-bold tracking-tight">
-		<MessageSquare class="h-5 w-5" />
-		{commentsQuery.data?.length || 0} Comments
+<div class="mt-8 border-t border-border/50 pt-6">
+	<h3 class="mb-6 flex items-center gap-2.5 text-lg font-bold tracking-tight text-foreground">
+		<MessageSquare class="h-5 w-5 text-primary" />
+		<span>{commentsQuery.data?.length || 0} Comments</span>
 	</h3>
-	<div class="mb-8 flex gap-4">
+
+	<!-- Post Comment Box -->
+	<div class="mb-8 flex gap-3.5">
 		<img
 			src={userState.user?.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=Guest`}
 			alt="Your Avatar"
-			class="bg-muted h-10 w-10 shrink-0 rounded-full"
+			class="h-10 w-10 shrink-0 rounded-full border border-border/80 object-cover mt-0.5"
 		/>
 		<div class="flex-1 space-y-2">
 			<Input
 				type="text"
 				bind:value={newCommentText}
-				placeholder={userState.user ? 'Add a comment...' : 'Log in to add a comment...'}
+				placeholder={userState.user ? 'Share your thoughts on this release...' : 'Sign in to join the conversation...'}
 				disabled={!userState.user || commentMutation.isPending}
-				class="border-b-only border-muted-foreground/30 rounded-none bg-transparent px-2 py-1 focus-visible:border-primary focus-visible:ring-0"
+				class="bg-card border-border/70 rounded-2xl px-4 py-3 text-sm text-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-all placeholder:text-muted-foreground/70"
 			/>
 			{#if newCommentText.length > 0}
 				<div class="mt-2 flex justify-end gap-2">
-					<Button variant="ghost" size="sm" onclick={() => (newCommentText = '')}>Cancel</Button>
-					<Button size="sm" onclick={handleCommentSubmit} disabled={commentMutation.isPending}>
+					<Button variant="ghost" size="sm" class="rounded-full text-xs" onclick={() => (newCommentText = '')}>Cancel</Button>
+					<Button size="sm" class="rounded-full px-5 text-xs font-semibold" onclick={handleCommentSubmit} disabled={commentMutation.isPending}>
 						{#if commentMutation.isPending}
-							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+							<Loader2 class="mr-2 h-3.5 w-3.5 animate-spin" />
 						{/if}
 						Comment
 					</Button>
@@ -150,34 +152,41 @@
 		</div>
 	</div>
 
-	<div class="space-y-6">
+	<!-- Comments List -->
+	<div class="space-y-5">
 		{#if commentsQuery.isPending}
 			{#each Array(3) as _}
-				<div class="flex animate-pulse gap-4">
-					<Skeleton class="h-10 w-10 rounded-full" />
-					<div class="flex-1 space-y-2">
-						<Skeleton class="h-4 w-1/4 rounded" />
-						<Skeleton class="h-4 w-3/4 rounded" />
+				<div class="flex animate-pulse gap-3.5">
+					<Skeleton class="h-10 w-10 rounded-full shrink-0" />
+					<div class="flex-1 space-y-2 py-1">
+						<Skeleton class="h-4 w-1/4 rounded-lg" />
+						<Skeleton class="h-4 w-3/4 rounded-lg" />
 					</div>
 				</div>
 			{/each}
 		{:else if commentsQuery.data}
 			{#each commentsQuery.data as comment}
-				<div class="group flex items-start gap-4">
+				{@const isUploader = (comment.user?.username || comment.author?.username) === uploaderUsername}
+				<div class="group flex items-start gap-3.5 rounded-2xl p-2.5 transition-colors hover:bg-secondary/40">
 					<img
 						src={comment.user?.avatar ||
 							comment.author?.avatar ||
 							`https://api.dicebear.com/7.x/identicon/svg?seed=${comment.user?.username || comment.author?.username || 'user'}`}
 						alt="Avatar"
-						class="bg-muted h-10 w-10 shrink-0 rounded-full object-cover"
+						class="h-10 w-10 shrink-0 rounded-full border border-border/80 object-cover mt-0.5"
 					/>
-					<div class="flex-1 space-y-1">
-						<div class="flex items-baseline justify-between">
-							<div class="flex items-baseline gap-2">
-								<span class="text-sm font-semibold">
-									{comment.user?.username || comment.author?.username || 'User'}
+					<div class="flex-1 space-y-1 min-w-0">
+						<div class="flex items-baseline justify-between gap-2">
+							<div class="flex items-center gap-2 flex-wrap">
+								<span class="text-xs sm:text-sm font-semibold text-foreground">
+									@{comment.user?.username || comment.author?.username || 'User'}
 								</span>
-								<span class="text-muted-foreground text-xs">
+								{#if isUploader}
+									<span class="rounded-full bg-primary/20 border border-primary/30 px-2 py-0.5 text-[10px] font-bold text-primary">
+										Creator
+									</span>
+								{/if}
+								<span class="text-muted-silver text-[11px]">
 									{formatTimeAgo(comment.createdAt || comment.created_at)}
 								</span>
 							</div>
@@ -186,14 +195,16 @@
 									type="button"
 									onclick={() => handleDeleteComment(comment.id || comment._id)}
 									disabled={deleteCommentMutation.isPending}
-									class="text-muted-foreground hover:text-destructive rounded p-1 opacity-0 transition-opacity group-hover:opacity-100"
+									class="text-muted-foreground hover:text-rose-400 rounded-lg p-1 opacity-0 transition-opacity group-hover:opacity-100"
 									title="Delete comment"
 								>
 									<Trash2 class="h-3.5 w-3.5" />
 								</button>
 							{/if}
 						</div>
-						<p class="text-sm leading-relaxed">{comment.content || comment.text}</p>
+						<p class="text-xs sm:text-sm leading-relaxed text-zinc-300 whitespace-pre-line break-words [overflow-wrap:anywhere]">
+							{comment.content || comment.text}
+						</p>
 					</div>
 				</div>
 			{/each}

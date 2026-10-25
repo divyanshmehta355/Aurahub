@@ -256,9 +256,9 @@
 		{:else if videoQuery.data}
 			<!-- Video Player with hover theater button -->
 			<div
-				class={`group relative flex w-full items-center justify-center overflow-hidden rounded-2xl border border-border/50 bg-black shadow-xl transition-all duration-300 ${
+				class={`group relative flex w-full items-center justify-center overflow-hidden rounded-3xl border border-border/80 bg-black shadow-2xl shadow-black/60 transition-all duration-300 ${
 					isTheaterMode
-						? 'h-[50vh] sm:h-[65vh] lg:h-[78vh] max-h-[860px]'
+						? 'h-[50vh] sm:h-[65vh] lg:h-[78vh] max-h-[880px]'
 						: 'aspect-video'
 				}`}
 			>
@@ -266,7 +266,7 @@
 				<button
 					type="button"
 					onclick={toggleTheaterMode}
-					class="absolute top-3 right-3 z-30 flex h-8 w-8 items-center justify-center rounded-lg bg-black/60 text-white/90 opacity-0 backdrop-blur-md transition-all hover:bg-black/90 hover:scale-105 group-hover:opacity-100"
+					class="absolute top-3 right-3 z-30 flex h-9 w-9 items-center justify-center rounded-xl bg-black/70 text-white/90 opacity-0 backdrop-blur-md border border-white/15 transition-all hover:bg-black/90 hover:scale-105 group-hover:opacity-100 shadow-md"
 					title={isTheaterMode ? 'Exit theater mode (T)' : 'Theater mode (T)'}
 					aria-label={isTheaterMode ? 'Exit theater mode' : 'Theater mode'}
 				>
@@ -278,14 +278,14 @@
 				</button>
 
 				{#if videoQuery.data.isAdult && !contentModeState.isAdult}
-					<div class="flex max-w-md flex-col items-center justify-center p-6 text-center">
+					<div class="flex max-w-md flex-col items-center justify-center p-8 text-center rounded-3xl border border-amber-500/30 bg-deep-slate/90 backdrop-blur-xl m-4 shadow-2xl">
 						<div
-							class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/15 text-amber-500"
+							class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/15 text-amber-400"
 						>
 							<ShieldAlert class="h-8 w-8" />
 						</div>
 						<div
-							class="mb-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-400"
+							class="mb-2 inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/20 px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-300"
 						>
 							18+ Age Restricted Video
 						</div>
@@ -303,7 +303,7 @@
 							<Button
 								variant="outline"
 								size="sm"
-								class="rounded-full border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
+								class="rounded-full border-zinc-700 bg-zinc-900/80 text-zinc-200 hover:bg-zinc-800"
 								onclick={() => goto('/')}
 							>
 								Return to Safety
@@ -311,7 +311,7 @@
 							{#if userState.user?.showAdultContent}
 								<Button
 									size="sm"
-									class="rounded-full bg-amber-600 font-semibold text-white hover:bg-amber-700"
+									class="rounded-full bg-amber-600 font-semibold text-white hover:bg-amber-500 shadow-md shadow-amber-600/25"
 									onclick={() => setContentMode(true)}
 								>
 									I am 18+ - Watch Video
@@ -319,7 +319,7 @@
 							{:else}
 								<Button
 									size="sm"
-									class="rounded-full bg-amber-600 font-semibold text-white hover:bg-amber-700"
+									class="rounded-full bg-amber-600 font-semibold text-white hover:bg-amber-500 shadow-md shadow-amber-600/25"
 									onclick={() => goto('/settings')}
 								>
 									Enable 18+ in Settings
@@ -330,10 +330,10 @@
 				{:else if isPlaybackFrozen && !userState.user?.isAdmin}
 					<!-- Emergency Playback Freeze (Content Blackout) Screen -->
 					<div
-						class="relative z-10 flex h-full max-w-lg flex-col items-center justify-center p-6 text-center"
+						class="relative z-10 flex h-full max-w-lg flex-col items-center justify-center p-8 text-center rounded-3xl border border-rose-500/40 bg-deep-slate/90 backdrop-blur-xl m-4 shadow-2xl"
 					>
 						<div
-							class="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl border border-rose-500/40 bg-rose-500/15 text-rose-400 shadow-lg shadow-rose-950/50"
+							class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-rose-500/40 bg-rose-500/15 text-rose-400 shadow-lg shadow-rose-950/50"
 						>
 							<AlertOctagon class="h-8 w-8 animate-pulse" />
 						</div>
@@ -358,7 +358,7 @@
 				{:else if embedUrl}
 					{#if isPlaybackFrozen && userState.user?.isAdmin}
 						<div
-							class="absolute top-3 left-3 z-30 flex items-center gap-1.5 rounded-full border border-amber-500/50 bg-amber-950/85 px-3 py-1 text-[11px] font-bold text-amber-300 backdrop-blur shadow-md"
+							class="absolute top-3 left-3 z-30 flex items-center gap-1.5 rounded-full border border-amber-500/50 bg-amber-950/90 px-3 py-1 text-[11px] font-bold text-amber-300 backdrop-blur-md shadow-md"
 						>
 							<Zap class="h-3.5 w-3.5 fill-amber-300 animate-pulse" />
 							<span>Admin Playback Bypass Active</span>
@@ -376,12 +376,12 @@
 						class="flex aspect-video w-full flex-col items-center justify-center p-6 text-center"
 					>
 						<div
-							class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 text-zinc-400"
+							class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary border border-border/80 text-muted-foreground"
 						>
 							<Tv class="h-8 w-8" />
 						</div>
-						<h3 class="text-lg font-semibold text-zinc-200">Video Processing</h3>
-						<p class="mt-1 text-xs text-zinc-400 max-w-sm">
+						<h3 class="text-lg font-semibold text-foreground">Video Processing</h3>
+						<p class="mt-1 text-xs text-muted-foreground max-w-sm">
 							This video stream is currently being prepared. Please check back in a few moments.
 						</p>
 					</div>
@@ -398,39 +398,39 @@
 	>
 		{#if videoQuery.isPending}
 			<div class="space-y-4">
-				<Skeleton class="h-8 w-3/4 rounded" />
+				<Skeleton class="h-8 w-3/4 rounded-xl" />
 				<div class="flex gap-4">
 					<Skeleton class="h-12 w-12 rounded-full" />
-					<Skeleton class="h-12 w-1/4 rounded" />
+					<Skeleton class="h-12 w-1/4 rounded-xl" />
 				</div>
 			</div>
 		{:else if videoQuery.data}
 			<!-- Video Info -->
 			<div class="space-y-4 min-w-0">
 				<div class="flex items-start gap-2 min-w-0">
-					<h1 class="text-xl sm:text-2xl font-bold tracking-tight break-words [overflow-wrap:anywhere] min-w-0 flex-1">{videoQuery.data.title}</h1>
+					<h1 class="text-xl sm:text-2xl font-bold tracking-tight text-foreground break-words [overflow-wrap:anywhere] min-w-0 flex-1">{videoQuery.data.title}</h1>
 					{#if videoQuery.data.isAdult}
 						<span
-							class="mt-1 shrink-0 rounded bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-500"
+							class="mt-1 shrink-0 rounded-full border border-rose-500/30 bg-rose-500/15 px-2.5 py-0.5 text-xs font-bold text-rose-400"
 							>18+</span
 						>
 					{/if}
 				</div>
 
 				<div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-					<div class="flex items-center gap-4">
+					<div class="flex items-center gap-3.5">
 						<a href={`/profile/${videoQuery.data.uploader.username}`} class="shrink-0">
 							<img
 								src={videoQuery.data.uploader.avatar ||
 									`https://api.dicebear.com/7.x/identicon/svg?seed=${videoQuery.data.uploader.username}`}
 								alt={videoQuery.data.uploader.username}
-								class="bg-muted h-12 w-12 rounded-full object-cover"
+								class="h-11 w-11 rounded-full border border-border/80 object-cover"
 							/>
 						</a>
 						<div class="flex flex-col">
 							<a
 								href={`/profile/${videoQuery.data.uploader.username}`}
-								class="text-lg font-semibold transition-colors hover:text-primary"
+								class="text-base font-semibold text-foreground transition-colors hover:text-primary"
 							>
 								{videoQuery.data.uploader.username}
 							</a>
@@ -438,7 +438,7 @@
 						</div>
 						<Button
 							variant={isSubscribed ? 'secondary' : 'default'}
-							class="ml-2 rounded-full px-5"
+							class="ml-2 rounded-full px-5 text-xs font-semibold shadow-xs"
 							onclick={handleSubscribe}
 							disabled={subscribeMutation.isPending}
 						>
@@ -449,39 +449,39 @@
 					<div class="hide-scrollbar flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
 						<Button
 							variant="secondary"
-							class={`rounded-full px-4 ${videoQuery.data.isLiked ? 'text-primary' : ''}`}
+							class={`rounded-full px-4 text-xs font-semibold border border-border/60 transition-all ${videoQuery.data.isLiked ? 'text-primary border-primary/40 bg-primary/10' : ''}`}
 							onclick={handleLike}
 						>
-							<ThumbsUp class="mr-2 h-4 w-4 {videoQuery.data.isLiked ? 'fill-primary' : ''}" />
-							{videoQuery.data.likesCount}
+							<ThumbsUp class="mr-2 h-3.5 w-3.5 {videoQuery.data.isLiked ? 'fill-primary text-primary' : ''}" />
+							<span>{videoQuery.data.likesCount}</span>
 						</Button>
-						<Button variant="secondary" class="rounded-full px-4" onclick={handleShare}>
-							<Share2 class="mr-2 h-4 w-4" />
+						<Button variant="secondary" class="rounded-full px-4 text-xs font-semibold border border-border/60" onclick={handleShare}>
+							<Share2 class="mr-2 h-3.5 w-3.5" />
 							Share
 						</Button>
 						<Button
 							variant="secondary"
-							class="rounded-full px-4"
+							class="rounded-full px-4 text-xs font-semibold border border-border/60"
 							onclick={() => (isSaveModalOpen = true)}
 						>
-							<ListPlus class="mr-2 h-4 w-4" />
+							<ListPlus class="mr-2 h-3.5 w-3.5" />
 							Save
 						</Button>
 						<Button
 							variant="secondary"
-							class={`rounded-full px-4 transition-all ${
+							class={`rounded-full px-4 text-xs font-semibold border border-border/60 transition-all ${
 								isTheaterMode
-									? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
+									? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90 shadow-sm shadow-primary/20'
 									: ''
 							}`}
 							onclick={toggleTheaterMode}
 							title="Toggle theater mode (T)"
 						>
 							{#if isTheaterMode}
-								<Minimize2 class="mr-2 h-4 w-4" />
+								<Minimize2 class="mr-2 h-3.5 w-3.5" />
 								Default View
 							{:else}
-								<Tv class="mr-2 h-4 w-4" />
+								<Tv class="mr-2 h-3.5 w-3.5" />
 								Theater Mode
 							{/if}
 						</Button>
@@ -489,22 +489,22 @@
 				</div>
 
 				<!-- Description Box -->
-				<div class="bg-secondary/50 hover:bg-secondary/70 rounded-xl p-4 text-sm transition-all">
-					<div class="mb-1 font-medium">
+				<div class="bg-card border border-border/70 rounded-2xl p-5 text-sm transition-all shadow-xs">
+					<div class="mb-2 font-semibold text-foreground text-xs sm:text-sm">
 						{videoQuery.data.views} views • {formatTimeAgo(
 							videoQuery.data.createdAt || new Date().toISOString()
 						)}
 					</div>
-					<div class="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+					<div class="text-muted-foreground leading-relaxed whitespace-pre-wrap text-xs sm:text-sm">
 						{videoQuery.data.description || 'No description provided.'}
 					</div>
 
 					{#if videoQuery.data.tags && videoQuery.data.tags.length > 0}
-						<div class="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border/40 pt-3">
+						<div class="mt-4 flex flex-wrap items-center gap-2 border-t border-border/50 pt-3">
 							{#each videoQuery.data.tags as tag}
 								<a
 									href={`/search?q=${encodeURIComponent(tag.startsWith('#') ? tag : '#' + tag)}`}
-									class="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-sm"
+									class="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-xs"
 								>
 									<Hash class="h-3 w-3" />
 									<span>{tag.replace(/^#+/, '')}</span>

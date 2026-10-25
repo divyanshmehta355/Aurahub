@@ -199,46 +199,42 @@
 </svelte:head>
 
 <main class="mx-auto max-w-4xl space-y-6 px-4 py-4 md:space-y-8 md:px-0 md:py-8">
-	<div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+	<div class="flex flex-col justify-between gap-2 border-b border-border/50 pb-4 sm:flex-row sm:items-end">
 		<div>
-			<h1 class="text-2xl font-bold tracking-tight md:text-3xl">Settings</h1>
-			<p class="text-muted-foreground mt-1 text-sm md:text-base">
-				Manage your public profile and account security.
+			<h1 class="text-2xl font-bold tracking-tight text-foreground md:text-3xl">Studio Settings</h1>
+			<p class="text-muted-foreground mt-1 text-xs sm:text-sm">
+				Configure public channel identity, mature filters, and credentials.
 			</p>
 		</div>
 	</div>
 
-	<!-- Custom Tabs (No Sidebar) -->
-	<div class="hide-scrollbar flex overflow-x-auto border-b">
+	<!-- Custom Modern Pill Tabs -->
+	<div class="flex items-center gap-2 border-b border-border/50 pb-3">
 		<button
-			class="border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {activeTab ===
+			class="flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all {activeTab ===
 			'profile'
-				? 'border-primary text-primary'
-				: 'text-muted-foreground border-transparent hover:border-border hover:text-primary'}"
+				? 'bg-primary text-primary-foreground shadow-xs shadow-primary/20'
+				: 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'}"
 			onclick={() => {
 				activeTab = 'profile';
 				message = { type: '', text: '' };
 			}}
 		>
-			<div class="flex items-center gap-2">
-				<User class="h-4 w-4" />
-				Public Profile
-			</div>
+			<User class="h-3.5 w-3.5" />
+			<span>Channel Identity</span>
 		</button>
 		<button
-			class="border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {activeTab ===
+			class="flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all {activeTab ===
 			'security'
-				? 'border-primary text-primary'
-				: 'text-muted-foreground border-transparent hover:border-border hover:text-primary'}"
+				? 'bg-primary text-primary-foreground shadow-xs shadow-primary/20'
+				: 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'}"
 			onclick={() => {
 				activeTab = 'security';
 				message = { type: '', text: '' };
 			}}
 		>
-			<div class="flex items-center gap-2">
-				<Shield class="h-4 w-4" />
-				Account Security
-			</div>
+			<Shield class="h-3.5 w-3.5" />
+			<span>Security & Password</span>
 		</button>
 	</div>
 

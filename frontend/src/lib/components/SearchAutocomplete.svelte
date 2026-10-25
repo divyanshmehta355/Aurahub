@@ -149,29 +149,33 @@
 				if (videos.length > 0 || users.length > 0) isOpen = true;
 			}}
 			{placeholder}
-			{autofocus}
-			class="bg-muted/50 border-border focus:ring-primary/20 w-full rounded-full border py-2 pr-4 pl-10 text-sm transition-all focus:ring-2 focus:outline-none"
+			class="bg-card border-border/70 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 w-full rounded-full border py-2 pr-10 pl-10 text-xs sm:text-sm text-foreground transition-all shadow-xs placeholder:text-muted-foreground/70 focus:outline-none"
 			autocomplete="off"
 			spellcheck="false"
 		/>
+		{#if !query}
+			<span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-muted-silver bg-secondary/80 rounded border border-border/60">
+				/
+			</span>
+		{/if}
 	</form>
 
 	<!-- Autocomplete Dropdown -->
 	{#if isOpen}
 		<div
-			class="bg-popover/95 border-border/80 absolute top-full z-50 mt-2 max-h-[480px] w-full overflow-hidden overflow-y-auto rounded-2xl border shadow-2xl backdrop-blur-md"
+			class="bg-deep-slate/95 border-border/80 absolute top-full z-50 mt-2 max-h-[480px] w-full overflow-hidden overflow-y-auto rounded-2xl border shadow-2xl backdrop-blur-xl"
 		>
 			<!-- Video suggestions -->
 			{#if videos.length > 0}
-				<div class="px-2 pt-2 pb-1">
-					<div class="text-muted-foreground flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold tracking-wider uppercase">
-						<Film class="h-3 w-3" />
+				<div class="px-2 pt-2.5 pb-1">
+					<div class="text-muted-silver flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold tracking-wider uppercase">
+						<Film class="h-3 w-3 text-primary" />
 						<span>Videos</span>
 					</div>
 					{#each videos as video, idx}
 						<button
 							type="button"
-							class="hover:bg-accent/80 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors {selectedIndex === idx ? 'bg-accent text-accent-foreground' : ''}"
+							class="hover:bg-slate-elevated/80 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors {selectedIndex === idx ? 'bg-slate-elevated text-primary' : 'text-foreground'}"
 							onclick={() => {
 								goto(`/watch/${video.id}`);
 								closeDropdown();
@@ -181,17 +185,17 @@
 								<img
 									src={video.thumbnailUrl}
 									alt=""
-									class="bg-muted h-9 w-16 shrink-0 rounded-md object-cover"
+									class="bg-secondary h-9 w-16 shrink-0 rounded-lg object-cover border border-border/50"
 								/>
 							{:else}
-								<div class="bg-muted text-muted-foreground flex h-9 w-16 shrink-0 items-center justify-center rounded-md text-xs">
+								<div class="bg-secondary text-muted-foreground flex h-9 w-16 shrink-0 items-center justify-center rounded-lg border border-border/50 text-xs">
 									<Film class="h-4 w-4 opacity-40" />
 								</div>
 							{/if}
 							<div class="min-w-0 flex-1">
-								<p class="truncate text-xs font-medium md:text-sm">{video.title}</p>
+								<p class="truncate text-xs font-semibold md:text-sm">{video.title}</p>
 								{#if video.category}
-									<span class="text-muted-foreground text-[10px]">{video.category}</span>
+									<span class="text-muted-silver text-[10px]">{video.category}</span>
 								{/if}
 							</div>
 						</button>
@@ -201,16 +205,16 @@
 
 			<!-- User suggestions -->
 			{#if users.length > 0}
-				<div class="border-border/60 border-t px-2 pt-2 pb-1">
-					<div class="text-muted-foreground flex items-center gap-1.5 px-3 py-1 text-[11px] font-semibold tracking-wider uppercase">
-						<UserIcon class="h-3 w-3" />
+				<div class="border-border/50 border-t px-2 pt-2 pb-1">
+					<div class="text-muted-silver flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold tracking-wider uppercase">
+						<UserIcon class="h-3 w-3 text-primary" />
 						<span>Creators</span>
 					</div>
 					{#each users as user, idx}
 						{@const userIdx = videos.length + idx}
 						<button
 							type="button"
-							class="hover:bg-accent/80 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors {selectedIndex === userIdx ? 'bg-accent text-accent-foreground' : ''}"
+							class="hover:bg-slate-elevated/80 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors {selectedIndex === userIdx ? 'bg-slate-elevated text-primary' : 'text-foreground'}"
 							onclick={() => {
 								goto(`/profile/${user.username}`);
 								closeDropdown();
@@ -219,30 +223,28 @@
 							<img
 								src={user.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${user.username}`}
 								alt={user.username}
-								class="bg-muted h-7 w-7 shrink-0 rounded-full object-cover"
+								class="h-7 w-7 shrink-0 rounded-full object-cover border border-border/70"
 							/>
 							<div class="min-w-0 flex-1">
-								<p class="truncate text-xs font-medium md:text-sm">{user.username}</p>
+								<p class="truncate text-xs font-semibold md:text-sm">@{user.username}</p>
 							</div>
 						</button>
 					{/each}
 				</div>
 			{/if}
 
-
-
 			<!-- Full search button row -->
 			{#if query.trim()}
 				{@const searchRowIdx = videos.length + users.length}
-				<div class="border-border/60 border-t p-1.5">
+				<div class="border-border/50 border-t p-1.5">
 					<button
 						type="button"
-						class="hover:bg-accent/80 text-muted-foreground hover:text-foreground flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-medium transition-colors {selectedIndex === searchRowIdx ? 'bg-accent text-accent-foreground' : ''}"
+						class="hover:bg-slate-elevated/80 text-muted-foreground hover:text-foreground flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-medium transition-colors {selectedIndex === searchRowIdx ? 'bg-slate-elevated text-primary' : ''}"
 						onclick={submitSearch}
 					>
-						<span class="flex items-center gap-2 truncate">
-							<Search class="h-3.5 w-3.5 shrink-0" />
-							Search for "{query.trim()}"
+						<span class="flex items-center gap-2 truncate font-semibold">
+							<Search class="h-3.5 w-3.5 shrink-0 text-primary" />
+							<span>Search for "{query.trim()}"</span>
 						</span>
 						<ArrowRight class="h-3.5 w-3.5 shrink-0 opacity-60" />
 					</button>

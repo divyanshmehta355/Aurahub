@@ -540,33 +540,33 @@
 </svelte:head>
 
 <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-	<Card.Root class="overflow-hidden shadow-sm">
-		<div class="bg-muted/20 border-b p-6 text-center">
-			<h1 class="text-2xl font-bold tracking-tight">Upload Video</h1>
-			<p class="text-muted-foreground mt-1 text-sm">
-				Share your content with the Aurahub community.
+	<Card.Root class="overflow-hidden rounded-3xl border border-slate-border/80 bg-deep-slate/70 shadow-2xl backdrop-blur-xl">
+		<div class="border-b border-slate-border/60 p-6 text-center bg-gradient-to-b from-deep-slate to-deep-slate/60">
+			<h1 class="text-2xl font-bold tracking-tight text-soft-ivory md:text-3xl font-serif">Upload Video</h1>
+			<p class="mt-1 text-xs text-muted-silver md:text-sm">
+				Publish cinematic videos and stories to the Aurahub community.
 			</p>
 		</div>
 
-		<div class="bg-muted/5 flex justify-center border-b p-4 sm:p-6">
-			<div class="bg-muted flex w-full max-w-2xl rounded-xl p-1">
+		<div class="flex justify-center border-b border-slate-border/60 p-4 sm:p-5 bg-midnight-ink/30">
+			<div class="flex w-full max-w-2xl rounded-2xl border border-slate-border/60 bg-midnight-ink/80 p-1.5">
 				<button
 					onclick={() => (uploadType = 'direct')}
-					class={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-all ${uploadType === 'direct' ? 'text-foreground bg-background shadow' : 'text-muted-foreground hover:text-foreground'}`}
+					class={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-xs sm:text-sm font-semibold transition-all ${uploadType === 'direct' ? 'bg-aura-lavender text-midnight-ink shadow-md font-bold' : 'text-muted-silver hover:text-soft-ivory'}`}
 				>
 					<UploadCloud class="h-4 w-4" /> Direct Upload
 				</button>
 				<button
 					onclick={() => (uploadType = 'remote')}
-					class={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-all ${uploadType === 'remote' ? 'text-foreground bg-background shadow' : 'text-muted-foreground hover:text-foreground'}`}
+					class={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-xs sm:text-sm font-semibold transition-all ${uploadType === 'remote' ? 'bg-aura-lavender text-midnight-ink shadow-md font-bold' : 'text-muted-silver hover:text-soft-ivory'}`}
 				>
 					<LinkIcon class="h-4 w-4" /> Remote URL
 				</button>
 				<button
 					onclick={() => (uploadType = 'playlist')}
-					class={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-all ${uploadType === 'playlist' ? 'text-foreground bg-background shadow' : 'text-muted-foreground hover:text-foreground'}`}
+					class={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-xs sm:text-sm font-semibold transition-all ${uploadType === 'playlist' ? 'bg-aura-lavender text-midnight-ink shadow-md font-bold' : 'text-muted-silver hover:text-soft-ivory'}`}
 				>
-					<ListVideo class="h-4 w-4" /> Bulk / Playlist Batch
+					<ListVideo class="h-4 w-4" /> Bulk Batch
 				</button>
 			</div>
 		</div>
@@ -926,26 +926,26 @@
 					</div>
 
 					{#if isUploading}
-						<div class="rounded-2xl border border-primary/25 bg-muted/40 p-5 shadow-sm space-y-4">
+						<div class="rounded-2xl border border-aura-lavender/30 bg-deep-slate/90 p-5 shadow-xl space-y-4">
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-3">
-									<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+									<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-aura-lavender/15 text-aura-lavender">
 										<UploadCloud class="h-5 w-5 animate-bounce" />
 									</div>
 									<div>
-										<p class="text-sm font-bold text-foreground">{statusMessage}</p>
-										<p class="text-xs text-muted-foreground truncate max-w-[220px] sm:max-w-md">
+										<p class="text-sm font-bold text-soft-ivory">{statusMessage}</p>
+										<p class="text-xs text-muted-silver truncate max-w-[220px] sm:max-w-md">
 											{file?.name || videoUrl}
 										</p>
 									</div>
 								</div>
 								<div class="flex items-center gap-3">
-									<span class="font-mono text-2xl font-black text-primary">{uploadProgress}%</span>
+									<span class="font-mono text-2xl font-black text-aura-lavender">{uploadProgress}%</span>
 									<Button
 										type="button"
 										variant="outline"
 										size="sm"
-										class="h-8 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
+										class="h-8 gap-1.5 rounded-full border-destructive/40 text-destructive hover:bg-destructive hover:text-white transition-colors"
 										onclick={cancelUpload}
 									>
 										<X class="h-3.5 w-3.5" />
@@ -955,9 +955,9 @@
 							</div>
 
 							<!-- Smooth animated gradient bar -->
-							<div class="relative h-3 w-full overflow-hidden rounded-full bg-muted">
+							<div class="relative h-2.5 w-full overflow-hidden rounded-full bg-slate-elevated">
 								<div
-									class="relative h-full rounded-full bg-gradient-to-r from-primary/80 via-primary to-primary transition-all duration-200 ease-out"
+									class="relative h-full rounded-full bg-gradient-to-r from-aura-lavender/80 via-aura-lavender to-aura-lavender transition-all duration-200 ease-out shadow-sm"
 									style="width: {uploadProgress}%"
 								>
 									<div class="absolute inset-0 bg-white/20 animate-pulse"></div>
@@ -965,22 +965,22 @@
 							</div>
 
 							<!-- Metrics Grid: Uploaded of Total, Speed, and Estimated Time -->
-							<div class="grid grid-cols-3 gap-2 border-t border-border/60 pt-3 text-xs">
+							<div class="grid grid-cols-3 gap-2 border-t border-slate-border/60 pt-3 text-xs">
 								<div class="space-y-0.5">
-									<span class="text-muted-foreground block text-[11px] font-medium">Uploaded</span>
-									<span class="font-mono font-bold text-foreground">
+									<span class="text-muted-silver block text-[11px] font-medium">Uploaded</span>
+									<span class="font-mono font-bold text-soft-ivory">
 										{formatBytes(uploadedBytes)} / {formatBytes(totalBytes || file?.size || 0)}
 									</span>
 								</div>
 								<div class="space-y-0.5 text-center">
-									<span class="text-muted-foreground block text-[11px] font-medium">Upload Speed</span>
-									<span class="font-mono font-bold text-foreground">
+									<span class="text-muted-silver block text-[11px] font-medium">Upload Speed</span>
+									<span class="font-mono font-bold text-soft-ivory">
 										{formatSpeed(uploadSpeed)}
 									</span>
 								</div>
 								<div class="space-y-0.5 text-right">
-									<span class="text-muted-foreground block text-[11px] font-medium">Time Remaining</span>
-									<span class="font-mono font-bold text-foreground">
+									<span class="text-muted-silver block text-[11px] font-medium">Time Remaining</span>
+									<span class="font-mono font-bold text-soft-ivory">
 										{formatEta(etaSeconds)}
 									</span>
 								</div>
@@ -993,7 +993,7 @@
 							<Button
 								type="button"
 								variant="destructive"
-								class="text-md h-12 w-full gap-2 font-semibold shadow-sm transition-all"
+								class="text-md h-12 w-full gap-2 font-semibold shadow-md rounded-full transition-all"
 								onclick={cancelUpload}
 							>
 								<X class="h-5 w-5" />
@@ -1003,7 +1003,7 @@
 							<Button
 								type="submit"
 								disabled={uploadType === 'direct' && !file}
-								class="text-md h-12 w-full font-semibold shadow-sm"
+								class="text-md h-12 w-full font-bold rounded-full bg-aura-lavender text-midnight-ink hover:bg-aura-lavender/90 shadow-lg shadow-aura-lavender/25 disabled:opacity-40"
 							>
 								Upload Video
 							</Button>

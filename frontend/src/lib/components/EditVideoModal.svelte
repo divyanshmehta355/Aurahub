@@ -180,15 +180,15 @@
 </script>
 
 <Dialog bind:open>
-	<DialogContent class="max-h-[90vh] overflow-y-auto rounded-2xl sm:max-w-[620px]">
-		<DialogHeader class="border-b pb-4">
+	<DialogContent class="max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-border/80 bg-deep-slate/95 text-soft-ivory shadow-2xl backdrop-blur-2xl sm:max-w-[620px]">
+		<DialogHeader class="border-b border-slate-border/60 pb-4">
 			<div class="flex items-center gap-2.5">
-				<div class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+				<div class="flex h-9 w-9 items-center justify-center rounded-xl bg-aura-lavender/10 text-aura-lavender">
 					<Edit class="h-5 w-5" />
 				</div>
 				<div>
-					<DialogTitle class="text-lg font-bold">Edit Video Details</DialogTitle>
-					<DialogDescription class="text-muted-foreground mt-0.5 text-xs">
+					<DialogTitle class="text-lg font-bold text-soft-ivory font-serif">Edit Video Details</DialogTitle>
+					<DialogDescription class="mt-0.5 text-xs text-muted-silver">
 						Update video metadata, category, tags, and audience settings in-place.
 					</DialogDescription>
 				</div>
@@ -405,11 +405,12 @@
 			</div>
 
 			<!-- Footer Buttons -->
-			<div class="flex justify-end gap-3 border-t pt-4">
+			<div class="flex justify-end gap-3 border-t border-slate-border/60 pt-4">
 				<Button
 					type="button"
 					variant="outline"
 					size="sm"
+					class="rounded-full border-slate-border text-soft-ivory hover:bg-slate-elevated text-xs font-semibold"
 					onclick={() => (open = false)}
 					disabled={updateMutation.isPending}
 				>
@@ -419,7 +420,7 @@
 					type="submit"
 					size="sm"
 					disabled={updateMutation.isPending}
-					class="font-semibold shadow-sm"
+					class="rounded-full bg-aura-lavender text-midnight-ink font-bold hover:bg-aura-lavender/90 shadow-md shadow-aura-lavender/20 text-xs px-5"
 				>
 					{#if updateMutation.isPending}
 						<Loader2 class="mr-2 h-4 w-4 animate-spin" /> Saving Changes...
