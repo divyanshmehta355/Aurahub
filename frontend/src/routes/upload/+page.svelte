@@ -566,7 +566,7 @@
 					onclick={() => (uploadType = 'playlist')}
 					class={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-all ${uploadType === 'playlist' ? 'text-foreground bg-background shadow' : 'text-muted-foreground hover:text-foreground'}`}
 				>
-					<ListVideo class="h-4 w-4" /> Playlist Batch
+					<ListVideo class="h-4 w-4" /> Bulk / Playlist Batch
 				</button>
 			</div>
 		</div>

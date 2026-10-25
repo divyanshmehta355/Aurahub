@@ -229,8 +229,10 @@ func uploadImageWithKey(image []byte, apiKey string) (string, error) {
 }
 
 type BatchRemoteUploadItem struct {
-	Title    string `json:"title"`
-	VideoURL string `json:"videoUrl"`
+	Title        string `json:"title"`
+	VideoURL     string `json:"videoUrl"`
+	MovieTitle   string `json:"movieTitle"`
+	DownloadLink string `json:"downloadLink"`
 }
 
 type BatchRemoteUploadRequest struct {
@@ -265,7 +267,13 @@ func (s *Server) BatchRemoteUploadHandler(c *fiber.Ctx) error {
 
 	for _, item := range req.Items {
 		title := strings.TrimSpace(item.Title)
+		if title == "" {
+			title = strings.TrimSpace(item.MovieTitle)
+		}
 		videoURL := strings.TrimSpace(item.VideoURL)
+		if videoURL == "" {
+			videoURL = strings.TrimSpace(item.DownloadLink)
+		}
 		if title == "" || videoURL == "" || validatePublicVideoURL(videoURL) != nil {
 			continue
 		}
